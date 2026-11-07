@@ -1,0 +1,51 @@
+# Native
+**/x64/
+**/Win32/
+**/ARM64/
+**/*.user
+**/*.suo
+**/*.VC.db
+**/*.VC.opendb
+**/.vs/
+**/ipch/
+**/obj/
+**/bin/
+**/out/
+**/build/
+**/packages/
+**/CMakeFiles/
+**/CMakeCache.txt
+**/cmake-build-*/
+*.ilk
+*.pdb
+*.obj
+*.exp
+*.lib
+*.dll
+*.exe
+!site/**
+
+# Keep release packaging scripts
+!scripts/**
+
+# Node / site
+site/node_modules/
+site/.next/
+site/out/
+site/.vercel/
+site/.env*.local
+npm-debug.log*
+yarn-error.log*
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Local
+*.log
+.tmp/
+Temp/
