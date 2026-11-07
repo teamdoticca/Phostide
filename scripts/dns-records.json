@@ -1,0 +1,20 @@
+{
+  "zone": "doticca.com",
+  "note": "Apply with the Cloudflare account that owns doticca.com (not the intale.net-only session). Run scripts/setup-dns.ps1 after cf auth.",
+  "records": [
+    {
+      "type": "TXT",
+      "name": "_vercel",
+      "content": "vc-domain-verify=phostide.doticca.com,246b5dee5a05d95fee9f",
+      "proxied": false,
+      "purpose": "Vercel domain ownership verification"
+    },
+    {
+      "type": "CNAME",
+      "name": "phostide",
+      "content": "cname.vercel-dns.com",
+      "proxied": false,
+      "purpose": "Point phostide.doticca.com at Vercel (DNS-only / grey cloud)"
+    }
+  ]
+}

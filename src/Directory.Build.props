@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <PlatformToolset>v143</PlatformToolset>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <CharacterSet>Unicode</CharacterSet>
+    <CppWinRTEnabled>true</CppWinRTEnabled>
+    <CppWinRTModernSDK>true</CppWinRTModernSDK>
+  </PropertyGroup>
+</Project>
