@@ -16,9 +16,9 @@ Host `InjectExplorerTap` finds `Shell_TrayWnd`, loads `ExplorerTAP.dll` via `WH_
 | Index | Theme | Notes |
 |------:|-------|-------|
 | 0 | Rainbow | Fixed ROYGBIV across thickness + atmospheric life (no hue marquee) |
-| 1 | Sea Waves | Gerstner full-bar — **locked** |
+| 1 | Sea Waves | Gerstner full-bar (deep teal / cyan foam toward marketing preview) |
 | 2 | Weather | Storm loop (slanted rain + lightning) |
-| 3 | Space | Forward cinematic nebula → stars (no rewind / no start fade-in) — **locked** |
+| 3 | Space | Forward cinematic nebula → stars (no rewind / no start fade-in) |
 | 4 | Aurora | Green→teal→violet curtains, standing undulation |
 
 Settings file: `%APPDATA%\Phostide\settings.json` (`theme`, `intensity`, `enabled`, …).
@@ -75,13 +75,9 @@ A later `Bound fill 8x8` can appear after a good `2560x48` bind; if `Local\Phost
 - Pass `TaskbarEdge` for edge-aware thickness mapping.
 - Calm time scale often `tCalm = t * ~0.18–0.22`.
 
-## Locked themes (as of this note)
+## Theme paint note
 
-Do not rewrite paint bodies without explicit user unlock:
-
-- Sea Waves (`PaintSeaWavesGerstner`)
-- Space (`PaintSpace`)
-- (Rainbow / Weather / Aurora may still iterate — check latest session)
+Sea Waves and Space were unlocked to match marketing preview JPGs (`site/public/themes/*.jpg`). Prefer retuning toward those targets over inventing a new look; keep Gerstner + forward cinematic loop constraints.
 
 ## Quick “theme=N live?” check
 

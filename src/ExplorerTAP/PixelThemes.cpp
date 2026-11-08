@@ -90,23 +90,26 @@ void PaintRainbow(uint8_t* bgra, int stride, int w, int h, float intensity, floa
   const int across = vertical ? w : h;
   if (along < 2 || across < 2) return;
 
-  // Fixed ROYGBIV across thickness — hue never scrolls along the bar.
-  // Motion is luminance / sat breath, boundary wobble, and in-place sheen.
+  // Fixed ROYGBIV ribbons across thickness — hue never scrolls along the bar.
+  // Target: vivid stacked bands like rainbow.jpg (bevel + grain life, no marquee).
   const float tCalm = t * 0.20f;
   const float i = std::clamp(intensity, 0.f, 1.f);
-  const float satBase = 0.56f + 0.30f * i;
-  const float valueBase = 0.20f + 0.28f * i;
-  const float alpha = 0.66f + 0.28f * i;
+  const float satBase = 0.82f + 0.16f * i;
+  const float valueBase = 0.42f + 0.40f * i;
+  const float alpha = 0.78f + 0.18f * i;
 
   // Clear sat/value breath loops (obvious on a ~48px bar).
-  const float breathV = 0.82f + 0.18f * std::sin(tCalm * 0.62f);
-  const float breathS = 0.86f + 0.14f * std::sin(tCalm * 0.47f + 1.1f);
-  const float breathSlow = 0.90f + 0.10f * std::sin(tCalm * 0.28f + 2.4f);
+  const float breathV = 0.88f + 0.12f * std::sin(tCalm * 0.62f);
+  const float breathS = 0.92f + 0.08f * std::sin(tCalm * 0.47f + 1.1f);
+  const float breathSlow = 0.94f + 0.06f * std::sin(tCalm * 0.28f + 2.4f);
 
   // Global standing-wave phase for sheen blooms (no hue drag).
   const float sheenPhase = tCalm * 0.85f;
   const float sheenPulse = 0.55f + 0.45f * std::sin(tCalm * 1.05f);
   const float iriPhase = tCalm * 0.55f;
+
+  // Soft-quantized ROYGBIV centers (desktop→outer): R O Y G C B V.
+  constexpr float kBandHue[7] = {0.00f, 0.08f, 0.14f, 0.33f, 0.50f, 0.62f, 0.78f};
 
   for (int alongI = 0; alongI < along; ++alongI) {
     const float alongF = static_cast<float>(alongI);
@@ -137,37 +140,53 @@ void PaintRainbow(uint8_t* bgra, int stride, int w, int h, float intensity, floa
           Noise2(alongF * 0.024f + 3.7f, tCalm * 0.38f + 4.1f) * 2.f - 1.f;
       const float wobC = std::sin(alongF * 0.018f + tCalm * 0.70f) *
                          std::sin(tCalm * 0.33f + alongN * 6.2831853f * 0.5f);
-      const float wobble = (0.045f + 0.025f * i) * (0.55f * wobA + 0.30f * wobB + 0.15f * wobC);
+      const float wobble = (0.028f + 0.018f * i) * (0.55f * wobA + 0.30f * wobB + 0.15f * wobC);
       const float band = std::clamp(column + wobble, 0.f, 1.f);
-      // Stable hue: red (0) at desktop side → violet (~0.78) at outer edge.
-      const float hue = band * 0.78f;
 
-      // Strong slow luminance caustics / shimmer on every pixel (anti burn-in).
+      // Soft ribbon quantization: clear ROYGBIV strips with tiny blend at seams.
+      const float bandF = band * 6.999f;
+      const int bandLo = static_cast<int>(std::floor(bandF));
+      const int bandHi = (std::min)(6, bandLo + 1);
+      const float bandFrac = bandF - static_cast<float>(bandLo);
+      // Sharper centers, soft 18% seam blend so strips read on ~48px.
+      const float seam = std::clamp((bandFrac - 0.41f) / 0.18f, 0.f, 1.f);
+      const float seamS = seam * seam * (3.f - 2.f * seam);
+      const float hue =
+          kBandHue[bandLo] + (kBandHue[bandHi] - kBandHue[bandLo]) * seamS;
+
+      // Per-ribbon bevel: highlight near top of each strip, soft shadow at bottom.
+      const float inBand = bandFrac;
+      const float bevelHi = std::exp(-std::abs(inBand - 0.22f) * 7.5f);
+      const float bevelLo = std::exp(-std::abs(inBand - 0.82f) * 6.0f);
+      const float bevel = 1.f + 0.18f * bevelHi - 0.12f * bevelLo;
+
+      // Strong slow luminance caustics / paper grain (anti burn-in).
       const float n1 =
           Noise2(alongF * 0.016f + tCalm * 0.18f, band * 3.1f + tCalm * 0.14f);
       const float n2 =
           Noise2(alongF * 0.038f - tCalm * 0.12f, band * 5.2f + tCalm * 0.21f + 2.1f);
       const float n3 =
           Noise2(alongF * 0.007f + tCalm * 0.06f, band * 1.6f - tCalm * 0.09f + 5.5f);
+      const float grain =
+          Noise2(alongF * 0.55f + band * 8.f, band * 11.f + tCalm * 0.04f);
       const float caustic =
-          0.55f + 0.28f * n1 + 0.12f * n2 + 0.05f * n3;
+          0.62f + 0.22f * n1 + 0.10f * n2 + 0.04f * n3 + 0.04f * (grain - 0.5f);
 
       // Soft specular / sheen: standing waves + within-band bloom (no sideways hue travel).
       const float stand =
           0.5f + 0.5f * std::sin(alongF * 0.014f + band * 2.6f + sheenPhase);
       const float stand2 =
           0.5f + 0.5f * std::sin(alongF * 0.031f - band * 4.1f + sheenPhase * 1.35f + 1.7f);
-      // Travels slightly *within* a band (across thickness), not along the spectrum axis.
       const float bandBloom =
           0.5f + 0.5f * std::sin(band * 9.0f + tCalm * 1.15f + alongN * 1.2f);
       const float sheen =
           stand * (0.55f + 0.45f * stand2) * (0.65f + 0.35f * bandBloom) * sheenPulse;
 
       const float live =
-          caustic * breathV * breathSlow * (0.88f + 0.12f * sheen);
+          caustic * breathV * breathSlow * bevel * (0.90f + 0.10f * sheen);
 
       const float sat =
-          satBase * breathS * (0.88f + 0.12f * n1) * (0.94f + 0.06f * bandBloom);
+          satBase * breathS * (0.94f + 0.06f * n1) * (0.96f + 0.04f * bandBloom);
       const float val = valueBase * live;
       float r, g, b;
       HsvToRgb(hue, std::clamp(sat, 0.f, 1.f), std::clamp(val, 0.f, 1.f), r, g, b);
@@ -175,7 +194,7 @@ void PaintRainbow(uint8_t* bgra, int stride, int w, int h, float intensity, floa
       // Soft specular pulses that bloom and fade in place.
       const float sparkCore = std::pow(sheen, 6.f);
       const float sparkSoft = std::pow(sheen, 3.5f);
-      const float sparkAmp = (0.10f + 0.18f * i) * breathV;
+      const float sparkAmp = (0.08f + 0.14f * i) * breathV;
       const float spark = (0.55f * sparkCore + 0.45f * sparkSoft) * sparkAmp;
       r += spark;
       g += spark * 0.94f;
@@ -185,8 +204,7 @@ void PaintRainbow(uint8_t* bgra, int stride, int w, int h, float intensity, floa
       const float iri =
           (0.5f + 0.5f * std::sin(band * 12.5f + iriPhase + alongN * 2.0f)) *
           (0.5f + 0.5f * std::sin(tCalm * 0.72f + band * 3.0f));
-      const float iriAmt = (0.04f + 0.08f * i) * iri * live;
-      // Mild shift toward neighbor band tint without moving the spectrum.
+      const float iriAmt = (0.03f + 0.06f * i) * iri * live;
       r += iriAmt * (0.55f + 0.45f * std::sin(hue * 6.2831853f + 0.4f));
       g += iriAmt * (0.55f + 0.45f * std::sin(hue * 6.2831853f + 2.5f));
       b += iriAmt * (0.55f + 0.45f * std::sin(hue * 6.2831853f + 4.6f));
@@ -248,22 +266,22 @@ void PaintSeaWavesGerstner(uint8_t* bgra, int stride, int w, int h, float intens
   const int across = vertical ? w : h;
   if (along < 2 || across < 2) return;
 
-  // Full-bar calm ocean: every pixel animated (anti burn-in), slow drift.
+  // Full-bar Gerstner ocean toward sea.jpg: deep navy troughs, teal swell, cyan foam.
   const float thick = static_cast<float>((std::max)(16, thicknessPx > 0 ? thicknessPx : across));
   const float thinFactor = std::clamp(thick / 72.f, 0.45f, 1.35f);
-  const float worldScale = 0.011f + 0.012f * thinFactor;
-  const float amp = (0.34f + 0.36f * intensity) * (0.75f + 0.25f * thinFactor);
+  const float worldScale = 0.010f + 0.011f * thinFactor;
+  const float amp = (0.40f + 0.42f * intensity) * (0.78f + 0.22f * thinFactor);
   const float tCalm = t * 0.20f;
-  // Adapted from CaffeineViking/osgw (MIT) / GPU Gems Ch.1 — calm speeds.
+  // Steeper trochoids → peaked crests / wider troughs (Gerstner, not soft sines).
   GerstnerWave waves[] = {
-      {1.00f, 0.00f, 0.30f * amp, 0.26f, 0.68f, 0.30f},
-      {0.94f, 0.28f, 0.20f * amp, 0.22f, 1.00f, 0.38f},
-      {0.75f, -0.55f, 0.14f * amp, 0.20f, 1.30f, 0.46f},
-      {-0.25f, 0.96f, 0.11f * amp, 0.24f, 1.65f, 0.52f},
-      {0.58f, 0.78f, 0.08f * amp, 0.18f, 2.05f, 0.60f},
-      {-0.82f, 0.42f, 0.07f * amp, 0.20f, 2.45f, 0.68f},
-      {0.22f, -0.97f, 0.05f * amp, 0.16f, 2.95f, 0.76f},
-      {0.96f, -0.22f, 0.04f * amp, 0.16f, 3.50f, 0.85f},
+      {1.00f, 0.00f, 0.34f * amp, 0.38f, 0.62f, 0.28f},
+      {0.94f, 0.28f, 0.22f * amp, 0.34f, 0.95f, 0.36f},
+      {0.75f, -0.55f, 0.16f * amp, 0.32f, 1.25f, 0.44f},
+      {-0.25f, 0.96f, 0.13f * amp, 0.36f, 1.58f, 0.50f},
+      {0.58f, 0.78f, 0.09f * amp, 0.28f, 2.00f, 0.58f},
+      {-0.82f, 0.42f, 0.08f * amp, 0.30f, 2.40f, 0.66f},
+      {0.22f, -0.97f, 0.06f * amp, 0.26f, 2.90f, 0.74f},
+      {0.96f, -0.22f, 0.05f * amp, 0.24f, 3.45f, 0.82f},
   };
   constexpr int kWaveCount = 8;
 
@@ -292,15 +310,19 @@ void PaintSeaWavesGerstner(uint8_t* bgra, int stride, int w, int h, float intens
     heightField.swap(smooth);
   }
   const float hRange = (std::max)(0.08f, hMax - hMin);
-  const float alpha = 0.82f + 0.14f * intensity;
+  const float alpha = 0.86f + 0.12f * intensity;
+  const float topGlow = 0.92f + 0.08f * std::sin(tCalm * 0.35f + 0.4f);
 
   // Paint every pixel with visible slow motion (anti burn-in across full bar).
   for (int alongI = 0; alongI < along; ++alongI) {
     const float hn =
         (heightField[static_cast<size_t>(alongI)] - hMin) / hRange;  // 0 trough → 1 crest
     const float nx = nxField[static_cast<size_t>(alongI)];
-    const float steep = std::clamp(std::abs(nx) * 1.35f, 0.f, 1.f);
+    const float steep = std::clamp(std::abs(nx) * 1.55f, 0.f, 1.f);
     const float alongF = static_cast<float>(alongI);
+    // Crest sharpness: emphasize upper height percentiles like sea.jpg whitecaps.
+    const float crest = std::pow(std::clamp(hn, 0.f, 1.f), 1.55f);
+    const float trough = 1.f - hn;
 
     for (int acrossI = 0; acrossI < across; ++acrossI) {
       const float sampleU =
@@ -322,48 +344,58 @@ void PaintSeaWavesGerstner(uint8_t* bgra, int stride, int w, int h, float intens
       const float c1 = Noise2(alongF * 0.018f + tCalm * 0.22f, column * 3.2f + tCalm * 0.14f);
       const float c2 = Noise2(alongF * 0.045f - tCalm * 0.11f, column * 5.5f + tCalm * 0.19f + 2.4f);
       const float c3 = Noise2(alongF * 0.009f + tCalm * 0.07f, column * 1.6f - tCalm * 0.05f + 5.1f);
-      const float caustic = 0.35f + 0.40f * c1 + 0.25f * c2 * c3;
+      const float caustic = 0.30f + 0.42f * c1 + 0.28f * c2 * c3;
 
       // Rolling luminance bands through the full thickness (not just a crest lip).
       const float rollA =
           0.5f + 0.5f * std::sin(alongF * 0.012f + column * 5.5f + tCalm * 0.85f + hn * 2.2f);
       const float rollB =
           0.5f + 0.5f * std::sin(alongF * 0.027f - column * 3.8f + tCalm * 1.15f + steep);
-      const float live = 0.55f + 0.25f * caustic + 0.12f * rollA + 0.08f * rollB;
+      const float live = 0.48f + 0.28f * caustic + 0.14f * rollA + 0.10f * rollB;
 
-      // Whole-column lift from Gerstner height — troughs darker, crests brighter.
-      const float swell = 0.72f + 0.38f * hn;
+      // Whole-column lift from Gerstner height — troughs near-black, crests lit.
+      const float swell = 0.55f + 0.55f * hn;
 
-      // Ocean body: animated everywhere; still calm palette.
-      float r = (0.03f + 0.05f * intensity + 0.07f * hn) * swell * live;
-      float g = (0.12f + 0.18f * intensity + 0.16f * hn + 0.10f * column) * swell * live;
-      float b = (0.26f + 0.28f * intensity + 0.20f * hn + 0.12f * column) * swell * live;
-      // Mild depth gradient (outer a bit deeper) without killing motion.
-      const float depthMul = 0.78f + 0.22f * column;
-      r *= depthMul;
-      g *= depthMul * 1.02f;
-      b *= depthMul * 1.05f;
+      // Deep navy trough → rich teal mid → cyan crest (sea.jpg palette).
+      float r = (0.01f + 0.02f * intensity + 0.04f * crest) * swell * live;
+      float g = (0.06f + 0.10f * intensity + 0.22f * hn + 0.14f * crest) * swell * live;
+      float b = (0.14f + 0.16f * intensity + 0.18f * hn + 0.10f * crest) * swell * live;
+      // Teal push on swells (not troughs).
+      g += (0.10f + 0.12f * intensity) * hn * live;
+      b += (0.08f + 0.10f * intensity) * hn * live;
+      // Top-down god-ray feel: brighter toward sky edge (column↑), darker bottom.
+      const float skyMul = (0.72f + 0.38f * column) * topGlow;
+      const float depthMul = (0.62f + 0.20f * trough) * skyMul;
+      r *= depthMul * 0.95f;
+      g *= depthMul * 1.08f;
+      b *= depthMul * 1.12f;
 
-      // Soft specular from normals — broad, not a single pixel ridge.
+      // Specular from Gerstner normals — cyan rim, readable on OLED.
       const float spec =
-          std::pow(std::clamp(0.48f + 0.52f * (-nx), 0.f, 1.f), 9.f) *
-          (0.10f + 0.16f * intensity) * (0.35f + 0.65f * live);
-      r += spec;
-      g += spec * 1.05f;
-      b += spec * 1.12f;
+          std::pow(std::clamp(0.42f + 0.58f * (-nx), 0.f, 1.f), 7.5f) *
+          (0.14f + 0.22f * intensity) * (0.40f + 0.60f * live) * (0.55f + 0.45f * crest);
+      r += spec * 0.75f;
+      g += spec * 1.15f;
+      b += spec * 1.30f;
 
-      // Soft foam sheets that drift through most of the short axis.
-      const float surfaceU = 0.28f + 0.44f * hn;
-      const float foamCore = std::exp(-std::abs(column - surfaceU) * (2.4f - 0.6f * steep));
+      // Readable foam / whitecap sheets on crest lips + spray speckles.
+      const float surfaceU = 0.34f + 0.48f * crest;
+      const float foamCore = std::exp(-std::abs(column - surfaceU) * (2.0f - 0.7f * steep));
       const float foamSheet =
-          0.55f * foamCore + 0.25f * std::exp(-std::abs(column - 0.55f * surfaceU) * 3.2f) +
-          0.15f * caustic * (0.4f + 0.6f * column);
-      const float foam = std::clamp(foamSheet * (0.30f + 0.35f * steep + 0.20f * hn), 0.f, 0.72f);
-      r = r * (1.f - foam) + (0.70f + 0.14f * intensity) * foam;
-      g = g * (1.f - foam) + (0.82f + 0.10f * intensity) * foam;
-      b = b * (1.f - foam) + 0.94f * foam;
+          0.62f * foamCore + 0.28f * std::exp(-std::abs(column - 0.58f * surfaceU) * 2.8f) +
+          0.22f * caustic * crest * (0.45f + 0.55f * column);
+      const float spray =
+          std::pow(Noise2(alongF * 0.09f + tCalm * 0.4f, column * 6.f + tCalm * 0.25f), 4.5f) *
+          crest * (0.35f + 0.45f * steep);
+      const float foam =
+          std::clamp(foamSheet * (0.38f + 0.42f * steep + 0.35f * crest) + spray * 0.55f, 0.f,
+                     0.88f);
+      r = r * (1.f - foam) + (0.55f + 0.20f * intensity) * foam;
+      g = g * (1.f - foam) + (0.88f + 0.10f * intensity) * foam;
+      b = b * (1.f - foam) + (0.98f + 0.02f * intensity) * foam;
 
-      Put(bgra, stride, x, y, w, h, {r, g, b, alpha});
+      Put(bgra, stride, x, y, w, h,
+          {std::clamp(r, 0.f, 1.f), std::clamp(g, 0.f, 1.f), std::clamp(b, 0.f, 1.f), alpha});
     }
   }
 }
@@ -408,9 +440,9 @@ void PaintWeather(uint8_t* bgra, int stride, int w, int h, float intensity, floa
   // Wind slant grows mid-loop (diagonal rain — never straight-down snow).
   const float windBase = 0.55f + 0.12f * std::sin(tCalm * 0.37f + 0.6f);
   const float wind = windBase + 0.55f * build + 0.70f * peak * (1.f - ease);
-  // Rain density / brightness envelope.
+  // Rain density / brightness envelope — push for OLED-readable slant.
   const float rainAmt =
-      std::clamp(0.42f + 0.48f * intensity + 0.55f * storm, 0.35f, 1.35f);
+      std::clamp(0.55f + 0.55f * intensity + 0.60f * storm, 0.45f, 1.55f);
 
   // Brief full-bar flashes (1–3 frames of film time ≈ short tCalm blips).
   auto flashEnv = [&](float center, float width, float seed) {
@@ -422,14 +454,14 @@ void PaintWeather(uint8_t* bgra, int stride, int w, int h, float intensity, floa
     return std::pow(smoother(u), 0.55f) *
            (0.75f + 0.25f * Hash21(seed, center * 17.f));
   };
-  const float flashA = flashEnv(0.50f, 0.028f, 1.1f);  // main strike
-  const float flashB = flashEnv(0.58f, 0.018f, 2.7f);  // quick follow
-  const float flashC = flashEnv(0.66f, 0.022f, 4.3f);  // late fork
+  const float flashA = flashEnv(0.50f, 0.036f, 1.1f);  // main strike
+  const float flashB = flashEnv(0.58f, 0.024f, 2.7f);  // quick follow
+  const float flashC = flashEnv(0.66f, 0.028f, 4.3f);  // late fork
   const float flash =
-      std::clamp(flashA * 1.00f + flashB * 0.72f + flashC * 0.88f, 0.f, 1.35f);
+      std::clamp(flashA * 1.15f + flashB * 0.82f + flashC * 0.95f, 0.f, 1.55f);
 
   const float breath = 0.92f + 0.08f * std::sin(tCalm * 0.41f);
-  const float alpha = 0.78f + 0.16f * intensity;
+  const float alpha = 0.82f + 0.14f * intensity;
   const float alongScale = static_cast<float>((std::max)(1, along));
   const float acrossScale = static_cast<float>((std::max)(1, across));
 
@@ -459,62 +491,63 @@ void PaintWeather(uint8_t* bgra, int stride, int w, int h, float intensity, floa
       }
       depth = std::clamp(depth, 0.f, 1.f);
 
-      // Cool charcoal / blue-grey storm base — full coverage.
+      // Deep navy / charcoal storm base — weather.jpg contrast for OLED rain.
       const float skyN =
           Noise2(alongF * 0.006f + tCalm * 0.04f, depth * 2.1f + tCalm * 0.03f + 1.4f);
       const float skyN2 =
           Noise2(alongF * 0.018f - tCalm * 0.025f, depth * 3.6f + tCalm * 0.05f + 4.2f);
-      const float murk = 0.55f + 0.28f * skyN + 0.17f * skyN2;
-      float r = (0.045f + 0.035f * intensity) * murk * breath;
-      float g = (0.055f + 0.045f * intensity) * murk * breath;
-      float b = (0.085f + 0.070f * intensity) * murk * breath;
-      // Slight cooler lift toward sky (outer) edge.
-      const float skyLift = 0.88f + 0.18f * (1.f - depth);
-      r *= skyLift * 0.92f;
-      g *= skyLift * 0.96f;
-      b *= skyLift * 1.08f;
+      const float murk = 0.42f + 0.32f * skyN + 0.20f * skyN2;
+      float r = (0.025f + 0.025f * intensity) * murk * breath;
+      float g = (0.035f + 0.035f * intensity) * murk * breath;
+      float b = (0.070f + 0.065f * intensity) * murk * breath;
+      // Cooler lift toward sky (outer) edge — storm volume.
+      const float skyLift = 0.82f + 0.22f * (1.f - depth);
+      r *= skyLift * 0.88f;
+      g *= skyLift * 0.94f;
+      b *= skyLift * 1.18f;
 
       // Slanted rain UV: fall along depth, wind shear along bar — diagonal sheets.
-      const float fallSpeed = 1.55f + 0.85f * storm;
-      const float shear = wind * windSign * 1.35f;
+      const float fallSpeed = 1.70f + 1.00f * storm;
+      const float shear = wind * windSign * 1.55f;
       const float rainU =
-          alongU * (14.f + 6.f * storm) + depth * shear * 3.2f - tCalm * fallSpeed * 0.55f;
+          alongU * (16.f + 8.f * storm) + depth * shear * 3.6f - tCalm * fallSpeed * 0.55f;
       const float rainV =
-          depth * (9.f + 4.f * storm) - alongU * shear * 2.4f + tCalm * fallSpeed;
+          depth * (10.f + 5.f * storm) - alongU * shear * 2.8f + tCalm * fallSpeed;
 
       // Layered sheets (fine streaks + denser curtains) — never vertical-only.
       const float sheetA = Noise2(rainU, rainV * 0.55f + 2.1f);
       const float sheetB = Noise2(rainU * 1.7f + 3.3f, rainV * 0.9f - tCalm * 0.2f);
       const float sheetC = Noise2(rainU * 3.1f - 1.7f, rainV * 1.4f + 5.5f);
-      // Streak ridges: thin bright diagonals via absolute saw.
+      // Streak ridges: thin bright diagonals via absolute saw — readable on OLED.
       const float streak = 1.f - std::fabs(sheetA * 2.f - 1.f);
       const float streak2 = 1.f - std::fabs(sheetB * 2.f - 1.f);
-      const float drops = std::pow(streak, 3.4f + 1.2f * (1.f - storm)) * 0.70f +
-                          std::pow(streak2, 4.2f) * 0.45f +
-                          std::pow(sheetC, 5.5f) * 0.28f * rainAmt;
+      const float drops = std::pow(streak, 2.6f + 0.9f * (1.f - storm)) * 0.95f +
+                          std::pow(streak2, 3.2f) * 0.62f +
+                          std::pow(sheetC, 4.5f) * 0.38f * rainAmt;
 
       // Soft curtain veil so the bar reads wet, not sparse snow.
       const float veil =
-          std::pow(std::clamp(0.35f + 0.55f * sheetA + 0.25f * sheetB, 0.f, 1.f), 1.6f) *
-          (0.18f + 0.28f * rainAmt);
+          std::pow(std::clamp(0.35f + 0.55f * sheetA + 0.25f * sheetB, 0.f, 1.f), 1.45f) *
+          (0.22f + 0.32f * rainAmt);
 
       const float rainVis =
-          std::clamp((drops * 0.95f + veil) * rainAmt * (0.75f + 0.35f * storm), 0.f, 1.2f);
-      const float rr = 0.55f + 0.20f * intensity;
-      const float rg = 0.62f + 0.18f * intensity;
-      const float rb = 0.78f + 0.16f * intensity;
-      const float rainMix = std::clamp(rainVis * (0.35f + 0.40f * intensity), 0.f, 0.85f);
+          std::clamp((drops * 1.15f + veil) * rainAmt * (0.85f + 0.40f * storm), 0.f, 1.45f);
+      // Cool electric rain highlights (not dim grey).
+      const float rr = 0.62f + 0.22f * intensity;
+      const float rg = 0.72f + 0.18f * intensity;
+      const float rb = 0.92f + 0.08f * intensity;
+      const float rainMix = std::clamp(rainVis * (0.48f + 0.42f * intensity), 0.f, 0.92f);
       r = r * (1.f - rainMix) + rr * rainMix;
       g = g * (1.f - rainMix) + rg * rainMix;
       b = b * (1.f - rainMix) + rb * rainMix;
 
-      // Full-bar lightning wash (white/blue) — lights the scene briefly.
+      // Full-bar lightning wash (electric blue/white) — readable flash on OLED.
       if (flash > 0.01f) {
-        const float wash = flash * (0.35f + 0.45f * intensity) *
+        const float wash = flash * (0.55f + 0.55f * intensity) *
                            (0.70f + 0.30f * Noise2(alongF * 0.02f, depth * 2.f + tCalm));
-        r = std::clamp(r + wash * 0.72f, 0.f, 1.f);
-        g = std::clamp(g + wash * 0.82f, 0.f, 1.f);
-        b = std::clamp(b + wash * 1.00f, 0.f, 1.f);
+        r = std::clamp(r + wash * 0.68f, 0.f, 1.f);
+        g = std::clamp(g + wash * 0.88f, 0.f, 1.f);
+        b = std::clamp(b + wash * 1.15f, 0.f, 1.f);
       }
 
       // Micro-shimmer (anti burn-in) across every pixel.
@@ -566,18 +599,20 @@ void PaintWeather(uint8_t* bgra, int stride, int w, int h, float intensity, floa
                 (edge == TaskbarEdge::Left) ? v : (1.f - v);
             px = static_cast<int>(sampleV * (acrossScale - 1.f) + 0.5f);
           }
-          const float core = glow * strength * (0.55f + 0.45f * intensity);
-          const float br = 0.78f + 0.18f * intensity;
-          const float bg = 0.88f + 0.10f * intensity;
+          const float core = glow * strength * (0.72f + 0.45f * intensity);
+          const float br = 0.82f + 0.16f * intensity;
+          const float bg = 0.92f + 0.08f * intensity;
           const float bb = 1.00f;
           Put(bgra, stride, px, py, w, h, {br, bg, bb, std::clamp(core, 0.f, 1.f)});
-          Put(bgra, stride, px + 1, py, w, h, {br, bg, bb, std::clamp(core * 0.45f, 0.f, 1.f)});
-          Put(bgra, stride, px - 1, py, w, h, {br, bg, bb, std::clamp(core * 0.45f, 0.f, 1.f)});
+          Put(bgra, stride, px + 1, py, w, h, {br, bg, bb, std::clamp(core * 0.55f, 0.f, 1.f)});
+          Put(bgra, stride, px - 1, py, w, h, {br, bg, bb, std::clamp(core * 0.55f, 0.f, 1.f)});
+          Put(bgra, stride, px + 2, py, w, h, {br * 0.7f, bg * 0.85f, bb, std::clamp(core * 0.28f, 0.f, 1.f)});
+          Put(bgra, stride, px - 2, py, w, h, {br * 0.7f, bg * 0.85f, bb, std::clamp(core * 0.28f, 0.f, 1.f)});
           if (across > 2) {
             Put(bgra, stride, px, py + 1, w, h,
-                {br, bg, bb, std::clamp(core * 0.35f, 0.f, 1.f)});
+                {br, bg, bb, std::clamp(core * 0.45f, 0.f, 1.f)});
             Put(bgra, stride, px, py - 1, w, h,
-                {br, bg, bb, std::clamp(core * 0.35f, 0.f, 1.f)});
+                {br, bg, bb, std::clamp(core * 0.45f, 0.f, 1.f)});
           }
         }
       };
@@ -682,13 +717,13 @@ void PaintSpace(uint8_t* bgra, int stride, int w, int h, float intensity, float 
   const float alpha = 0.84f + 0.12f * intensity;
   const float alongScale = static_cast<float>((std::max)(1, along));
 
-  // Persistent world nebula: large extended cloud so pan reveals body → tail → void.
+  // Persistent world nebula: warm amber/cream band like space.jpg + dark dust rift.
   // World X is screen-along + camX (pan right = scroll left through cloud).
   const float nebCoreWorld = 0.42f;  // Act A frames the warm core
   const float nebCoreDepth = 0.52f + 0.05f * std::sin(tCalm * 0.17f + 0.8f);
-  const float nebAlongSigma = 0.34f;  // wide enough to stay obvious while panning
-  const float nebDepthSigma = 0.58f;
-  const float nebGain = (0.72f + 0.28f * intensity) * breath * nebPresence;
+  const float nebAlongSigma = 0.36f;  // wide enough to stay obvious while panning
+  const float nebDepthSigma = 0.62f;
+  const float nebGain = (0.88f + 0.28f * intensity) * breath * nebPresence;
 
   // Vanishing point drifts from slightly off-center (sideways vibe) → dead center.
   const float vpAlongBias = (0.18f - 0.18f * camYaw) * (vertical ? 0.f : 1.f);
@@ -780,21 +815,21 @@ void PaintSpace(uint8_t* bgra, int stride, int w, int h, float intensity, float 
       density = std::clamp(density, 0.f, 1.4f);
       density = density * density * (3.f - 2.f * std::clamp(density, 0.f, 1.f));
 
-      // Color ramp: void → copper/sienna → burnt orange → cream (reference).
+      // Color ramp: void → amber/sienna → burnt orange → cream (space.jpg).
       const float shade =
-          std::clamp(density * 0.85f + core * 0.55f + halo * 0.25f, 0.f, 1.f);
-      const float bodyR = 0.55f + 0.35f * shade;
-      const float bodyG = 0.18f + 0.22f * shade;
-      const float bodyB = 0.04f + 0.06f * shade;
-      const float hotR = 0.95f;
-      const float hotG = 0.42f + 0.18f * mid;
-      const float hotB = 0.08f + 0.06f * fine;
+          std::clamp(density * 0.90f + core * 0.60f + halo * 0.28f, 0.f, 1.f);
+      const float bodyR = 0.62f + 0.32f * shade;
+      const float bodyG = 0.22f + 0.28f * shade;
+      const float bodyB = 0.05f + 0.08f * shade;
+      const float hotR = 1.00f;
+      const float hotG = 0.52f + 0.22f * mid;
+      const float hotB = 0.10f + 0.08f * fine;
       const float creamR = 1.00f;
-      const float creamG = 0.92f;
-      const float creamB = 0.78f;
+      const float creamG = 0.94f;
+      const float creamB = 0.82f;
 
-      const float hotMix = std::clamp(density * 0.75f + halo * 0.35f, 0.f, 1.f);
-      const float creamMix = std::clamp(core * (0.85f + 0.35f * intensity), 0.f, 1.f);
+      const float hotMix = std::clamp(density * 0.82f + halo * 0.40f, 0.f, 1.f);
+      const float creamMix = std::clamp(core * (1.00f + 0.40f * intensity), 0.f, 1.f);
 
       float nr = bodyR;
       float ng = bodyG;
@@ -806,26 +841,34 @@ void PaintSpace(uint8_t* bgra, int stride, int w, int h, float intensity, float 
       ng = ng + (creamG - ng) * creamMix;
       nb = nb + (creamB - nb) * creamMix;
 
-      const float grain = (fine - 0.5f) * density * 0.12f;
+      const float grain = (fine - 0.5f) * density * 0.14f;
       nr += grain * 0.9f;
       ng += grain * 0.45f;
       nb += grain * 0.15f;
 
-      const float recess = (1.f - wisps) * envelope * 0.18f * (1.f - creamMix);
+      // Dark dust rift through the bright core (silhouette filament like space.jpg).
+      const float rift =
+          std::pow(1.f - std::fabs(filament * 2.f - 1.f), 3.2f) * envelope * (0.55f + 0.35f * mid);
+      const float riftAmt = rift * (0.42f + 0.18f * intensity) * (0.55f + 0.45f * creamMix);
+      nr *= 1.f - riftAmt * 0.88f;
+      ng *= 1.f - riftAmt * 0.92f;
+      nb *= 1.f - riftAmt * 0.70f;
+
+      const float recess = (1.f - wisps) * envelope * 0.20f * (1.f - creamMix);
       nr *= 1.f - recess * 0.55f;
       ng *= 1.f - recess * 0.65f;
       nb *= 1.f - recess * 0.40f;
 
       const float amt = std::clamp(
-          density * (0.55f + 0.45f * intensity) + creamMix * 0.35f, 0.f, 1.f);
+          density * (0.62f + 0.48f * intensity) + creamMix * 0.42f, 0.f, 1.f);
       r = r * (1.f - amt) + nr * amt;
       g = g * (1.f - amt) + ng * amt;
       b = b * (1.f - amt) + nb * amt;
 
-      const float bloom = creamMix * creamMix * (0.25f + 0.20f * intensity);
-      r = std::clamp(r + bloom * 0.55f, 0.f, 1.f);
-      g = std::clamp(g + bloom * 0.42f, 0.f, 1.f);
-      b = std::clamp(b + bloom * 0.22f, 0.f, 1.f);
+      const float bloom = creamMix * creamMix * (0.32f + 0.28f * intensity);
+      r = std::clamp(r + bloom * 0.65f, 0.f, 1.f);
+      g = std::clamp(g + bloom * 0.50f, 0.f, 1.f);
+      b = std::clamp(b + bloom * 0.26f, 0.f, 1.f);
 
       // Anti burn-in micro-shimmer (whole bar).
       const float sheen =
@@ -847,10 +890,10 @@ void PaintSpace(uint8_t* bgra, int stride, int w, int h, float intensity, float 
 
   // --- Pass 2: field stars + radial rush (drawn AFTER nebula so they punch through) ---
   // Dense cool-white sparkle — pan parallax only (never snow-falling / vertical drift).
-  constexpr int kFieldStars = 110;
+  constexpr int kFieldStars = 150;
   const float fieldBoost =
-      (0.35f + 0.55f * (1.f - std::min(nebPresence, 1.f)) + 0.70f * actC + 0.25f * camYaw) *
-      (0.60f + 0.40f * intensity);
+      (0.48f + 0.55f * (1.f - std::min(nebPresence, 1.f)) + 0.75f * actC + 0.30f * camYaw) *
+      (0.70f + 0.40f * intensity);
   for (int i = 0; i < kFieldStars; ++i) {
     const float fi = static_cast<float>(i);
     const float hx = Hash21(fi + 0.13f, 2.77f);
@@ -866,13 +909,13 @@ void PaintSpace(uint8_t* bgra, int stride, int w, int h, float intensity, float 
     const float twinkle =
         0.72f + 0.28f * std::sin(tCalm * (0.55f + hTw * 0.4f) + hTw * 6.2831853f);
     const float fieldAmt =
-        fieldBoost * twinkle * (0.40f + 0.60f * hBright) * (0.55f + 0.45f * starHero);
-    if (fieldAmt < 0.04f) continue;
-    // Cool-white cores against the void.
-    const float sr = 0.86f + 0.10f * hBright;
-    const float sg = 0.90f + 0.07f * hBright;
-    const float sb = 1.00f;
-    const float a = std::clamp(alpha * fieldAmt * (0.72f + 0.28f * actC), 0.f, 1.f);
+        fieldBoost * twinkle * (0.50f + 0.55f * hBright) * (0.60f + 0.45f * starHero);
+    if (fieldAmt < 0.03f) continue;
+    // Cool-white / pale-gold cores against the void (space.jpg starfield).
+    const float sr = 0.90f + 0.10f * hBright;
+    const float sg = 0.92f + 0.07f * hBright;
+    const float sb = 0.98f + 0.02f * hBright;
+    const float a = std::clamp(alpha * fieldAmt * (0.82f + 0.28f * actC), 0.f, 1.f);
     const int ix = static_cast<int>(sx + 0.5f);
     const int iy = static_cast<int>(sy + 0.5f);
     Put(bgra, stride, ix, iy, w, h, {sr, sg, sb, a});
@@ -888,7 +931,7 @@ void PaintSpace(uint8_t* bgra, int stride, int w, int h, float intensity, float 
 
   // Radial tunnel toward vanishing point. On a thin bar, bias angles along the
   // bar axis so streaks stay readable instead of exiting top/bottom immediately.
-  constexpr int kStarCount = 180;
+  constexpr int kStarCount = 210;
   const float rushSpeed = 0.040f + 0.20f * starHero;
   const float streakScale = 0.55f + 2.35f * starHero;
   for (int i = 0; i < kStarCount; ++i) {
@@ -978,13 +1021,13 @@ void PaintAurora(uint8_t* bgra, int stride, int w, int h, float intensity, float
   if (phase < 0.f) phase += 1.f;
 
   const float i = std::clamp(intensity, 0.f, 1.f);
-  const float alpha = 0.70f + 0.24f * i;
-  const float breath = 0.88f + 0.12f * std::sin(tCalm * 0.52f);
-  const float breath2 = 0.90f + 0.10f * std::sin(tCalm * 0.33f + 1.7f);
+  const float alpha = 0.78f + 0.20f * i;
+  const float breath = 0.90f + 0.10f * std::sin(tCalm * 0.52f);
+  const float breath2 = 0.92f + 0.08f * std::sin(tCalm * 0.33f + 1.7f);
   const float alongScale = static_cast<float>((std::max)(1, along - 1));
 
   // Fixed shaft centers (world-stable) — bloom in place / fade; seamless via sin.
-  constexpr int kShafts = 5;
+  constexpr int kShafts = 6;
   float shaftPos[kShafts];
   float shaftPhase[kShafts];
   float shaftWidth[kShafts];
@@ -992,21 +1035,21 @@ void PaintAurora(uint8_t* bgra, int stride, int w, int h, float intensity, float
     const float fs = static_cast<float>(s);
     shaftPos[s] = Hash21(fs + 0.41f, 2.17f);
     shaftPhase[s] = Hash21(fs + 3.11f, 7.53f);
-    shaftWidth[s] = 0.035f + 0.045f * Hash21(fs + 1.09f, 4.77f);
+    shaftWidth[s] = 0.040f + 0.055f * Hash21(fs + 1.09f, 4.77f);
   }
 
   for (int alongI = 0; alongI < along; ++alongI) {
     const float alongF = static_cast<float>(alongI);
     const float alongN = alongF / alongScale;
 
-    // Standing fabric waves — warp the curtain mapping along the bar, no scroll.
-    const float wave1 = std::sin(alongN * 6.2831853f * 1.35f + tCalm * 0.78f);
-    const float wave2 = std::sin(alongN * 6.2831853f * 2.55f - tCalm * 0.51f + 1.2f);
-    const float wave3 = std::sin(alongN * 6.2831853f * 0.70f + tCalm * 0.29f + 2.4f);
+    // Stronger standing undulation — S-curve curtains like aurora.jpg.
+    const float wave1 = std::sin(alongN * 6.2831853f * 1.45f + tCalm * 0.92f);
+    const float wave2 = std::sin(alongN * 6.2831853f * 2.75f - tCalm * 0.58f + 1.2f);
+    const float wave3 = std::sin(alongN * 6.2831853f * 0.78f + tCalm * 0.34f + 2.4f);
     const float fabric =
-        0.55f * wave1 + 0.30f * wave2 + 0.15f * wave3;  // ≈ [-1, 1]
-    const float hangBias = fabric * (0.10f + 0.06f * i);
-    const float densMul = 0.82f + 0.18f * (0.5f + 0.5f * fabric);
+        0.52f * wave1 + 0.32f * wave2 + 0.16f * wave3;  // ≈ [-1, 1]
+    const float hangBias = fabric * (0.18f + 0.10f * i);
+    const float densMul = 0.78f + 0.28f * (0.5f + 0.5f * fabric);
 
     // Occasional brighter vertical shafts that bloom & fade in place.
     float shaft = 0.f;
@@ -1049,45 +1092,59 @@ void PaintAurora(uint8_t* bgra, int stride, int w, int h, float intensity, float
       float b = 0.028f + 0.020f * i;
 
       // Soft curtain density: bright near outer root, soft falloff toward desktop.
-      const float root = std::exp(-hang * hang * (2.4f - 0.6f * densMul));
-      const float body = std::exp(-std::fabs(hang - 0.42f) * 3.1f) * densMul;
-      const float tip = std::exp(-(1.f - hang) * (1.f - hang) * 4.5f) * 0.35f;
-      float curtain = std::clamp(root * 0.75f + body * 0.85f + tip * 0.40f, 0.f, 1.4f);
+      const float root = std::exp(-hang * hang * (2.1f - 0.7f * densMul));
+      const float body = std::exp(-std::fabs(hang - 0.40f) * 2.7f) * densMul;
+      const float tip = std::exp(-(1.f - hang) * (1.f - hang) * 4.0f) * 0.42f;
+      float curtain = std::clamp(root * 0.82f + body * 0.95f + tip * 0.48f, 0.f, 1.55f);
       curtain *= breath * densMul;
 
-      // Palette across thickness: green (outer) → teal → violet (desktop). Fixed
-      // order — undulation only warps hang, never scrolls hue along the bar.
+      // Vertical silk streak grain (aurora.jpg combed light).
+      const float streak =
+          0.5f + 0.5f * std::sin(alongN * 48.f + hang * 2.5f + tCalm * 0.22f + fabric * 1.4f);
+      const float streak2 =
+          Noise2(alongF * 0.42f + tCalm * 0.08f, hang * 9.f + fabric * 2.f);
+      const float silk = 0.72f + 0.18f * streak + 0.10f * streak2;
+      curtain *= silk;
+
+      // Palette across thickness: lush green → teal → violet. Fixed order —
+      // undulation only warps hang, never scrolls hue along the bar.
       const float u = hang;
-      // Green
-      const float gR = 0.12f, gG = 0.78f, gB = 0.32f;
-      // Teal
-      const float tR = 0.08f, tG = 0.62f, tB = 0.68f;
-      // Violet
-      const float vR = 0.42f, vG = 0.22f, vB = 0.82f;
+      // Emerald
+      const float gR = 0.10f, gG = 0.92f, gB = 0.38f;
+      // Teal / cyan
+      const float tR = 0.06f, tG = 0.72f, tB = 0.82f;
+      // Deep violet
+      const float vR = 0.52f, vG = 0.18f, vB = 0.95f;
       float cr, cg, cb;
-      if (u < 0.50f) {
-        const float m = u / 0.50f;
+      if (u < 0.48f) {
+        const float m = u / 0.48f;
         cr = gR + (tR - gR) * m;
         cg = gG + (tG - gG) * m;
         cb = gB + (tB - gB) * m;
       } else {
-        const float m = (u - 0.50f) / 0.50f;
+        const float m = (u - 0.48f) / 0.52f;
         cr = tR + (vR - tR) * m;
         cg = tG + (vG - tG) * m;
         cb = tB + (vB - tB) * m;
       }
 
-      const float gain = (0.42f + 0.48f * i) * curtain * breath2;
+      const float gain = (0.55f + 0.55f * i) * curtain * breath2;
       const float amt = std::clamp(gain, 0.f, 1.f);
       r = r * (1.f - amt) + cr * amt;
       g = g * (1.f - amt) + cg * amt;
       b = b * (1.f - amt) + cb * amt;
 
-      // Brighter vertical shaft bloom (in place).
-      const float shaftAmt = shaft * shaft * (0.22f + 0.28f * i) * (0.55f + 0.45f * curtain);
-      r = std::clamp(r + shaftAmt * (0.55f + 0.25f * cr), 0.f, 1.f);
-      g = std::clamp(g + shaftAmt * (0.85f + 0.15f * cg), 0.f, 1.f);
-      b = std::clamp(b + shaftAmt * (0.70f + 0.25f * cb), 0.f, 1.f);
+      // Stronger vertical shaft bloom / glow (in place).
+      const float shaftAmt = shaft * shaft * (0.35f + 0.40f * i) * (0.55f + 0.45f * curtain);
+      r = std::clamp(r + shaftAmt * (0.50f + 0.30f * cr), 0.f, 1.f);
+      g = std::clamp(g + shaftAmt * (0.95f + 0.15f * cg), 0.f, 1.f);
+      b = std::clamp(b + shaftAmt * (0.78f + 0.28f * cb), 0.f, 1.f);
+
+      // Soft gaussian-ish glow halo so ribbons feel lush, not hard-edged.
+      const float glow = curtain * curtain * (0.10f + 0.14f * i);
+      r = std::clamp(r + glow * cr * 0.35f, 0.f, 1.f);
+      g = std::clamp(g + glow * cg * 0.55f, 0.f, 1.f);
+      b = std::clamp(b + glow * cb * 0.45f, 0.f, 1.f);
 
       // Full-bar micro-shimmer (anti burn-in).
       const float n1 = Noise2(alongF * 0.014f + tCalm * 0.16f, hang * 2.8f + tCalm * 0.11f);
@@ -1095,13 +1152,14 @@ void PaintAurora(uint8_t* bgra, int stride, int w, int h, float intensity, float
           Noise2(alongF * 0.033f - tCalm * 0.10f, hang * 4.6f + tCalm * 0.19f + 2.3f);
       const float sheen =
           0.5f + 0.5f * std::sin(alongF * 0.007f + hang * 2.2f + tCalm * 0.48f);
-      const float live = 0.93f + 0.045f * n1 + 0.025f * n2 + 0.02f * sheen;
+      const float live = 0.94f + 0.04f * n1 + 0.02f * n2 + 0.02f * sheen;
       r *= live;
       g *= live;
       b *= live;
 
-      // Slightly dimmer toward desktop tip so outer root reads as the hang point.
-      const float edgeFade = 0.92f + 0.08f * (1.f - hang * 0.55f);
+      // Mid-band peak glow; softer toward tips (aurora.jpg vertical falloff).
+      const float midGlow = std::exp(-std::abs(hang - 0.42f) * 2.2f);
+      const float edgeFade = 0.88f + 0.14f * midGlow;
       r *= edgeFade;
       g *= edgeFade;
       b *= edgeFade;
@@ -1109,7 +1167,7 @@ void PaintAurora(uint8_t* bgra, int stride, int w, int h, float intensity, float
       // Quiet void between sparse curtains (phase-stable, no rewind).
       const float veil =
           0.55f + 0.45f * Noise2(alongN * 3.2f + phase * 0.15f, hang * 1.4f + 0.7f);
-      const float veilAmt = 1.f - (0.18f + 0.12f * i) * (1.f - curtain) * (1.f - veil);
+      const float veilAmt = 1.f - (0.22f + 0.14f * i) * (1.f - curtain) * (1.f - veil);
       r *= veilAmt;
       g *= veilAmt;
       b *= veilAmt;
