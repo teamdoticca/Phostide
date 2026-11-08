@@ -276,8 +276,8 @@ void TaskbarAppearanceService::EnsureUiTimer() {
   }
   if (!command_.enabled) {
     command_.enabled = 1;
-    command_.theme = static_cast<uint32_t>(ThemeId::SeaWaves);
-    command_.intensity = 70;
+    command_.theme = static_cast<uint32_t>(ThemeId::Rainbow);
+    command_.intensity = 55;
     command_.apiVersion = kTapApiVersion;
   }
   try {
