@@ -2,9 +2,9 @@
 
 OLED-safe animated themes on the **real** Windows taskbar.
 
-Phostide injects a small helper into Explorer and replaces the taskbar’s XAML `BackgroundFill` with animated Composition surfaces — rainbow, sea waves, weather, space, and more. No overlays. No pixel-shift hacks.
+Phostide injects a small helper into Explorer and replaces the taskbar’s XAML `BackgroundFill` with animated Composition surfaces — Rainbow, Sea Waves, Weather, Space, and Aurora. No overlays. No pixel-shift hacks.
 
-**Download:** [phostide.doticca.com](https://phostide.doticca.com) (also live at [phostide.vercel.app](https://phostide.vercel.app) while DNS propagates)
+**Download:** [phostide.doticca.com](https://phostide.doticca.com) · [GitHub Releases](https://github.com/teamdoticca/Phostide/releases)
 
 ## Requirements
 

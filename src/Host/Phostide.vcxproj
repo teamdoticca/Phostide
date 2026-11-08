@@ -38,11 +38,13 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <AdditionalDependencies>shell32.lib;ole32.lib;wtsapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ApplicationIcon>phostide.ico</ApplicationIcon>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Injector.h" />
     <ClInclude Include="SettingsStore.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="..\Common\PhostideCommon.h" />
   </ItemGroup>
   <ItemGroup>
@@ -50,6 +52,12 @@
     <ClCompile Include="Injector.cpp" />
     <ClCompile Include="SettingsStore.cpp" />
     <ClCompile Include="..\Common\TaskbarAccent.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Phostide.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="phostide.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

@@ -1,5 +1,6 @@
 #include "Injector.h"
 #include "SettingsStore.h"
+#include "resource.h"
 #include "../Common/PhostideCommon.h"
 #include "../Common/TaskbarAccent.h"
 
@@ -31,6 +32,7 @@ NOTIFYICONDATAW g_nid{};
 phostide::Settings g_settings{};
 HMENU g_menu = nullptr;
 bool g_trayAdded = false;
+bool g_trayIconOwned = false;
 bool g_sessionLocked = false;
 bool g_tapBound = false;
 bool g_clearedAccentForTap = false;
@@ -129,9 +131,15 @@ void AddTrayIcon(HWND hwnd, HINSTANCE hi) {
   g_nid.uID = ID_TRAY;
   g_nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP | NIF_SHOWTIP;
   g_nid.uCallbackMessage = WM_TRAY;
+  g_trayIconOwned = false;
   g_nid.hIcon = static_cast<HICON>(LoadImageW(
-      nullptr, IDI_APPLICATION, IMAGE_ICON,
-      GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), LR_SHARED));
+      hi, MAKEINTRESOURCEW(IDI_APPICON), IMAGE_ICON,
+      GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), 0));
+  if (g_nid.hIcon) {
+    g_trayIconOwned = true;
+  } else {
+    g_nid.hIcon = LoadIconW(hi, MAKEINTRESOURCEW(IDI_APPICON));
+  }
   if (!g_nid.hIcon) {
     g_nid.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
   }
@@ -142,12 +150,16 @@ void AddTrayIcon(HWND hwnd, HINSTANCE hi) {
     Shell_NotifyIconW(NIM_SETVERSION, &g_nid);
     g_trayAdded = true;
   }
-  (void)hi;
 }
 
 void RemoveTrayIcon() {
   if (!g_trayAdded) return;
   Shell_NotifyIconW(NIM_DELETE, &g_nid);
+  if (g_trayIconOwned && g_nid.hIcon) {
+    DestroyIcon(g_nid.hIcon);
+  }
+  g_nid.hIcon = nullptr;
+  g_trayIconOwned = false;
   g_trayAdded = false;
 }
 
@@ -251,7 +263,10 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR, int) {
   WNDCLASSEXW wc{sizeof(wc)};
   wc.lpfnWndProc = WndProc;
   wc.hInstance = hi;
-  wc.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
+  wc.hIcon = LoadIconW(hi, MAKEINTRESOURCEW(IDI_APPICON));
+  wc.hIconSm = static_cast<HICON>(LoadImageW(
+      hi, MAKEINTRESOURCEW(IDI_APPICON), IMAGE_ICON,
+      GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), 0));
   wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
   wc.lpszClassName = L"PhostideTray";
   RegisterClassExW(&wc);

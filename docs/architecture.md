@@ -13,7 +13,7 @@ Paint the real Windows 11 taskbar background (`Rectangle#BackgroundFill`) with O
 
 ## Themes
 
-Procedural effects implementing `ITaskbarEffect`: Rainbow, SeaWaves, Weather, Space.
+Procedural effects implementing `ITaskbarEffect`: Rainbow, SeaWaves, Weather, Space, Aurora.
 
 ## Site
 

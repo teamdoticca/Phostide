@@ -24,6 +24,16 @@ Copy-Item (Join-Path $outDir "ExplorerTAP.dll") $stage -Force
 Copy-Item (Join-Path $root "README.md") $stage -Force
 Copy-Item (Join-Path $root "LICENSE") $stage -Force
 
+# Brand icons for future installer (Inno/WiX SetupIcon) and store listings.
+$brand = Join-Path $root "assets\brand"
+if (Test-Path (Join-Path $brand "setup-phostide.ico")) {
+  $brandStage = Join-Path $stage "brand"
+  New-Item -ItemType Directory -Force -Path $brandStage | Out-Null
+  Copy-Item (Join-Path $brand "setup-phostide.ico") $brandStage -Force
+  Copy-Item (Join-Path $brand "phostide.ico") $brandStage -Force
+  Copy-Item (Join-Path $brand "phostide-1024.png") $brandStage -Force
+}
+
 if (Test-Path $zip) { Remove-Item $zip -Force }
 Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $zip
 Write-Host "Packed $zip"

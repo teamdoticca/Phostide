@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Phostide">
+  <title>Phostide</title>
+  <defs>
+    <linearGradient id="core" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="35%" stop-color="#38bdf8"/>
+      <stop offset="70%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#67e8f9"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a5f3fc" stop-opacity="0.85"/>
+      <stop offset="50%" stop-color="#60a5fa" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0.75"/>
+    </linearGradient>
+    <filter id="glow" x="-35%" y="-80%" width="170%" height="260%">
+      <feGaussianBlur stdDeviation="18" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="soft" x="-20%" y="-50%" width="140%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" fill="#07080c"/>
+  <!-- Soft bloom under the ribbon -->
+  <path d="M120 540 C 260 420, 420 680, 560 520 S 820 380, 920 500"
+        fill="none" stroke="#38bdf8" stroke-width="90" stroke-linecap="round"
+        opacity="0.18" filter="url(#glow)"/>
+  <!-- Outer strands -->
+  <path d="M140 560 C 280 430, 430 690, 570 530 S 800 400, 900 520"
+        fill="none" stroke="url(#edge)" stroke-width="42" stroke-linecap="round"
+        opacity="0.55" filter="url(#soft)"/>
+  <path d="M130 520 C 270 400, 410 660, 550 500 S 810 360, 910 480"
+        fill="none" stroke="url(#edge)" stroke-width="36" stroke-linecap="round"
+        opacity="0.45" filter="url(#soft)"/>
+  <!-- Bright core ribbon -->
+  <path d="M150 540 C 290 420, 430 680, 560 520 S 800 390, 890 500"
+        fill="none" stroke="url(#core)" stroke-width="28" stroke-linecap="round"
+        filter="url(#glow)"/>
+  <!-- Hot cyan spine -->
+  <path d="M180 535 C 310 430, 440 650, 565 525 S 780 405, 870 495"
+        fill="none" stroke="#e0faff" stroke-width="10" stroke-linecap="round"
+        opacity="0.9" filter="url(#soft)"/>
+  <!-- Fine sparkles -->
+  <circle cx="280" cy="470" r="3" fill="#ffffff" opacity="0.9"/>
+  <circle cx="420" cy="590" r="2" fill="#a5f3fc" opacity="0.75"/>
+  <circle cx="610" cy="500" r="2.5" fill="#ffffff" opacity="0.85"/>
+  <circle cx="760" cy="430" r="2" fill="#67e8f9" opacity="0.7"/>
+  <circle cx="520" cy="545" r="1.5" fill="#ffffff" opacity="0.65"/>
+</svg>

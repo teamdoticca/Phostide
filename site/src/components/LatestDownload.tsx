@@ -1,7 +1,7 @@
 const RELEASES_API =
   "https://api.github.com/repos/teamdoticca/Phostide/releases/latest";
 const FALLBACK_RELEASES =
-  "https://github.com/teamdoticca/Phostide/releases";
+  "https://github.com/teamdoticca/Phostide/releases/latest";
 
 async function resolveDownloadUrl(): Promise<{
   href: string;
@@ -46,13 +46,14 @@ async function resolveDownloadUrl(): Promise<{
   }
 }
 
-export async function LatestDownload() {
+export async function LatestDownload({
+  className = "btn-primary",
+}: {
+  className?: string;
+}) {
   const { href, label } = await resolveDownloadUrl();
   return (
-    <a
-      href={href}
-      className="inline-flex h-12 items-center justify-center rounded-full bg-[var(--ink)] px-7 text-sm font-semibold text-[var(--bg0)] transition hover:bg-[var(--accent)]"
-    >
+    <a href={href} className={className}>
       {label}
     </a>
   );
