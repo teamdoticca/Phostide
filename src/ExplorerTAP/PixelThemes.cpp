@@ -84,24 +84,66 @@ void Clear(uint8_t* bgra, int stride, int w, int h, Rgba c) {
 }
 
 void PaintRainbow(uint8_t* bgra, int stride, int w, int h, float intensity, float t,
-                  bool vertical) {
+                  TaskbarEdge edge) {
+  const bool vertical = (edge == TaskbarEdge::Left || edge == TaskbarEdge::Right);
   const int along = vertical ? h : w;
   const int across = vertical ? w : h;
-  const int bands = (std::max)(8, along / 24);
-  const float bandW = static_cast<float>(along) / static_cast<float>(bands);
-  const float value = 0.18f + 0.22f * intensity;
-  const float alpha = 0.40f + 0.45f * intensity;
-  for (int i = 0; i < bands; ++i) {
-    float r, g, b;
-    HsvToRgb((static_cast<float>(i) / bands) + t * 0.035f, 0.75f, value, r, g, b);
-    const int a0 = static_cast<int>(i * bandW);
-    const int a1 = static_cast<int>((i + 1) * bandW + 1.f);
+  if (along < 2 || across < 2) return;
+
+  // Fixed ROYGBIV ribbons across thickness; only light/atmosphere animates (no hue scroll).
+  const float tCalm = t * 0.20f;
+  const float satBase = 0.58f + 0.26f * intensity;
+  const float valueBase = 0.18f + 0.24f * intensity;
+  const float alpha = 0.64f + 0.26f * intensity;
+  const float breath = 0.92f + 0.08f * std::sin(tCalm * 0.55f);
+
+  for (int alongI = 0; alongI < along; ++alongI) {
+    const float alongF = static_cast<float>(alongI);
+
     for (int acrossI = 0; acrossI < across; ++acrossI) {
-      for (int alongI = a0; alongI < a1 && alongI < along; ++alongI) {
-        const int x = vertical ? acrossI : alongI;
-        const int y = vertical ? alongI : acrossI;
-        Put(bgra, stride, x, y, w, h, {r, g, b, alpha});
+      const float sampleV =
+          across <= 1 ? 0.f : static_cast<float>(acrossI) / static_cast<float>(across - 1);
+      float column = sampleV;
+      int x = 0, y = 0;
+      if (!vertical) {
+        x = alongI;
+        y = acrossI;
+        // Bottom: column 1 = toward desktop (top of bar) → red; 0 = outer → violet.
+        column = (edge == TaskbarEdge::Bottom) ? (1.f - sampleV) : sampleV;
+      } else {
+        y = alongI;
+        x = acrossI;
+        column = (edge == TaskbarEdge::Left) ? sampleV : (1.f - sampleV);
       }
+      column = std::clamp(column, 0.f, 1.f);
+
+      // Tiny band-boundary wobble — spectrum stays put, edges breathe.
+      const float wobble =
+          0.02f * (Noise2(alongF * 0.008f, tCalm * 0.15f + 1.3f) * 2.f - 1.f);
+      const float band = std::clamp(column + wobble, 0.f, 1.f);
+      // Stable hue: red (0) at desktop side → violet (~0.78) at outer edge.
+      const float hue = band * 0.78f;
+
+      // Atmospheric live motion on every pixel (anti burn-in, not a marquee).
+      const float n1 = Noise2(alongF * 0.014f + tCalm * 0.12f, band * 2.8f + tCalm * 0.09f);
+      const float n2 =
+          Noise2(alongF * 0.032f - tCalm * 0.08f, band * 4.6f + tCalm * 0.14f + 2.1f);
+      const float sheen =
+          0.5f + 0.5f * std::sin(alongF * 0.011f + band * 3.2f + tCalm * 0.70f);
+      const float live = (0.68f + 0.20f * n1 + 0.08f * n2 + 0.04f * sheen) * breath;
+
+      const float sat = satBase * (0.90f + 0.10f * breath) * (0.92f + 0.08f * n1);
+      const float val = valueBase * live;
+      float r, g, b;
+      HsvToRgb(hue, sat, val, r, g, b);
+
+      // Soft in-place specular pulse (does not travel along the bar).
+      const float spark = std::pow(sheen, 12.f) * (0.06f + 0.10f * intensity) * live;
+      r += spark;
+      g += spark * 0.95f;
+      b += spark * 0.90f;
+
+      Put(bgra, stride, x, y, w, h, {r, g, b, alpha});
     }
   }
 }
@@ -303,31 +345,231 @@ void PaintWeather(uint8_t* bgra, int stride, int w, int h, float intensity, floa
   }
 }
 
-void PaintSpace(uint8_t* bgra, int stride, int w, int h, float intensity, float t) {
-  float nr, ng, nb;
-  HsvToRgb(std::fmod(t * 0.02f, 1.f), 0.55f, 0.35f, nr, ng, nb);
-  const float nebula = 0.05f + 0.10f * intensity;
-  Clear(bgra, stride, w, h, {nr * nebula, ng * nebula, nb * nebula, 0.78f});
-  for (int i = 0; i < 64; ++i) {
-    const float seed = static_cast<float>(i);
-    const float speed = 0.01f + Hash21(seed, 1.f) * 0.04f;
-    const float size = 0.6f + Hash21(seed, 2.f) * 1.8f;
-    const float phase = Hash21(seed, 3.f) * 6.28f;
-    float x = std::fmod(Hash21(seed, 4.f) + t * speed, 1.f);
-    if (x < 0.f) x += 1.f;
-    const float y = Hash21(seed, 5.f);
-    const float twinkle = 0.5f + 0.5f * std::sin(t * 3.f + phase);
-    const float rad = size * (0.6f + 0.4f * twinkle);
-    const float a = 0.35f + 0.45f * intensity;
-    const int cx = static_cast<int>(x * w);
-    const int cy = static_cast<int>(y * h);
-    const int r = std::max(1, static_cast<int>(rad + 0.5f));
-    for (int py = cy - r; py <= cy + r; ++py) {
-      for (int px = cx - r; px <= cx + r; ++px) {
-        const float dx = static_cast<float>(px - cx);
-        const float dy = static_cast<float>(py - cy);
-        if (dx * dx + dy * dy > rad * rad) continue;
-        Put(bgra, stride, px, py, w, h, {0.9f, 0.95f, 1.f, a});
+// Calm OLED space trip: fly toward a vanishing point (radial star rush) through
+// an obvious warm nebula (cream core / burnt sienna / wispy tendrils on black).
+void PaintSpace(uint8_t* bgra, int stride, int w, int h, float intensity, float t,
+                TaskbarEdge edge) {
+  const bool vertical = (edge == TaskbarEdge::Left || edge == TaskbarEdge::Right);
+  const int along = vertical ? h : w;
+  const int across = vertical ? w : h;
+  if (along < 2 || across < 2) return;
+
+  const float tCalm = t * 0.20f;
+  const float breath = 0.90f + 0.10f * std::sin(tCalm * 0.48f);
+  const float breath2 = 0.92f + 0.08f * std::sin(tCalm * 0.27f + 1.9f);
+  const float alpha = 0.84f + 0.12f * intensity;
+  const float alongScale = static_cast<float>((std::max)(1, along));
+
+  // Warm nebula rides with the journey: large cloud region near bar center,
+  // slow along-drift so you fly past/through it for a long stretch.
+  const float nebCoreAlong = 0.48f + 0.04f * std::sin(tCalm * 0.11f);
+  const float nebCoreDepth = 0.50f + 0.06f * std::sin(tCalm * 0.17f + 0.8f);
+  // Cover ~45–55% of bar length — must read clearly on ~48px thickness.
+  const float nebAlongSigma = 0.22f;
+  const float nebDepthSigma = 0.55f;
+  const float nebGain = (0.72f + 0.28f * intensity) * breath;
+
+  // --- Pass 1: void + warm volumetric nebula (every pixel) ---
+  for (int alongI = 0; alongI < along; ++alongI) {
+    const float alongF = static_cast<float>(alongI);
+    const float alongU = alongF / alongScale;
+
+    for (int acrossI = 0; acrossI < across; ++acrossI) {
+      const float sampleV =
+          across <= 1 ? 0.5f : static_cast<float>(acrossI) / static_cast<float>(across - 1);
+      float depth = sampleV;
+      int x = 0, y = 0;
+      if (!vertical) {
+        x = alongI;
+        y = acrossI;
+        depth = (edge == TaskbarEdge::Bottom) ? (1.f - sampleV) : sampleV;
+      } else {
+        y = alongI;
+        x = acrossI;
+        depth = (edge == TaskbarEdge::Left) ? sampleV : (1.f - sampleV);
+      }
+      depth = std::clamp(depth, 0.f, 1.f);
+
+      // Deep OLED void — black canvas for the nebula.
+      float r = 0.004f + 0.006f * intensity;
+      float g = 0.004f + 0.005f * intensity;
+      float b = 0.008f + 0.010f * intensity;
+
+      const float dAlong = (alongU - nebCoreAlong) / nebAlongSigma;
+      const float dDepth = (depth - nebCoreDepth) / nebDepthSigma;
+      const float envelope = std::exp(-(dAlong * dAlong + dDepth * dDepth * 0.55f));
+
+      // Local coords for fibrous noise — diagonal filament direction (BL→TR vibe).
+      const float pxN = alongU * 6.5f + depth * 1.8f;
+      const float pyN = depth * 3.2f - alongU * 1.1f;
+      const float drift = tCalm * 0.035f;
+
+      // Multi-scale volume: bulky gas + wispy tendrils + granular dust.
+      const float bulky = Noise2(pxN * 0.55f + drift * 0.4f, pyN * 0.55f - 1.7f);
+      const float mid = Noise2(pxN * 1.35f - drift * 0.6f, pyN * 1.55f + 2.3f);
+      const float fine = Noise2(pxN * 3.4f + drift, pyN * 3.8f + 5.1f);
+      // Anisotropic filaments: stretch noise along diagonal.
+      const float filU = alongU * 9.0f + depth * 4.5f + drift * 0.5f;
+      const float filV = (-alongU * 2.2f + depth * 1.4f) * 0.55f;
+      const float filament = Noise2(filU, filV + 3.7f);
+      const float filament2 = Noise2(filU * 1.7f - 2.1f, filV * 1.3f + 8.2f);
+
+      // Ridged wisps (hair-like edges bleeding into black).
+      const float ridge = 1.f - std::fabs(filament * 2.f - 1.f);
+      const float ridge2 = 1.f - std::fabs(filament2 * 2.f - 1.f);
+      const float wisps = std::pow(ridge, 2.4f) * 0.65f + std::pow(ridge2, 3.1f) * 0.45f;
+      const float volume =
+          std::pow(bulky, 1.35f) * 0.55f + std::pow(mid, 1.8f) * 0.35f +
+          std::pow(fine, 2.4f) * 0.22f + wisps * 0.40f;
+
+      // Soft core glow (cream-white) — distance in bar space, thick enough for 48px.
+      const float coreDist =
+          std::sqrt(dAlong * dAlong * 0.85f + dDepth * dDepth * 0.35f);
+      const float core = std::exp(-coreDist * coreDist * 2.8f) * breath2;
+      const float halo = std::exp(-coreDist * coreDist * 0.85f);
+
+      float density = envelope * (0.35f + 0.85f * volume) * nebGain;
+      density = std::clamp(density, 0.f, 1.4f);
+      // Push midtones so gas is obvious, not a faint wash.
+      density = density * density * (3.f - 2.f * std::clamp(density, 0.f, 1.f));
+
+      // Color ramp: void → deep copper → burnt sienna → rusty orange → cream.
+      const float shade = std::clamp(density * 0.85f + core * 0.55f + halo * 0.25f, 0.f, 1.f);
+      // Deep copper / sienna body
+      const float bodyR = 0.55f + 0.35f * shade;
+      const float bodyG = 0.18f + 0.22f * shade;
+      const float bodyB = 0.04f + 0.06f * shade;
+      // Hot orange mid
+      const float hotR = 0.95f;
+      const float hotG = 0.42f + 0.18f * mid;
+      const float hotB = 0.08f + 0.06f * fine;
+      // Cream-white / pale peach core
+      const float creamR = 1.00f;
+      const float creamG = 0.92f;
+      const float creamB = 0.78f;
+
+      const float hotMix = std::clamp(density * 0.75f + halo * 0.35f, 0.f, 1.f);
+      const float creamMix = std::clamp(core * (0.85f + 0.35f * intensity), 0.f, 1.f);
+
+      float nr = bodyR;
+      float ng = bodyG;
+      float nb = bodyB;
+      nr = nr + (hotR - nr) * hotMix;
+      ng = ng + (hotG - ng) * hotMix;
+      nb = nb + (hotB - nb) * hotMix;
+      nr = nr + (creamR - nr) * creamMix;
+      ng = ng + (creamG - ng) * creamMix;
+      nb = nb + (creamB - nb) * creamMix;
+
+      // Dust mottling in dense regions (painterly grain).
+      const float grain = (fine - 0.5f) * density * 0.12f;
+      nr += grain * 0.9f;
+      ng += grain * 0.45f;
+      nb += grain * 0.15f;
+
+      // Dark brownish recesses where wisps thin out.
+      const float recess = (1.f - wisps) * envelope * 0.18f * (1.f - creamMix);
+      nr *= 1.f - recess * 0.55f;
+      ng *= 1.f - recess * 0.65f;
+      nb *= 1.f - recess * 0.40f;
+
+      const float amt = std::clamp(density * (0.55f + 0.45f * intensity) + creamMix * 0.35f,
+                                   0.f, 1.f);
+      r = r * (1.f - amt) + nr * amt;
+      g = g * (1.f - amt) + ng * amt;
+      b = b * (1.f - amt) + nb * amt;
+
+      // Extra cream bloom so the core pops on OLED even at ~48px.
+      const float bloom = creamMix * creamMix * (0.25f + 0.20f * intensity);
+      r = std::clamp(r + bloom * 0.55f, 0.f, 1.f);
+      g = std::clamp(g + bloom * 0.42f, 0.f, 1.f);
+      b = std::clamp(b + bloom * 0.22f, 0.f, 1.f);
+
+      // Tiny living sheen across the whole bar (anti burn-in).
+      const float sheen =
+          0.5f + 0.5f * std::sin(alongF * 0.006f + depth * 2.4f + tCalm * 0.55f);
+      const float live = 0.94f + 0.04f * fine + 0.02f * sheen;
+      r *= live;
+      g *= live;
+      b *= live;
+
+      // Slightly darker toward outer edge of thickness.
+      const float edgeFade = 0.88f + 0.12f * depth;
+      r *= edgeFade;
+      g *= edgeFade;
+      b *= edgeFade;
+
+      Put(bgra, stride, x, y, w, h,
+          {std::clamp(r, 0.f, 1.f), std::clamp(g, 0.f, 1.f), std::clamp(b, 0.f, 1.f), alpha});
+    }
+  }
+
+  // --- Pass 2: radial star tunnel (in front of / through nebula) ---
+  const float cx = (static_cast<float>(w) - 1.f) * 0.50f +
+                   (vertical ? 0.f : alongScale * 0.02f);
+  const float cy = (static_cast<float>(h) - 1.f) * 0.50f;
+  const float halfW = (std::max)(1.f, static_cast<float>(w) * 0.5f);
+  const float halfH = (std::max)(1.f, static_cast<float>(h) * 0.5f);
+  const float maxReach =
+      std::sqrt(halfW * halfW + halfH * halfH) / (std::min)(halfW, halfH) * 1.15f;
+
+  constexpr int kStarCount = 110;
+  for (int i = 0; i < kStarCount; ++i) {
+    const float fi = static_cast<float>(i);
+    const float hAngle = Hash21(fi + 0.37f, 1.71f);
+    const float hPhase = Hash21(fi + 2.11f, 4.93f);
+    const float hSpeed = Hash21(fi + 5.57f, 8.23f);
+    const float hBright = Hash21(fi + 9.41f, 3.17f);
+    const float hWarm = Hash21(fi + 6.13f, 7.77f);
+
+    const float angle = hAngle * 6.2831853f;
+    const float cosA = std::cos(angle);
+    const float sinA = std::sin(angle);
+    const float speed = 0.055f + hSpeed * 0.14f;
+    float u = hPhase + tCalm * speed;
+    u -= std::floor(u);
+    const float u2 = u * u;
+    const float radius = u2 * maxReach;
+
+    const float dx = cosA * radius * halfW;
+    const float dy = sinA * radius * halfH;
+    const float px = cx + dx;
+    const float py = cy + dy;
+
+    const float streakPx = 0.6f + u2 * (3.5f + hSpeed * 2.5f);
+    const float len = std::sqrt(dx * dx + dy * dy);
+    const float rdx = len > 1e-3f ? dx / len : cosA;
+    const float rdy = len > 1e-3f ? dy / len : sinA;
+
+    const float twinkle =
+        0.78f + 0.22f * std::sin(tCalm * (1.05f + hSpeed * 0.55f) + hPhase * 6.2831853f);
+    const float bright =
+        (0.20f + 0.75f * u2) * (0.55f + 0.45f * intensity) * (0.65f + 0.35f * hBright) *
+        twinkle;
+    if (bright < 0.02f) continue;
+
+    // Cool-white stars punch through warm nebula.
+    const float warm = hWarm * 0.08f;
+    const float sr = std::clamp(0.90f + warm, 0.f, 1.f);
+    const float sg = std::clamp(0.93f + warm * 0.35f, 0.f, 1.f);
+    const float sb = 1.00f;
+    const float starA = std::clamp(alpha * (0.60f + 0.40f * bright), 0.f, 1.f);
+
+    const int steps = 1 + static_cast<int>(streakPx + 0.5f);
+    for (int s = 0; s < steps; ++s) {
+      const float tS = static_cast<float>(s) / static_cast<float>(steps);
+      const float ox = px - rdx * streakPx * tS;
+      const float oy = py - rdy * streakPx * tS;
+      const float fall = 1.f - tS * 0.72f;
+      const float a = starA * bright * fall;
+      const int ix = static_cast<int>(ox + 0.5f);
+      const int iy = static_cast<int>(oy + 0.5f);
+      Put(bgra, stride, ix, iy, w, h, {sr, sg, sb, a});
+      if (u2 > 0.35f && s == 0) {
+        Put(bgra, stride, ix + 1, iy, w, h, {sr, sg, sb, a * 0.35f});
+        Put(bgra, stride, ix - 1, iy, w, h, {sr, sg, sb, a * 0.35f});
+        Put(bgra, stride, ix, iy + 1, w, h, {sr, sg, sb, a * 0.28f});
+        Put(bgra, stride, ix, iy - 1, w, h, {sr, sg, sb, a * 0.28f});
       }
     }
   }
@@ -350,11 +592,11 @@ void PaintThemePixels(const PaintContext& ctx, uint8_t* bgra, int width, int hei
       PaintWeather(bgra, strideBytes, width, height, intensity, ctx.timeSeconds);
       break;
     case ThemeId::Space:
-      PaintSpace(bgra, strideBytes, width, height, intensity, ctx.timeSeconds);
+      PaintSpace(bgra, strideBytes, width, height, intensity, ctx.timeSeconds, ctx.edge);
       break;
     case ThemeId::Rainbow:
     default:
-      PaintRainbow(bgra, strideBytes, width, height, intensity, ctx.timeSeconds, ctx.vertical);
+      PaintRainbow(bgra, strideBytes, width, height, intensity, ctx.timeSeconds, ctx.edge);
       break;
   }
 }
