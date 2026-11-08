@@ -24,6 +24,7 @@ enum class ThemeId : uint32_t {
   SeaWaves = 1,
   Weather = 2,
   Space = 3,
+  Aurora = 4,
   Count
 };
 
@@ -33,6 +34,7 @@ inline constexpr const wchar_t* ThemeName(ThemeId id) {
     case ThemeId::SeaWaves: return L"Sea Waves";
     case ThemeId::Weather:  return L"Weather";
     case ThemeId::Space:    return L"Space";
+    case ThemeId::Aurora:   return L"Aurora";
     default:                return L"Unknown";
   }
 }

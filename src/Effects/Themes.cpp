@@ -192,6 +192,52 @@ class SpaceEffect final : public ITaskbarEffect {
   std::vector<Star> stars_;
 };
 
+// Preview stub: soft green→teal→violet curtains with slow standing undulation.
+class AuroraEffect final : public ITaskbarEffect {
+ public:
+  ThemeId Id() const override { return ThemeId::Aurora; }
+  const wchar_t* Name() const override { return ThemeName(ThemeId::Aurora); }
+
+  void Update(ID2D1DeviceContext* dc, const EffectContext& ctx) override {
+    const float tCalm = ctx.timeSeconds * 0.20f;
+    const float breath = 0.88f + 0.12f * std::sin(tCalm * 0.55f);
+    dc->Clear(Premul(0.01f, 0.02f, 0.04f, 0.72f));
+
+    const int bands = (std::max)(10, static_cast<int>(ctx.width / 28.f));
+    const float bandW = ctx.width / static_cast<float>(bands);
+    const float alpha = 0.18f + 0.35f * ctx.intensity;
+
+    for (int i = 0; i < bands; ++i) {
+      const float alongN = (static_cast<float>(i) + 0.5f) / static_cast<float>(bands);
+      const float wave =
+          0.5f + 0.5f * std::sin(alongN * 6.2831853f * 1.5f + tCalm * 0.85f);
+      const float wave2 =
+          0.5f + 0.5f * std::sin(alongN * 6.2831853f * 2.7f - tCalm * 0.55f + 1.3f);
+      const float hang = std::clamp(0.35f + 0.45f * wave + 0.20f * wave2, 0.f, 1.f);
+      const float shaft =
+          std::pow(0.5f + 0.5f * std::sin(alongN * 6.2831853f * 3.f + tCalm * 0.40f), 4.f);
+
+      // Green → teal → violet down the curtain height.
+      float r = 0.10f + 0.20f * hang;
+      float g = 0.55f + 0.20f * (1.f - hang);
+      float b = 0.25f + 0.55f * hang;
+      r = r * (1.f - hang * 0.35f) + 0.35f * hang * hang;
+      g = g * (0.85f + 0.15f * (1.f - hang));
+      b = b + hang * 0.25f;
+
+      const float glow = (0.55f + 0.45f * hang) * breath * (0.75f + 0.45f * shaft);
+      const float a = alpha * glow * (0.55f + 0.45f * ctx.intensity);
+      ComPtr<ID2D1SolidColorBrush> brush;
+      dc->CreateSolidColorBrush(Premul(r, g, b, a), &brush);
+      if (!brush) continue;
+
+      const float top = ctx.height * (0.08f + 0.20f * (1.f - hang));
+      const float bot = ctx.height;
+      dc->FillRectangle(D2D1::RectF(i * bandW, top, (i + 1) * bandW + 1.f, bot), brush.Get());
+    }
+  }
+};
+
 }  // namespace
 
 std::unique_ptr<ITaskbarEffect> CreateRainbowEffect() {
@@ -206,12 +252,16 @@ std::unique_ptr<ITaskbarEffect> CreateWeatherEffect() {
 std::unique_ptr<ITaskbarEffect> CreateSpaceEffect() {
   return std::make_unique<SpaceEffect>();
 }
+std::unique_ptr<ITaskbarEffect> CreateAuroraEffect() {
+  return std::make_unique<AuroraEffect>();
+}
 
 std::unique_ptr<ITaskbarEffect> CreateEffect(ThemeId id) {
   switch (id) {
     case ThemeId::SeaWaves: return CreateSeaWavesEffect();
     case ThemeId::Weather:  return CreateWeatherEffect();
     case ThemeId::Space:    return CreateSpaceEffect();
+    case ThemeId::Aurora:   return CreateAuroraEffect();
     case ThemeId::Rainbow:
     default:                return CreateRainbowEffect();
   }

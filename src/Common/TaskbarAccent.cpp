@@ -123,6 +123,16 @@ AccentColor SampleThemeAccent(ThemeId theme, float intensity0to1, float timeSeco
       alpha = 0.45f + 0.35f * intensity + 0.12f * pulse;
       break;
     }
+    case ThemeId::Aurora: {
+      // Cool green / teal accent — mirrors curtain palette without violet wash.
+      const float breath = 0.5f + 0.5f * std::sin(t * 0.55f);
+      const float teal = 0.5f + 0.5f * std::sin(t * 0.31f + 1.4f);
+      r = 0.04f + 0.05f * teal;
+      g = 0.28f + 0.32f * breath * (0.55f + 0.45f * intensity);
+      b = 0.30f + 0.28f * teal + 0.10f * breath;
+      alpha = 0.40f + 0.35f * intensity + 0.10f * breath;
+      break;
+    }
     default:
       break;
   }
