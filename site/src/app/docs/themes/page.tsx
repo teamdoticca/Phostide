@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ThemePreview } from "@/components/ThemePreview";
 import { themes } from "@/lib/themes";
 
 export const metadata: Metadata = {
@@ -22,10 +23,10 @@ export default function ThemesPage() {
       <div className="mt-12 space-y-12">
         {themes.map((theme, index) => (
           <section key={theme.id} className="border-t border-[var(--line)] pt-8">
-            <div
-              className={theme.barClass}
-              role="img"
-              aria-label={`${theme.name} preview`}
+            <ThemePreview
+              theme={theme}
+              className="theme-preview--wide"
+              sizes="(max-width: 768px) 100vw, 720px"
             />
             <h2 className="!mt-5">
               {index}. {theme.name}

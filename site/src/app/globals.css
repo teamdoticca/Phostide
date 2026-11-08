@@ -149,6 +149,19 @@ body {
   animation: phostide-rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.36s both;
 }
 
+.theme-preview {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  border-radius: 0.35rem;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  background: #020617;
+}
+
+.theme-preview--wide {
+  aspect-ratio: 2.8 / 1;
+  max-height: 14rem;
+}
+
 .theme-bar {
   height: 2.75rem;
   width: 100%;

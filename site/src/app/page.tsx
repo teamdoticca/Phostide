@@ -3,6 +3,7 @@ import Link from "next/link";
 import { LatestDownload } from "@/components/LatestDownload";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
+import { ThemePreview } from "@/components/ThemePreview";
 import { themes } from "@/lib/themes";
 
 export default function Home() {
@@ -66,7 +67,7 @@ export default function Home() {
             stay on top. When Phostide exits, brushes restore.
           </p>
 
-          <div className="mt-14 grid gap-10 sm:grid-cols-3">
+          <dl className="mt-10 grid gap-x-8 gap-y-6 border-t border-[var(--line)] pt-6 sm:grid-cols-3">
             {[
               {
                 title: "Not autohide",
@@ -81,16 +82,16 @@ export default function Home() {
                 body: "Original brushes return on quit or crash. No system files are modified.",
               },
             ].map((item) => (
-              <div key={item.title} className="border-t border-[var(--line)] pt-5">
-                <h3 className="font-[family-name:var(--font-display)] text-lg font-medium">
+              <div key={item.title}>
+                <dt className="font-[family-name:var(--font-display)] text-base font-medium">
                   {item.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
+                </dt>
+                <dd className="mt-1.5 text-sm leading-relaxed text-[var(--muted)]">
                   {item.body}
-                </p>
+                </dd>
               </div>
             ))}
-          </div>
+          </dl>
         </section>
 
         <section
@@ -119,11 +120,7 @@ export default function Home() {
             <ul className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
               {themes.map((theme) => (
                 <li key={theme.id} className="group">
-                  <div
-                    className={theme.barClass}
-                    role="img"
-                    aria-label={`${theme.name} theme preview`}
-                  />
+                  <ThemePreview theme={theme} />
                   <h3 className="mt-4 font-[family-name:var(--font-display)] text-xl font-medium transition-transform duration-200 group-hover:-translate-y-0.5">
                     {theme.name}
                   </h3>
