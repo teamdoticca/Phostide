@@ -4,13 +4,20 @@
 #include <string>
 #include <string_view>
 
+#include <guiddef.h>
+
 namespace phostide {
 
 inline constexpr std::wstring_view kAppName = L"Phostide";
 inline constexpr std::wstring_view kMutexName = L"Local\\Phostide.SingleInstance";
 inline constexpr std::wstring_view kTapReadyEvent = L"Local\\Phostide.TAP.Ready";
+inline constexpr std::wstring_view kTapBoundEvent = L"Local\\Phostide.TAP.Bound";
 inline constexpr std::wstring_view kSettingsFileName = L"settings.json";
 inline constexpr int kTapApiVersion = 1;
+
+// {A7C3E91F-4B2D-4E8A-9F15-6D3C8B0A1E72}
+inline constexpr GUID kTapSiteClsid = {
+    0xa7c3e91f, 0x4b2d, 0x4e8a, {0x9f, 0x15, 0x6d, 0x3c, 0x8b, 0x0a, 0x1e, 0x72}};
 
 enum class ThemeId : uint32_t {
   Rainbow = 0,

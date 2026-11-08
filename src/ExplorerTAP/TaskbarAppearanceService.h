@@ -1,72 +1,72 @@
 #pragma once
 
 #include "../Common/PhostideCommon.h"
-#include "../Effects/Themes.h"
+#include "TaskbarGeometry.h"
 
 #include <atomic>
 #include <chrono>
 #include <mutex>
 #include <thread>
-#include <unordered_map>
 #include <vector>
 
 #include <windows.h>
-#include <wrl/client.h>
 
+#pragma push_macro("GetCurrentTime")
+#undef GetCurrentTime
+#include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.UI.Xaml.h>
-#include <winrt/Windows.UI.Xaml.Controls.h>
-#include <winrt/Windows.UI.Xaml.Hosting.h>
 #include <winrt/Windows.UI.Xaml.Media.h>
+#include <winrt/Windows.UI.Xaml.Media.Imaging.h>
 #include <winrt/Windows.UI.Xaml.Shapes.h>
-#include <winrt/Windows.UI.Composition.h>
-#include <windows.ui.composition.interop.h>
-
-#include <d2d1_1.h>
-#include <d3d11.h>
+#include <winrt/Windows.System.h>
+#pragma pop_macro("GetCurrentTime")
 
 namespace phostide {
 
 struct TaskbarVisual {
   winrt::Windows::UI::Xaml::Shapes::Shape background{nullptr};
   winrt::Windows::UI::Xaml::Media::Brush originalFill{nullptr};
-  Microsoft::WRL::ComPtr<ABI::Windows::UI::Composition::ICompositionDrawingSurface> surface;
-  Microsoft::WRL::ComPtr<ABI::Windows::UI::Composition::ICompositionSurfaceBrush> brush;
-  float width = 0.f;
-  float height = 0.f;
+  winrt::Windows::UI::Xaml::Media::Imaging::WriteableBitmap bitmap{nullptr};
+  winrt::Windows::UI::Xaml::Media::ImageBrush imageBrush{nullptr};
+  TaskbarGeom geom{};
+  int pixelWidth = 0;
+  int pixelHeight = 0;
+  bool bound = false;
 };
 
-// Runs inside explorer.exe. Owns BackgroundFill brushes and the render loop.
 class TaskbarAppearanceService {
  public:
   static TaskbarAppearanceService& Instance();
 
   void RegisterBackground(winrt::Windows::UI::Xaml::Shapes::Shape const& shape);
+  void UnregisterHandle(uint64_t unusedHandle);
   void Apply(const ThemeCommand& cmd);
   void RestoreAll();
   void StartRenderLoop();
   void StopRenderLoop();
-  void WatchHostProcess(DWORD pid);
+  void WatchHostMutex();
+  bool HasBoundFill() const { return boundCount_.load() > 0; }
 
  private:
   TaskbarAppearanceService() = default;
 
-  void RenderFrame();
-  bool EnsureGraphics();
-  bool EnsureSurface(TaskbarVisual& tv, winrt::Windows::UI::Composition::Compositor const& compositor);
+  void EnsureUiTimer();
+  void TickUi();
+  bool BindVisual(TaskbarVisual& tv);
+  void UnbindVisual(TaskbarVisual& tv);
+  void RefreshGeomAndBitmap(TaskbarVisual& tv);
+  void PaintVisual(TaskbarVisual& tv, float timeSeconds);
+  void SignalBound();
 
   std::mutex mutex_;
   std::vector<TaskbarVisual> taskbars_;
   ThemeCommand command_{};
-  std::unique_ptr<ITaskbarEffect> effect_;
   std::atomic<bool> running_{false};
-  std::thread renderThread_;
+  std::atomic<int> boundCount_{0};
   std::thread watchThread_;
   std::chrono::steady_clock::time_point start_{std::chrono::steady_clock::now()};
-
-  Microsoft::WRL::ComPtr<ID3D11Device> d3d_;
-  Microsoft::WRL::ComPtr<IDXGIDevice> dxgi_;
-  Microsoft::WRL::ComPtr<ID2D1Device> d2dDevice_;
-  Microsoft::WRL::ComPtr<ID2D1DeviceContext> d2dDc_;
+  winrt::Windows::System::DispatcherQueue dispatcher_{nullptr};
+  winrt::Windows::System::DispatcherQueueTimer timer_{nullptr};
 };
 
 }  // namespace phostide

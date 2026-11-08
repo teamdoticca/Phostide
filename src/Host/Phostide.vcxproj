@@ -49,6 +49,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Injector.cpp" />
     <ClCompile Include="SettingsStore.cpp" />
+    <ClCompile Include="..\Common\TaskbarAccent.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

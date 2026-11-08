@@ -1,0 +1,7 @@
+EXPORTS
+DllGetClassObject PRIVATE
+DllCanUnloadNow PRIVATE
+PhostideCallWndProc
+PhostideTapApply
+PhostideTapApiVersion
+PhostideTapNotifyHostPid

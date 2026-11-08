@@ -1,30 +1,34 @@
+#include "TapSite.h"
 #include "TaskbarAppearanceService.h"
-
-#include <windows.h>
+#include "../Common/PhostideCommon.h"
 
 #include <atomic>
+#include <cstring>
 
-namespace phostide {
-bool StartXamlDiagnosticsBootstrap();
-void ScanFromRoot(winrt::Windows::UI::Xaml::DependencyObject const& root);
-}
+#include <windows.h>
+#include <winrt/base.h>
 
 namespace {
 std::atomic<bool> g_initialized{false};
 HMODULE g_module = nullptr;
-
-// Named pipe for host → TAP theme commands.
 constexpr wchar_t kPipeName[] = L"\\\\.\\pipe\\Phostide.TAP";
+
+bool IsExplorerProcess() {
+  wchar_t path[MAX_PATH]{};
+  if (!GetModuleFileNameW(nullptr, path, MAX_PATH)) return false;
+  const wchar_t* base = wcsrchr(path, L'\\');
+  base = base ? base + 1 : path;
+  return _wcsicmp(base, L"explorer.exe") == 0;
+}
 
 DWORD WINAPI PipeThread(LPVOID) {
   while (true) {
     HANDLE pipe = CreateNamedPipeW(
         kPipeName, PIPE_ACCESS_INBOUND,
         PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
-        PIPE_UNLIMITED_INSTANCES, sizeof(phostide::ThemeCommand),
-        sizeof(phostide::ThemeCommand), 0, nullptr);
+        1, sizeof(phostide::ThemeCommand), sizeof(phostide::ThemeCommand), 0, nullptr);
     if (pipe == INVALID_HANDLE_VALUE) {
-      Sleep(500);
+      Sleep(1000);
       continue;
     }
     const BOOL connected = ConnectNamedPipe(pipe, nullptr)
@@ -46,43 +50,64 @@ DWORD WINAPI PipeThread(LPVOID) {
 }
 
 DWORD WINAPI InitThread(LPVOID) {
-  winrt::init_apartment(winrt::apartment_type::multi_threaded);
-  phostide::StartXamlDiagnosticsBootstrap();
-
-  if (HANDLE ready = CreateEventW(nullptr, TRUE, FALSE, phostide::kTapReadyEvent.data())) {
-    SetEvent(ready);
-    CloseHandle(ready);
-  }
-
+  // Pipe + host-death watch first (safe, no XAML).
   CreateThread(nullptr, 0, PipeThread, nullptr, 0, nullptr);
+  phostide::TaskbarAppearanceService::Instance().WatchHostMutex();
+
+  // XAML Diagnostics bootstrap (may take retries). Signals kTapReadyEvent when advised.
+  phostide::TAPSite::Install(nullptr);
   return 0;
 }
+
+struct ClassFactory : winrt::implements<ClassFactory, IClassFactory> {
+  HRESULT STDMETHODCALLTYPE CreateInstance(IUnknown* outer, REFIID iid, void** result) noexcept override {
+    *result = nullptr;
+    if (outer) return CLASS_E_NOAGGREGATION;
+    return winrt::make<phostide::TAPSite>()->QueryInterface(iid, result);
+  }
+  HRESULT STDMETHODCALLTYPE LockServer(BOOL) noexcept override { return S_OK; }
+};
+
 }  // namespace
 
 BOOL APIENTRY DllMain(HMODULE module, DWORD reason, LPVOID) {
   if (reason == DLL_PROCESS_ATTACH) {
     g_module = module;
     DisableThreadLibraryCalls(module);
-    if (!g_initialized.exchange(true)) {
+    // Host also LoadLibrary's this DLL for SetWindowsHookEx — never start TAP there.
+    if (IsExplorerProcess() && !g_initialized.exchange(true)) {
       CreateThread(nullptr, 0, InitThread, nullptr, 0, nullptr);
     }
-  } else if (reason == DLL_PROCESS_DETACH) {
-    phostide::TaskbarAppearanceService::Instance().StopRenderLoop();
   }
   return TRUE;
 }
 
-// Exported helpers for the host injector / diagnostics site.
-extern "C" __declspec(dllexport) void PhostideTapNotifyHostPid(DWORD pid) {
-  phostide::TaskbarAppearanceService::Instance().WatchHostProcess(pid);
+extern "C" HRESULT WINAPI DllGetClassObject(REFCLSID clsid, REFIID iid, void** result) {
+  *result = nullptr;
+  if (InlineIsEqualGUID(clsid, phostide::kTapSiteClsid)) {
+    return winrt::make<ClassFactory>()->QueryInterface(iid, result);
+  }
+  return CLASS_E_CLASSNOTAVAILABLE;
 }
 
+extern "C" HRESULT WINAPI DllCanUnloadNow() {
+  // InitializeXamlDiagnosticsEx pins this module for Explorer's lifetime.
+  return S_FALSE;
+}
+
+extern "C" __declspec(dllexport) void PhostideTapNotifyHostPid(DWORD) {}
+
 extern "C" __declspec(dllexport) void PhostideTapApply(const phostide::ThemeCommand* cmd) {
-  if (cmd) {
+  if (cmd && IsExplorerProcess()) {
     phostide::TaskbarAppearanceService::Instance().Apply(*cmd);
   }
 }
 
 extern "C" __declspec(dllexport) int PhostideTapApiVersion() {
   return phostide::kTapApiVersion;
+}
+
+extern "C" __declspec(dllexport) LRESULT CALLBACK PhostideCallWndProc(int code, WPARAM wParam,
+                                                                      LPARAM lParam) {
+  return CallNextHookEx(nullptr, code, wParam, lParam);
 }
