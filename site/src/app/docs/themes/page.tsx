@@ -15,9 +15,8 @@ export default function ThemesPage() {
         Themes
       </h1>
       <p className="mt-4 max-w-2xl text-lg">
-        Every theme paints the full taskbar background so static chrome does
-        not sit on the same OLED pixels. Motion is procedural Composition
-        surfaces — not screenshots or video loops.
+        Pick a look from the tray. Each theme keeps the whole taskbar moving —
+        nicer to look at, and better for OLED screens that hate still images.
       </p>
 
       <div className="mt-12 space-y-12">
@@ -36,19 +35,18 @@ export default function ThemesPage() {
         ))}
       </div>
 
-      <h2>Choosing intensity</h2>
+      <h2>Brightness tip</h2>
       <p>
-        Intensity scales effect energy without turning the bar into a light
-        strip. Prefer the lowest setting that still reads as continuous motion
-        under your icons — that is the OLED-friendly default.
+        Start with a medium intensity. If the bar feels too bright or busy,
+        turn it down. You still want soft motion — that is what helps the
+        screen — just not a flashlight under your icons.
       </p>
 
-      <h2>Paint rules of thumb</h2>
+      <h2>Good habits</h2>
       <ul>
-        <li>Full-bar every-pixel paint for anti burn-in.</li>
-        <li>No sideways hue or star marquees that feel like tickers.</li>
-        <li>Cinematic loops stay forward-only (especially Space).</li>
-        <li>Calm time scales keep the bar usable day to day.</li>
+        <li>Leave a theme running while you work; that is the point.</li>
+        <li>Switch looks from the tray whenever you like.</li>
+        <li>Quit Phostide anytime to restore the normal Windows bar.</li>
       </ul>
     </div>
   );
