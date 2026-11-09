@@ -10,11 +10,12 @@ OLED void + living cyan light. The page is deep black water/desk night; biolumin
 
 - Ground: `#020408` (`--bg0`), elevated `#070b10` (`--bg1`)
 - Ink: `#f2f8fa`
-- Muted: `#8a9eaa`
+- Muted (body on solid dark): `#b4c8d2` — cyan-tinted, ≥10:1 on `--bg0`
+- On-media (nav / hero over wave): `#e4eef3`
 - Accent / wave: `#5eead4`, `#38bdf8`
-- Line: white at ~10% on dark
+- Line: ink-tint at ~18% on dark
 
-Strategy: Committed dark ground; light is the accent field (wave imagery), not scattered chips.
+Strategy: Committed dark ground; light is the accent field (wave imagery), not scattered chips. Theme previews are real `PaintThemePixels` strips (1920×48) in taskbar chrome — never moodboard plates.
 
 ## Type
 

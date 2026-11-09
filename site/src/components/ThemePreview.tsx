@@ -4,26 +4,45 @@ import type { ThemeInfo } from "@/lib/themes";
 type ThemePreviewProps = {
   theme: ThemeInfo;
   className?: string;
-  sizes?: string;
+  /** Larger chrome for landing rows; compact for docs. */
+  size?: "row" | "docs";
 };
 
+/** Honest preview: real PaintThemePixels strip inside fake taskbar chrome. */
 export function ThemePreview({
   theme,
   className = "",
-  sizes = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw",
+  size = "row",
 }: ThemePreviewProps) {
+  const barH = size === "docs" ? "h-11 sm:h-12" : "h-12 sm:h-14";
   return (
     <div
-      className={`theme-preview relative overflow-hidden ${className}`.trim()}
+      className={`taskbar-chrome ${className}`.trim()}
+      aria-label={`${theme.name} taskbar preview`}
     >
-      <Image
-        src={theme.previewSrc}
-        alt=""
-        fill
-        className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
-        sizes={sizes}
-      />
-      <span className="sr-only">{theme.name} theme preview</span>
+      <div className={`taskbar-chrome__bar relative ${barH}`}>
+        <Image
+          src={theme.previewSrc}
+          alt=""
+          fill
+          className="object-cover object-left"
+          sizes="(max-width: 1152px) 100vw, 72rem"
+          unoptimized
+        />
+        <div className="taskbar-chrome__icons" aria-hidden>
+          <span className="taskbar-chrome__start" />
+          <span className="taskbar-chrome__pill" />
+          <span className="taskbar-chrome__pill taskbar-chrome__pill--dim" />
+          <span className="taskbar-chrome__pill taskbar-chrome__pill--dim" />
+          <span className="taskbar-chrome__spacer" />
+          <span className="taskbar-chrome__tray" />
+          <span className="taskbar-chrome__tray" />
+          <span className="taskbar-chrome__clock" />
+        </div>
+      </div>
+      <span className="sr-only">
+        {theme.name} — captured from the real taskbar theme painter
+      </span>
     </div>
   );
 }

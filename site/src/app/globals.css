@@ -6,11 +6,14 @@
   --bg0: #020408;
   --bg1: #070b10;
   --ink: #f2f8fa;
-  --muted: #8a9eaa;
+  /* Cyan-tinted secondary — ≥10:1 on --bg0; not cool-gray wash */
+  --muted: #b4c8d2;
+  /* Secondary over imagery / colored plates (pair with .media-scrim) */
+  --on-media: #e4eef3;
   --accent: #5eead4;
   --accent-deep: #14b8a6;
   --wave: #38bdf8;
-  --line: rgba(242, 248, 250, 0.1);
+  --line: rgba(228, 238, 243, 0.18);
   --glow: rgba(94, 234, 212, 0.28);
 }
 
@@ -154,43 +157,94 @@ body {
   animation: phostide-rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.36s both;
 }
 
-.theme-preview {
-  aspect-ratio: 16 / 9;
+/* Fake Windows 11 taskbar chrome around a real 1920×48 theme strip */
+.taskbar-chrome {
   width: 100%;
-  border-radius: 0.2rem;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  background: #020408;
-}
-
-.theme-preview--wide {
-  aspect-ratio: 2.8 / 1;
-  max-height: 14rem;
-}
-
-.theme-preview--plate {
-  aspect-ratio: 2.6 / 1;
-  min-height: 11rem;
-  max-height: 16rem;
-  border-radius: 0;
-  box-shadow: none;
-}
-
-.theme-plate {
   border: 1px solid var(--line);
+  background: #0a0e14;
+  padding: 0.65rem 0.65rem 0.55rem;
   transition: border-color 0.25s ease, transform 0.25s ease;
 }
 
-.theme-plate:hover {
-  border-color: rgba(94, 234, 212, 0.35);
-  transform: translateY(-2px);
+.taskbar-chrome:hover {
+  border-color: rgba(94, 234, 212, 0.4);
+  transform: translateY(-1px);
 }
 
-.theme-plate:hover .theme-preview img {
-  transform: scale(1.03);
+.taskbar-chrome__bar {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 0.55rem;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
-.theme-preview img {
-  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+.taskbar-chrome__icons {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0 0.65rem;
+}
+
+.taskbar-chrome__start {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
+  border-radius: 0.28rem;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.18));
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+.taskbar-chrome__pill {
+  width: 1.7rem;
+  height: 1.7rem;
+  flex-shrink: 0;
+  border-radius: 0.4rem;
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.taskbar-chrome__pill--dim {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.taskbar-chrome__spacer {
+  flex: 1;
+}
+
+.taskbar-chrome__tray {
+  width: 0.55rem;
+  height: 0.55rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.taskbar-chrome__clock {
+  width: 2.4rem;
+  height: 0.55rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.theme-row {
+  display: grid;
+  gap: 1rem 1.5rem;
+  padding: 1.25rem 0;
+  border-top: 1px solid var(--line);
+}
+
+@media (min-width: 640px) {
+  .theme-row {
+    grid-template-columns: minmax(0, 1.4fr) minmax(12rem, 0.7fr);
+    align-items: center;
+  }
 }
 
 .link-nav {
@@ -205,69 +259,6 @@ body {
   background:
     radial-gradient(ellipse 70% 80% at 15% 60%, rgba(94, 234, 212, 0.1), transparent 55%),
     radial-gradient(ellipse 50% 60% at 85% 40%, rgba(56, 189, 248, 0.08), transparent 50%);
-}
-
-.theme-bar {
-  height: 2.75rem;
-  width: 100%;
-  border-radius: 0.35rem;
-  overflow: hidden;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-}
-
-.theme-bar--rainbow {
-  background: linear-gradient(
-    90deg,
-    #ef4444,
-    #f59e0b,
-    #eab308,
-    #22c55e,
-    #06b6d4,
-    #3b82f6,
-    #a855f7,
-    #ef4444
-  );
-  background-size: 200% 100%;
-  animation: rainbow-flow 14s linear infinite;
-}
-
-.theme-bar--sea {
-  background:
-    radial-gradient(ellipse 80% 120% at 20% 80%, rgba(56, 189, 248, 0.55), transparent 55%),
-    radial-gradient(ellipse 70% 100% at 80% 20%, rgba(14, 165, 233, 0.45), transparent 50%),
-    linear-gradient(180deg, #0b3a4a 0%, #06202c 55%, #031018 100%);
-  background-size: 140% 140%, 140% 140%, 100% 100%;
-  animation: sea-swell 8s ease-in-out infinite;
-}
-
-.theme-bar--weather {
-  background:
-    linear-gradient(115deg, transparent 40%, rgba(226, 232, 240, 0.35) 41%, transparent 42%),
-    linear-gradient(180deg, #1e293b 0%, #0f172a 50%, #020617 100%);
-  animation: weather-flicker 5.5s ease-in-out infinite;
-}
-
-.theme-bar--space {
-  background:
-    radial-gradient(1px 1px at 12% 40%, #fff, transparent),
-    radial-gradient(1.5px 1.5px at 70% 30%, #e0f2fe, transparent),
-    radial-gradient(1px 1px at 40% 70%, #fff, transparent),
-    radial-gradient(2px 2px at 85% 65%, #bae6fd, transparent),
-    radial-gradient(ellipse 60% 80% at 30% 50%, rgba(99, 102, 241, 0.35), transparent 60%),
-    radial-gradient(ellipse 50% 70% at 75% 40%, rgba(236, 72, 153, 0.2), transparent 55%),
-    linear-gradient(180deg, #020617, #0b1020);
-  background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 160% 160%, 160% 160%, 100% 100%;
-  animation: space-drift 18s linear infinite;
-}
-
-.theme-bar--aurora {
-  background:
-    radial-gradient(ellipse 40% 120% at 25% 50%, rgba(52, 211, 153, 0.55), transparent 70%),
-    radial-gradient(ellipse 35% 110% at 55% 40%, rgba(45, 212, 191, 0.45), transparent 65%),
-    radial-gradient(ellipse 40% 120% at 80% 55%, rgba(139, 92, 246, 0.4), transparent 70%),
-    linear-gradient(180deg, #04120f, #050816);
-  background-size: 160% 160%, 160% 160%, 160% 160%, 100% 100%;
-  animation: aurora-curtain 10s ease-in-out infinite;
 }
 
 .prose-docs h2 {

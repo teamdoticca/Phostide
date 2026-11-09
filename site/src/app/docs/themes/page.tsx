@@ -15,18 +15,14 @@ export default function ThemesPage() {
         Themes
       </h1>
       <p className="mt-4 max-w-2xl text-lg">
-        Pick a look from the tray. Each theme keeps the whole taskbar moving —
-        nicer to look at, and better for OLED screens that hate still images.
+        Pick a look from the tray. Previews below are real frames from the same
+        painter that fills your taskbar — not moodboard art.
       </p>
 
-      <div className="mt-12 space-y-12">
+      <div className="mt-12 space-y-10">
         {themes.map((theme, index) => (
           <section key={theme.id} className="border-t border-[var(--line)] pt-8">
-            <ThemePreview
-              theme={theme}
-              className="theme-preview--wide"
-              sizes="(max-width: 768px) 100vw, 720px"
-            />
+            <ThemePreview theme={theme} size="docs" />
             <h2 className="!mt-5">
               {index}. {theme.name}
             </h2>

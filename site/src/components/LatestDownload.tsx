@@ -23,18 +23,26 @@ async function resolveDownloadUrl(): Promise<{
       html_url?: string;
       assets?: Array<{ name: string; browser_download_url: string }>;
     };
-    const asset =
-      data.assets?.find((a) =>
-        /Phostide.*win.*\.(zip|msi|exe)$/i.test(a.name)
-      ) ??
-      data.assets?.find((a) => /\.(zip|msi|exe)$/i.test(a.name));
+    const assets = data.assets ?? [];
+    const setup =
+      assets.find((a) => /Phostide-Setup.*\.exe$/i.test(a.name)) ??
+      assets.find((a) => /Setup.*\.exe$/i.test(a.name));
+    const portable =
+      assets.find((a) => /Phostide.*win.*\.zip$/i.test(a.name)) ??
+      assets.find((a) => /\.zip$/i.test(a.name));
+    const asset = setup ?? portable ?? assets.find((a) => /\.(msi|exe)$/i.test(a.name));
 
     if (asset) {
+      const isSetup = /\.exe$/i.test(asset.name);
       return {
         href: asset.browser_download_url,
         label: data.tag_name
-          ? `Download ${data.tag_name}`
-          : "Download for Windows",
+          ? isSetup
+            ? `Download installer ${data.tag_name}`
+            : `Download ${data.tag_name}`
+          : isSetup
+            ? "Download installer for Windows"
+            : "Download for Windows",
       };
     }
     return {
