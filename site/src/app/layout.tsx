@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Figtree, IBM_Plex_Mono } from "next/font/google";
+import { Darker_Grotesque, Karla, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
-const display = Bricolage_Grotesque({
+const display = Darker_Grotesque({
   variable: "--font-display",
   subsets: ["latin"],
-  axes: ["opsz"],
+  weight: ["500", "600", "700", "800"],
 });
 
-const body = Figtree({
+const body = Karla({
   variable: "--font-body",
   subsets: ["latin"],
 });

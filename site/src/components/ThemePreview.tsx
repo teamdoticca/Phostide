@@ -20,7 +20,7 @@ export function ThemePreview({
         src={theme.previewSrc}
         alt=""
         fill
-        className="object-cover"
+        className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
         sizes={sizes}
       />
       <span className="sr-only">{theme.name} theme preview</span>
