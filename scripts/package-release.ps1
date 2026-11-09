@@ -56,10 +56,21 @@ function Resolve-TrustedSigningMetadataPath {
   if (-not [string]::IsNullOrWhiteSpace($envPath)) {
     return (Resolve-Path -LiteralPath $envPath).Path
   }
-  if (-not (Test-Path -LiteralPath $defaultTsConfig)) {
-    throw "Trusted Signing metadata not found. Expected installer/trusted-signing.json"
+  $localOverride = Join-Path $root "installer\trusted-signing.local.json"
+  $source = if (Test-Path -LiteralPath $localOverride) {
+    $localOverride
+  } elseif (Test-Path -LiteralPath $defaultTsConfig) {
+    $defaultTsConfig
+  } else {
+    throw "Trusted Signing metadata not found. Expected installer/trusted-signing.json (or trusted-signing.local.json)."
   }
-  $cfg = Get-Content -LiteralPath $defaultTsConfig -Raw | ConvertFrom-Json
+  $cfg = Get-Content -LiteralPath $source -Raw | ConvertFrom-Json
+  foreach ($required in @("Endpoint", "CodeSigningAccountName", "CertificateProfileName")) {
+    $hasField = $cfg.PSObject.Properties.Name -contains $required
+    if (-not $hasField -or [string]::IsNullOrWhiteSpace([string]$cfg.$required)) {
+      throw "Trusted Signing metadata missing required field: $required ($source)"
+    }
+  }
   $meta = @{
     Endpoint = $cfg.Endpoint
     CodeSigningAccountName = $cfg.CodeSigningAccountName
@@ -72,16 +83,23 @@ function Resolve-TrustedSigningMetadataPath {
 }
 
 function Ensure-AzTrustedSigningAuth {
-  param([string]$SubscriptionName = "Microsoft Partner Network")
+  # Prefer env override; never commit subscription GUIDs. Default is the Doticca MPN display name.
+  param([string]$Subscription = $(
+    if (-not [string]::IsNullOrWhiteSpace($env:PHOSTIDE_AZURE_SUBSCRIPTION)) {
+      $env:PHOSTIDE_AZURE_SUBSCRIPTION
+    } else {
+      "Microsoft Partner Network"
+    }
+  ))
   $null = az account show -o none 2>$null
   if ($LASTEXITCODE -ne 0) {
     Write-Host "Azure CLI: sign in for Artifact Signing..."
     az login --only-show-errors
     if ($LASTEXITCODE -ne 0) { throw "az login failed" }
   }
-  az account set --subscription $SubscriptionName --only-show-errors
+  az account set --subscription $Subscription --only-show-errors
   if ($LASTEXITCODE -ne 0) {
-    throw "Could not select Azure subscription '$SubscriptionName' for code signing"
+    throw "Could not select Azure subscription '$Subscription' for code signing (set PHOSTIDE_AZURE_SUBSCRIPTION if needed)"
   }
 }
 

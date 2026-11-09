@@ -1,0 +1,6 @@
+{
+  "Endpoint": "https://weu.codesigning.azure.net/",
+  "CodeSigningAccountName": "doticca-codesigning",
+  "CertificateProfileName": "MnemonPublic",
+  "_comment": "Optional local override (gitignored as trusted-signing.local.json). Do not put subscription GUIDs or secrets in the committed trusted-signing.json. Select the Azure subscription via `az account set` or PHOSTIDE_AZURE_SUBSCRIPTION."
+}

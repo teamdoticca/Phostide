@@ -49,3 +49,5 @@ Thumbs.db
 *.log
 .tmp/
 Temp/
+installer/trusted-signing.local.json
+
