@@ -1,78 +1,77 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { IconArrowLeft, IconGithub } from "@/components/Icons";
+import { SiteFooter } from "@/components/SiteFooter";
+import { SiteHeader } from "@/components/SiteHeader";
 
 export const metadata: Metadata = {
-  title: "Privacy & permissions",
+  title: "Privacy",
   description:
-    "What Phostide runs locally, what injection means, and what never leaves your PC.",
+    "Phostide is local only — no account, no telemetry, MIT open source.",
 };
 
 export default function PrivacyPage() {
   return (
-    <div className="prose-docs">
-      <h1 className="font-[family-name:var(--font-display)] text-4xl font-semibold tracking-tight">
-        Privacy & permissions
-      </h1>
-      <p className="mt-4 max-w-2xl text-lg">
-        Phostide is a local Windows utility. There is no account, no telemetry
-        cloud, and no network requirement for themes to run.
-      </p>
+    <div className="min-h-screen bg-void text-zinc-100">
+      <SiteHeader active="/docs/troubleshooting" />
 
-      <h2>What runs on your machine</h2>
-      <ul>
-        <li>
-          <code>Phostide.exe</code> — tray host that manages settings and
-          injection.
-        </li>
-        <li>
-          <code>ExplorerTAP.dll</code> — loaded into Explorer to paint the
-          taskbar fill.
-        </li>
-      </ul>
+      <section className="mx-auto max-w-site px-6 py-16 sm:px-10 sm:py-20">
+        <Link
+          href="/docs"
+          className="inline-flex items-center gap-2 text-sm text-soft hover:text-white"
+        >
+          <IconArrowLeft />
+          Docs
+        </Link>
+        <p className="mt-6 eyebrow">Privacy</p>
+        <h1 className="mt-3 max-w-2xl text-4xl font-semibold tracking-tight sm:text-5xl">
+          Local only. That&apos;s the whole policy.
+        </h1>
+        <p className="mt-5 max-w-2xl text-lg text-soft">
+          Phostide runs entirely on your PC. There&apos;s no account, no
+          telemetry, and it doesn&apos;t need network access to work. The only
+          thing it saves is your theme choice in a local settings file.
+        </p>
 
-      <h2>Why injection exists</h2>
-      <p>
-        The Windows 11 taskbar background is owned by Explorer. To animate that
-        fill without an overlay window, Phostide uses a supported-style XAML
-        Diagnostics TAP path plus a window hook to load the helper. That is a
-        privileged local technique: it can see and modify Explorer UI state for
-        the taskbar brush. It is not a browser extension and it does not
-        request cloud OAuth scopes.
-      </p>
+        <ul className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {["Local only", "No account", "No telemetry", "MIT open source"].map(
+            (label) => (
+              <li
+                key={label}
+                className="rounded-xl border border-line bg-panel p-5 text-sm font-medium"
+              >
+                {label}
+              </li>
+            )
+          )}
+        </ul>
 
-      <h2>Data on disk</h2>
-      <ul>
-        <li>
-          Settings: <code>%APPDATA%\Phostide\settings.json</code>
-        </li>
-        <li>
-          Optional diagnostics: <code>%TEMP%\Phostide\*.log</code>
-        </li>
-      </ul>
-      <p>Those files stay local unless you choose to share them.</p>
+        <div className="mt-12 max-w-2xl space-y-4 text-soft leading-relaxed">
+          <p>
+            Settings live at{" "}
+            <code className="rounded bg-panel px-1.5 py-0.5 font-mono text-sm text-zinc-100">
+              %APPDATA%\Phostide\settings.json
+            </code>
+            . Delete that file anytime to reset.
+          </p>
+          <p>
+            The installer and portable builds are published on GitHub Releases
+            and signed by Doticca SRL. Source code is available under the MIT
+            License so you can read every line.
+          </p>
+        </div>
 
-      <h2>What Phostide does not do</h2>
-      <ul>
-        <li>No analytics beacons from the native host.</li>
-        <li>No modification of system files under <code>Windows\System32</code>.</li>
-        <li>No persistence that survives a clean uninstall of the unpack folder + AppData settings (aside from optional Windows tray / startup choices you enable yourself).</li>
-      </ul>
-
-      <h2>Website note</h2>
-      <p>
-        The marketing site at{" "}
-        <a href="https://phostide.doticca.com">phostide.doticca.com</a> may
-        fetch the public GitHub Releases API to resolve the download button.
-        That call is separate from the desktop app.
-      </p>
-
-      <h2>License</h2>
-      <p>
-        Phostide is MIT-licensed. Source:{" "}
-        <a href="https://github.com/teamdoticca/Phostide">
+        <a
+          href="https://github.com/teamdoticca/Phostide"
+          className="mt-10 inline-flex items-center gap-2 rounded-lg border border-line bg-panel px-5 py-3 text-sm hover:border-zinc-600"
+          rel="noreferrer"
+        >
+          <IconGithub className="h-4 w-4" />
           github.com/teamdoticca/Phostide
         </a>
-        .
-      </p>
+      </section>
+
+      <SiteFooter />
     </div>
   );
 }

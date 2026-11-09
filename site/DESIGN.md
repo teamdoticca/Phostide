@@ -1,53 +1,35 @@
-# Design
+# Phostide site design
 
-<!-- impeccable:design-schema 1 -->
+Port of the UX Pilot suite (page `UE6tIDfhvVybZY9Cmzx3`): black OLED ground, ember accent, Inter, honest taskbar PNG strips.
 
-## World
+## Tokens
 
-OLED void + living cyan light. The page is deep black water/desk night; bioluminescent ribbons carry brand energy. Marketing Persuade surface for Phostide.
+| Token | Value | Role |
+| --- | --- | --- |
+| `void` | `#000000` | Page ground |
+| `panel` | `#0B0B0C` | Raised surfaces |
+| `line` | `#1C1C1F` | Borders / dividers |
+| `soft` | `#8A8A93` | Secondary text |
+| `ember` | `#FF8A3D` | Accent / CTAs |
+| `emberdim` | `#3A1E0C` | Ember wash behind recommended cards |
 
-## Color
+## Typography
 
-- Ground: `#020408` (`--bg0`), elevated `#070b10` (`--bg1`)
-- Ink: `#f2f8fa`
-- Muted (body on solid dark): `#b4c8d2` — cyan-tinted, ≥10:1 on `--bg0`
-- On-media (nav / hero over wave): `#e4eef3`
-- Accent / wave: `#5eead4`, `#38bdf8`
-- Line: ink-tint at ~18% on dark
+- Sans: Inter (`--font-sans`)
+- Mono: IBM Plex Mono (`--font-mono`) for paths
 
-Strategy: Committed dark ground; light is the accent field (wave imagery), not scattered chips. Theme previews are real `PaintThemePixels` strips (1920×48) in taskbar chrome — never moodboard plates.
+## Theme previews
 
-## Type
+Use `/themes/*.png` — real `PaintThemePixels` captures at 1920×48. Render with `ThemeStrip` (full-bleed strip, no fake moodboard chrome).
 
-- Display: Darker Grotesque (bold, tight tracking)
-- Body: Karla
-- Mono: IBM Plex Mono (code / meta only)
+## Screens mapped
 
-## Components
-
-- Primary CTA: pill, ink fill → accent on hover, 2px lift
-- Ghost: hairline border, accent on hover
-- Theme plates: full-width light fields with name overlay (not equal icon cards)
-- Header: absolute over hero; mark + wordmark; quiet nav
-
-## Motion
-
-- Hero wave slow drift (~32s alternate)
-- Rise-in on hero copy (staggered)
-- Theme plate hover lift + image scale
-- Mark breathe on OLED section
-
-## Landing composition
-
-1. Full-bleed wave-only hero; single H1 Phostide; CTAs
-2. Real taskbar pixels proof + three truths as divided list
-3. Themes as stacked light plates
-4. OLED section with mark
-5. Download close
-
-## Anti-patterns refused
-
-- og-ai.jpg (baked wordmark) as hero background
-- Equal theme cards with captions under images as page structure
-- Kickers / eyebrows above headings
-- Purple neon SaaS glow costume
+| Route | UX Pilot screen |
+| --- | --- |
+| `/` | Home |
+| `/docs` | Docs |
+| `/docs/install` | Install |
+| `/docs/themes` | Themes |
+| `/docs/oled` | OLED Notes |
+| `/docs/troubleshooting` (+ `#privacy`) | Troubleshooting |
+| `/docs/privacy` | Privacy (standalone; also summarized on troubleshooting) |

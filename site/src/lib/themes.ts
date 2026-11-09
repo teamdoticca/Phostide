@@ -13,41 +13,41 @@ export const themes: ThemeInfo[] = [
   {
     id: "rainbow",
     name: "Rainbow",
-    blurb: "Soft color bands across the bar — calm shimmer, not a scrolling rainbow.",
+    blurb: "Soft color bands drifting slowly across the bar.",
     detail:
-      "Classic colors stacked through the height of the taskbar, with a gentle glow so every part of the bar keeps moving.",
+      "Soft color bands drifting slowly across the bar — calm shimmer, not a scrolling rainbow.",
     previewSrc: "/themes/rainbow.png",
   },
   {
     id: "sea",
     name: "Sea Waves",
-    blurb: "Slow ocean swell that rolls along the whole taskbar.",
-    detail:
-      "Deep blues and soft foam highlights. The motion covers the full bar so nothing sits still for long.",
+    blurb: "Dark blue water with gentle moving waves.",
+    detail: "Dark blue water with gentle moving waves across the full bar.",
     previewSrc: "/themes/sea.png",
   },
   {
     id: "weather",
     name: "Weather",
-    blurb: "Rain on a dark sky, with short flashes of lightning.",
-    detail:
-      "A simple storm loop: slanted rain, then a bright flash. Easy to see, easy on the eyes when you leave it running.",
+    blurb: "A small sky scene with drifting weather.",
+    detail: "A small sky scene with drifting weather — rain and short flashes.",
     previewSrc: "/themes/weather.png",
   },
   {
     id: "space",
     name: "Space",
-    blurb: "Fly past a warm nebula toward the stars.",
-    detail:
-      "A short space trip that always moves forward — glowing cloud, then a field of stars — then it loops again.",
+    blurb: "Mostly black with slow, scattered stars.",
+    detail: "Mostly black with slow, scattered stars — quiet motion for OLED.",
     previewSrc: "/themes/space.png",
   },
   {
     id: "aurora",
     name: "Aurora",
-    blurb: "Northern-light curtains in green, teal, and violet.",
-    detail:
-      "Soft light that waves in place across the bar — quiet, colorful, and made for long desktop sessions.",
+    blurb: "Faint northern-light ribbons over black.",
+    detail: "Faint northern-light ribbons over black — quiet and colorful.",
     previewSrc: "/themes/aurora.png",
   },
 ];
+
+export function themeById(id: ThemeId): ThemeInfo {
+  return themes.find((t) => t.id === id) ?? themes[0];
+}

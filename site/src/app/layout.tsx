@@ -1,16 +1,11 @@
 import type { Metadata } from "next";
-import { Darker_Grotesque, Karla, IBM_Plex_Mono } from "next/font/google";
+import { Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
-const display = Darker_Grotesque({
-  variable: "--font-display",
+const sans = Inter({
+  variable: "--font-sans",
   subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
-});
-
-const body = Karla({
-  variable: "--font-body",
-  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const mono = IBM_Plex_Mono({
@@ -21,11 +16,11 @@ const mono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Phostide — Living taskbar themes for OLED",
+    default: "Phostide — Animated themes for the Windows taskbar",
     template: "%s · Phostide",
   },
   description:
-    "A small Windows app that animates your taskbar. Get a prettier bar and help protect OLED screens from burn-in.",
+    "Phostide paints OLED-safe motion directly into the Windows taskbar background. Free, MIT, signed installer.",
   metadataBase: new URL("https://phostide.doticca.com"),
   applicationName: "Phostide",
   icons: {
@@ -41,7 +36,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Phostide",
     description:
-      "Animate your Windows taskbar with calm themes. Look better — and help OLED screens last longer.",
+      "Animated themes, painted into your real Windows taskbar. Free · MIT · Windows 11.",
     url: "https://phostide.doticca.com",
     siteName: "Phostide",
     type: "website",
@@ -50,7 +45,7 @@ export const metadata: Metadata = {
         url: "/og-ai.jpg",
         width: 1200,
         height: 630,
-        alt: "Phostide — living taskbar themes for OLED",
+        alt: "Phostide — animated taskbar themes",
       },
     ],
   },
@@ -58,7 +53,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Phostide",
     description:
-      "Animate your Windows taskbar with calm themes. Look better — and help OLED screens last longer.",
+      "Animated themes, painted into your real Windows taskbar. Free · MIT · Windows 11.",
     images: ["/og-ai.jpg"],
   },
 };
@@ -74,9 +69,7 @@ export default function RootLayout({
         <meta name="page-type" content="software" />
         <meta name="site-kind" content="software" />
       </head>
-      <body
-        className={`${display.variable} ${body.variable} ${mono.variable} antialiased`}
-      >
+      <body className={`${sans.variable} ${mono.variable} font-sans antialiased`}>
         {children}
       </body>
     </html>

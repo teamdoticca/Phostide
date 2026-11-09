@@ -1,50 +1,61 @@
-import Image from "next/image";
 import Link from "next/link";
 
-const links = [
-  { href: "/#themes", label: "Themes" },
-  { href: "/docs", label: "Docs" },
-  { href: "https://github.com/teamdoticca/Phostide", label: "GitHub", external: true },
+const nav = [
+  { href: "/docs", label: "Docs", match: "/docs" },
+  { href: "/docs/install", label: "Install", match: "/docs/install" },
+  { href: "/docs/themes", label: "Themes", match: "/docs/themes" },
+  { href: "/docs/oled", label: "OLED notes", match: "/docs/oled" },
+  {
+    href: "/docs/troubleshooting",
+    label: "Help & Privacy",
+    match: "/docs/troubleshooting",
+  },
 ];
 
-export function SiteHeader({ solid = false }: { solid?: boolean }) {
+export function SiteHeader({ active }: { active?: string }) {
   return (
-    <header
-      className={`mx-auto flex w-full max-w-[72rem] items-center justify-between px-6 py-5 sm:px-8 sm:py-6 ${
-        solid ? "border-b border-[var(--line)] bg-[var(--bg0)]" : "absolute inset-x-0 top-0 z-20"
-      }`}
-    >
-      <Link href="/" className="group flex items-center gap-2.5">
-        <Image
-          src="/mark-64.png"
-          alt=""
-          width={28}
-          height={28}
-          className="h-7 w-7 transition-transform duration-200 group-hover:scale-105"
-          priority
-        />
-        <span className="font-[family-name:var(--font-display)] text-lg font-bold tracking-tight">
+    <header className="sticky top-0 z-30 border-b border-line bg-black/90 backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-site items-center justify-between px-6 sm:px-10">
+        <Link
+          href="/"
+          className="flex items-center gap-3 text-[15px] font-semibold text-zinc-100"
+        >
+          <span className="grid h-7 w-7 place-items-center rounded-md bg-ember text-xs font-bold text-black">
+            P
+          </span>
           Phostide
-        </span>
-      </Link>
-      <nav className="flex items-center gap-6 text-sm text-[var(--on-media)]">
-        {links.map((link) =>
-          link.external ? (
-            <a
-              key={link.href}
-              href={link.href}
-              className="link-nav"
-              rel="noreferrer"
-            >
-              {link.label}
-            </a>
-          ) : (
-            <Link key={link.href} href={link.href} className="link-nav">
-              {link.label}
-            </Link>
-          )
-        )}
-      </nav>
+        </Link>
+        <nav className="hidden items-center gap-8 text-sm text-soft md:flex">
+          {nav.map((item) => {
+            const isActive =
+              active === item.match ||
+              (item.match === "/docs" && active === "/docs");
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={
+                  isActive ? "text-white" : "transition-colors hover:text-white"
+                }
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <a
+            href="https://github.com/teamdoticca/Phostide"
+            className="hidden px-3 py-2 text-sm text-soft transition-colors hover:text-white sm:inline"
+            rel="noreferrer"
+          >
+            GitHub
+          </a>
+          <Link href="/docs/install#setup" className="btn-ember-sm">
+            Download
+          </Link>
+        </div>
+      </div>
     </header>
   );
 }
