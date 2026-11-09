@@ -27,7 +27,7 @@ export function SiteHeader({ solid = false }: { solid?: boolean }) {
           Phostide
         </span>
       </Link>
-      <nav className="flex items-center gap-6 text-sm text-[var(--muted)]">
+      <nav className="flex items-center gap-6 text-sm text-[var(--on-media)]">
         {links.map((link) =>
           link.external ? (
             <a

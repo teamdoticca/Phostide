@@ -13,7 +13,8 @@ export default function InstallPage() {
         Install & run
       </h1>
       <p className="mt-4 max-w-2xl text-lg">
-        Phostide ships as a portable Windows x64 zip. No installer required.
+        Prefer the Windows installer. A portable zip remains available on GitHub
+        Releases if you want a folder you can move yourself.
       </p>
 
       <div className="mt-8">
@@ -26,22 +27,32 @@ export default function InstallPage() {
         <li>x64 (AMD64)</li>
       </ul>
 
-      <h2>Steps</h2>
+      <h2>Installer (recommended)</h2>
       <ol className="mt-3 list-decimal space-y-2 pl-5 text-[var(--muted)]">
         <li>
-          Download the latest{" "}
-          <code>Phostide-*-win-x64.zip</code> from{" "}
+          Download <code>Phostide-Setup-*-win-x64.exe</code> from{" "}
           <a href="https://github.com/teamdoticca/Phostide/releases">
             GitHub Releases
           </a>
           .
         </li>
-        <li>Unpack somewhere durable (for example <code>%LOCALAPPDATA%\Phostide</code>).</li>
         <li>
-          Run <code>Phostide.exe</code>. A tray icon appears; the host injects{" "}
+          Run the setup (per-user, no admin). Files land in{" "}
+          <code>%LOCALAPPDATA%\Programs\Phostide</code>.
+        </li>
+        <li>
+          Launch Phostide when prompted. A tray icon appears; the host injects{" "}
           <code>ExplorerTAP.dll</code> into Explorer.
         </li>
         <li>Open the tray menu, pick a theme, and optionally set intensity.</li>
+      </ol>
+
+      <h2>Portable zip</h2>
+      <ol className="mt-3 list-decimal space-y-2 pl-5 text-[var(--muted)]">
+        <li>
+          Download <code>Phostide-*-win-x64.zip</code>, unpack somewhere durable,
+          then run <code>Phostide.exe</code>.
+        </li>
       </ol>
 
       <h2>What normal start does</h2>
@@ -61,9 +72,10 @@ export default function InstallPage() {
 
       <h2>Uninstall</h2>
       <p>
-        Quit Phostide from the tray (brushes restore), then delete the unpack
-        folder and optionally remove{" "}
-        <code>%APPDATA%\Phostide</code>.
+        Quit Phostide from the tray (brushes restore). If you used the
+        installer, uninstall from Windows Settings → Apps, or use Start Menu →
+        Phostide → Uninstall. For the portable zip, delete the unpack folder.
+        Optionally remove <code>%APPDATA%\Phostide</code>.
       </p>
 
       <h2>Build from source</h2>

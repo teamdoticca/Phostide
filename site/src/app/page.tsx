@@ -22,7 +22,7 @@ export default function Home() {
             className="hero-wave object-cover object-[center_60%]"
             sizes="100vw"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg0)] via-[rgba(2,4,8,0.55)] to-[rgba(2,4,8,0.25)]" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg0)] via-[rgba(2,4,8,0.72)] to-[rgba(2,4,8,0.4)]" />
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_40%,rgba(56,189,248,0.12),transparent_55%)]" />
         </div>
 
@@ -33,7 +33,7 @@ export default function Home() {
           <p className="animate-rise-delay-1 max-w-xl text-[1.35rem] leading-snug text-[var(--ink)] sm:text-2xl">
             A prettier, living taskbar — kinder to OLED screens.
           </p>
-          <p className="animate-rise-delay-2 max-w-lg text-base leading-relaxed text-[var(--muted)] sm:text-lg">
+          <p className="animate-rise-delay-2 max-w-lg text-base leading-relaxed text-[var(--on-media)] sm:text-lg">
             Phostide is a small Windows app that puts gentle animated themes on
             your taskbar. You get a more beautiful bar, and moving pixels help
             protect OLED screens from burn-in.
@@ -112,24 +112,15 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="mx-auto flex w-full max-w-[72rem] flex-col gap-5 px-6 pb-24 sm:px-8 sm:pb-32">
-            {themes.map((theme, i) => (
-              <article
-                key={theme.id}
-                className="theme-plate group relative overflow-hidden"
-                style={{ animationDelay: `${i * 40}ms` }}
-              >
-                <ThemePreview
-                  theme={theme}
-                  className="theme-preview--plate"
-                  sizes="(max-width: 1152px) 100vw, 72rem"
-                />
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[rgba(2,4,8,0.82)] via-[rgba(2,4,8,0.35)] to-transparent" />
-                <div className="absolute inset-y-0 left-0 flex max-w-md flex-col justify-end p-6 sm:p-8">
-                  <h3 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight sm:text-3xl">
+          <div className="mx-auto flex w-full max-w-[72rem] flex-col px-6 pb-24 sm:px-8 sm:pb-32">
+            {themes.map((theme) => (
+              <article key={theme.id} className="theme-row group">
+                <ThemePreview theme={theme} size="row" />
+                <div>
+                  <h3 className="font-[family-name:var(--font-display)] text-xl font-bold tracking-tight sm:text-2xl">
                     {theme.name}
                   </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-[var(--muted)] sm:text-base">
+                  <p className="mt-1.5 text-sm leading-relaxed text-[var(--muted)] sm:text-base">
                     {theme.blurb}
                   </p>
                 </div>
@@ -189,7 +180,7 @@ export default function Home() {
               Try it in a minute
             </h2>
             <p className="max-w-xl text-lg text-[var(--muted)]">
-              Free for Windows 11. Download, unzip, open Phostide, choose a
+              Free for Windows 11. Run the installer, open Phostide, choose a
               theme from the tray icon. That is the whole setup.
             </p>
             <div className="flex flex-wrap gap-3 pt-2">

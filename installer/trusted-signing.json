@@ -1,0 +1,8 @@
+{
+  "Endpoint": "https://weu.codesigning.azure.net/",
+  "CodeSigningAccountName": "doticca-codesigning",
+  "CertificateProfileName": "MnemonPublic",
+  "SubscriptionId": "fb1ad8dc-2660-440d-83c4-f208ac1852f4",
+  "ResourceGroup": "doticca",
+  "Location": "westeurope"
+}
