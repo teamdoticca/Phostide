@@ -3,18 +3,13 @@
 @tailwind utilities;
 
 :root {
-  --bg0: #020408;
-  --bg1: #070b10;
-  --ink: #f2f8fa;
-  /* Cyan-tinted secondary — ≥10:1 on --bg0; not cool-gray wash */
-  --muted: #b4c8d2;
-  /* Secondary over imagery / colored plates (pair with .media-scrim) */
-  --on-media: #e4eef3;
-  --accent: #5eead4;
-  --accent-deep: #14b8a6;
-  --wave: #38bdf8;
-  --line: rgba(228, 238, 243, 0.18);
-  --glow: rgba(94, 234, 212, 0.28);
+  --void: #000000;
+  --panel: #0b0b0c;
+  --line: #1c1c1f;
+  --soft: #8a8a93;
+  --ember: #ff8a3d;
+  --emberdim: #3a1e0c;
+  --ink: #f4f4f5;
 }
 
 * {
@@ -29,350 +24,49 @@ html,
 body {
   margin: 0;
   min-height: 100%;
-  background: var(--bg0);
+  background: var(--void);
   color: var(--ink);
 }
 
 body {
-  font-family: var(--font-body), system-ui, sans-serif;
-  background-color: var(--bg0);
+  font-family: var(--font-sans), system-ui, "Segoe UI", sans-serif;
+  background-color: var(--void);
 }
 
 ::selection {
-  background: rgba(94, 234, 212, 0.35);
+  background: rgba(255, 138, 61, 0.35);
   color: #fff;
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--ember);
   outline-offset: 3px;
 }
 
-@keyframes phostide-drift {
-  from {
-    transform: translate3d(0, 0, 0) scale(1.04);
-  }
-  to {
-    transform: translate3d(-1.8%, 1.2%, 0) scale(1.07);
-  }
-}
-
-.hero-wave {
-  animation: phostide-drift 32s ease-in-out infinite alternate;
-  will-change: transform;
-}
-
-@keyframes phostide-rise {
-  from {
-    opacity: 0;
-    transform: translateY(18px);
-    filter: blur(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-    filter: blur(0);
-  }
-}
-
-@keyframes rainbow-flow {
-  0% {
-    background-position: 0% 50%;
-  }
-  100% {
-    background-position: 200% 50%;
-  }
-}
-
-@keyframes sea-swell {
-  0%,
-  100% {
-    background-position: 0% 40%, 100% 60%, 50% 50%;
-  }
-  50% {
-    background-position: 40% 55%, 60% 35%, 50% 50%;
-  }
-}
-
-@keyframes weather-flicker {
-  0%,
-  100% {
-    filter: brightness(0.95);
-  }
-  40% {
-    filter: brightness(1.05);
-  }
-  42% {
-    filter: brightness(1.35);
-  }
-  45% {
-    filter: brightness(0.9);
-  }
-}
-
-@keyframes space-drift {
-  from {
-    background-position: 0% 50%, 100% 0%;
-  }
-  to {
-    background-position: 100% 50%, 0% 100%;
-  }
-}
-
-@keyframes aurora-curtain {
-  0%,
-  100% {
-    background-position: 20% 0%, 80% 100%, 50% 50%;
-  }
-  50% {
-    background-position: 60% 20%, 30% 80%, 50% 50%;
-  }
-}
-
-@keyframes mark-breathe {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.9;
-  }
-  50% {
-    transform: scale(1.03);
-    opacity: 1;
-  }
-}
-
-.animate-rise {
-  animation: phostide-rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.animate-rise-delay-1 {
-  animation: phostide-rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both;
-}
-
-.animate-rise-delay-2 {
-  animation: phostide-rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.24s both;
-}
-
-.animate-rise-delay-3 {
-  animation: phostide-rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.36s both;
-}
-
-/* Fake Windows 11 taskbar chrome around a real 1920×48 theme strip */
-.taskbar-chrome {
+.strip img {
+  display: block;
   width: 100%;
-  border: 1px solid var(--line);
-  background: #0a0e14;
-  padding: 0.65rem 0.65rem 0.55rem;
-  transition: border-color 0.25s ease, transform 0.25s ease;
+  height: auto;
 }
 
-.taskbar-chrome:hover {
-  border-color: rgba(94, 234, 212, 0.4);
-  transform: translateY(-1px);
-}
-
-.taskbar-chrome__bar {
-  width: 100%;
-  overflow: hidden;
-  border-radius: 0.55rem;
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.06),
-    0 8px 24px rgba(0, 0, 0, 0.35);
-}
-
-.taskbar-chrome__icons {
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0 0.65rem;
-}
-
-.taskbar-chrome__start {
-  width: 1.15rem;
-  height: 1.15rem;
-  flex-shrink: 0;
-  border-radius: 0.28rem;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.18));
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
-}
-
-.taskbar-chrome__pill {
-  width: 1.7rem;
-  height: 1.7rem;
-  flex-shrink: 0;
-  border-radius: 0.4rem;
-  background: rgba(255, 255, 255, 0.14);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-}
-
-.taskbar-chrome__pill--dim {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.taskbar-chrome__spacer {
-  flex: 1;
-}
-
-.taskbar-chrome__tray {
-  width: 0.55rem;
-  height: 0.55rem;
-  flex-shrink: 0;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.35);
-}
-
-.taskbar-chrome__clock {
-  width: 2.4rem;
-  height: 0.55rem;
-  flex-shrink: 0;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.22);
-}
-
-.theme-row {
-  display: grid;
-  gap: 1rem 1.5rem;
-  padding: 1.25rem 0;
-  border-top: 1px solid var(--line);
-}
-
-@media (min-width: 640px) {
-  .theme-row {
-    grid-template-columns: minmax(0, 1.4fr) minmax(12rem, 0.7fr);
-    align-items: center;
+@layer components {
+  .btn-ember {
+    @apply inline-flex items-center justify-center rounded-lg bg-ember px-6 py-3.5 text-sm font-semibold text-black transition-colors hover:bg-orange-300;
   }
-}
 
-.link-nav {
-  transition: color 0.2s ease;
-}
+  .btn-ghost {
+    @apply inline-flex items-center justify-center rounded-lg border border-line px-6 py-3.5 text-sm text-zinc-200 transition-colors hover:border-zinc-600;
+  }
 
-.link-nav:hover {
-  color: var(--ink);
-}
+  .btn-ember-sm {
+    @apply inline-flex items-center justify-center rounded-lg bg-ember px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-orange-300;
+  }
 
-.download-glow {
-  background:
-    radial-gradient(ellipse 70% 80% at 15% 60%, rgba(94, 234, 212, 0.1), transparent 55%),
-    radial-gradient(ellipse 50% 60% at 85% 40%, rgba(56, 189, 248, 0.08), transparent 50%);
-}
+  .panel {
+    @apply rounded-xl border border-line bg-panel;
+  }
 
-.prose-docs h2 {
-  margin-top: 2.5rem;
-  margin-bottom: 0.75rem;
-  font-family: var(--font-display), system-ui, sans-serif;
-  font-size: 1.5rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
-.prose-docs h3 {
-  margin-top: 1.75rem;
-  margin-bottom: 0.5rem;
-  font-family: var(--font-display), system-ui, sans-serif;
-  font-size: 1.125rem;
-  font-weight: 600;
-}
-
-.prose-docs p,
-.prose-docs li {
-  color: var(--muted);
-  line-height: 1.7;
-}
-
-.prose-docs p + p {
-  margin-top: 1rem;
-}
-
-.prose-docs ul {
-  margin-top: 0.75rem;
-  list-style: disc;
-  padding-left: 1.25rem;
-}
-
-.prose-docs li + li {
-  margin-top: 0.4rem;
-}
-
-.prose-docs code {
-  font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 0.875em;
-  color: var(--ink);
-  background: rgba(94, 234, 212, 0.08);
-  padding: 0.1em 0.35em;
-  border-radius: 0.25rem;
-}
-
-.prose-docs pre {
-  margin-top: 1rem;
-  overflow-x: auto;
-  border: 1px solid var(--line);
-  background: #080c12;
-  padding: 1rem 1.1rem;
-  border-radius: 0.5rem;
-  font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 0.8125rem;
-  line-height: 1.6;
-  color: var(--ink);
-}
-
-.prose-docs a {
-  color: var(--accent);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.prose-docs a:hover {
-  color: #99f6e4;
-}
-
-.btn-primary {
-  display: inline-flex;
-  height: 3rem;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  background: var(--ink);
-  padding: 0 1.75rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--bg0);
-  transition: transform 0.15s ease, background-color 0.2s ease;
-}
-
-.btn-primary:hover {
-  background: var(--accent);
-  transform: translateY(-2px);
-}
-
-.btn-primary:active {
-  transform: translateY(0);
-}
-
-.btn-ghost {
-  display: inline-flex;
-  height: 3rem;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  border: 1px solid var(--line);
-  padding: 0 1.5rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--ink);
-  transition: border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
-}
-
-.btn-ghost:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  transform: translateY(-2px);
-}
-
-.btn-ghost:active {
-  transform: translateY(0);
+  .eyebrow {
+    @apply text-sm font-medium text-ember;
+  }
 }

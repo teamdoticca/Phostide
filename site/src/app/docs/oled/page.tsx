@@ -1,62 +1,113 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import {
+  IconArrowLeft,
+  IconArrowRight,
+  IconEye,
+  IconLayers,
+  IconUndo,
+  IconWave,
+} from "@/components/Icons";
+import { SiteFooter } from "@/components/SiteFooter";
+import { SiteHeader } from "@/components/SiteHeader";
+import { ThemeStrip } from "@/components/ThemeStrip";
+import { themeById } from "@/lib/themes";
 
 export const metadata: Metadata = {
   title: "OLED notes",
   description:
-    "How Phostide approaches OLED taskbar burn-in without autohide or overlays.",
+    "Why a still taskbar matters on OLED, and how Phostide keeps the fill moving.",
 };
 
 export default function OledPage() {
+  const space = themeById("space");
+
   return (
-    <div className="prose-docs">
-      <h1 className="font-[family-name:var(--font-display)] text-4xl font-semibold tracking-tight">
-        OLED notes
-      </h1>
-      <p className="mt-4 max-w-2xl text-lg">
-        Windows taskbars are often bright, static, and always on screen —
-        exactly the pattern OLED panels dislike. Phostide attacks that pattern
-        at the source: the fill itself.
-      </p>
+    <div className="min-h-screen bg-void text-zinc-100">
+      <SiteHeader active="/docs/oled" />
 
-      <h2>What Phostide does</h2>
-      <ul>
-        <li>
-          Keeps the bar visible and interactive (unlike autohide workflows).
-        </li>
-        <li>
-          Moves background luminance continuously across the full fill region.
-        </li>
-        <li>
-          Prefers restrained brightness so icons stay legible and average pixel
-          stress stays lower.
-        </li>
-      </ul>
+      <section className="mx-auto max-w-site px-6 pb-12 pt-16 sm:px-10 sm:pb-16 sm:pt-20">
+        <Link
+          href="/docs"
+          className="inline-flex items-center gap-2 text-sm text-soft hover:text-white"
+        >
+          <IconArrowLeft />
+          Docs
+        </Link>
+        <p className="mt-6 eyebrow">OLED notes</p>
+        <h1 className="mt-3 max-w-3xl text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
+          Why a still taskbar matters on an OLED screen.
+        </h1>
+        <p className="mt-5 max-w-2xl text-lg text-soft">
+          OLED pixels light themselves. When the same bright shape sits in the
+          same spot for hours, those pixels age faster than the rest. The
+          taskbar is about the most static thing on a Windows screen.
+        </p>
+      </section>
 
-      <h2>What it is not</h2>
-      <ul>
-        <li>Not a warranty or a guarantee that burn-in cannot occur.</li>
-        <li>Not a pixel-shift of the whole desktop.</li>
-        <li>Not a transparent overlay window sitting above Explorer.</li>
-      </ul>
+      <section className="border-y border-line">
+        <div className="mx-auto flex max-w-site justify-between px-6 py-3 text-xs text-soft sm:px-10">
+          <span>Space theme · mostly black, always moving</span>
+          <span>1920 × 48, real taskbar</span>
+        </div>
+        <ThemeStrip theme={space} />
+      </section>
 
-      <h2>Practical habits</h2>
-      <ul>
-        <li>Use a theme you can leave on all day without distraction.</li>
-        <li>Lower intensity if the bar feels busy under dense icon sets.</li>
-        <li>
-          Pair with normal Windows OLED hygiene: avoid static bright UI parked
-          for weeks, and use panel pixel cleaning tools when the OEM provides
-          them.
-        </li>
-      </ul>
+      <section className="mx-auto grid max-w-site gap-5 px-6 py-16 sm:px-10 sm:py-20 md:grid-cols-2">
+        <div className="rounded-xl border border-ember/40 bg-panel p-8">
+          <IconWave className="h-5 w-5 text-ember" />
+          <h2 className="mt-5 text-xl font-semibold">It keeps the fill moving</h2>
+          <p className="mt-2 text-soft">
+            Phostide replaces the flat taskbar background with slow motion on a
+            dark base, so the background isn&apos;t one fixed block of light.
+          </p>
+        </div>
+        <div className="rounded-xl border border-line bg-panel p-8">
+          <IconEye className="h-5 w-5 text-soft" />
+          <h2 className="mt-5 text-xl font-semibold">It&apos;s not auto‑hide</h2>
+          <p className="mt-2 text-soft">
+            The taskbar stays visible and usable. You don&apos;t have to hunt for
+            it at the screen edge.
+          </p>
+        </div>
+        <div className="rounded-xl border border-line bg-panel p-8">
+          <IconLayers className="h-5 w-5 text-soft" />
+          <h2 className="mt-5 text-xl font-semibold">It&apos;s not an overlay</h2>
+          <p className="mt-2 text-soft">
+            Nothing floats on top of the bar. The fill is drawn inside Explorer,
+            behind your icons, tray and clock.
+          </p>
+        </div>
+        <div className="rounded-xl border border-line bg-panel p-8">
+          <IconUndo className="h-5 w-5 text-soft" />
+          <h2 className="mt-5 text-xl font-semibold">Quitting restores it</h2>
+          <p className="mt-2 text-soft">
+            Close Phostide from the tray and the normal Windows taskbar comes
+            straight back.
+          </p>
+        </div>
+        <p className="mt-4 text-sm text-soft md:col-span-2">
+          Note: icons and the clock are still drawn by Windows and stay static.
+          Phostide only changes the background.
+        </p>
+        <div className="flex justify-between pt-4 text-sm md:col-span-2">
+          <Link
+            href="/docs/themes"
+            className="inline-flex items-center gap-2 text-soft hover:text-white"
+          >
+            <IconArrowLeft />
+            Themes
+          </Link>
+          <Link
+            href="/docs/troubleshooting"
+            className="inline-flex items-center gap-2 text-ember"
+          >
+            Next: Troubleshooting <IconArrowRight />
+          </Link>
+        </div>
+      </section>
 
-      <h2>Why Explorer composition</h2>
-      <p>
-        Overlays can desync, clip, or fight DWM. Painting{" "}
-        <code>Rectangle#BackgroundFill</code> means themes travel with the real
-        taskbar — multi-monitor bars included — and restore cleanly when the
-        host exits.
-      </p>
+      <SiteFooter />
     </div>
   );
 }
