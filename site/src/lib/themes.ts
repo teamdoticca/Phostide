@@ -14,45 +14,45 @@ export const themes: ThemeInfo[] = [
   {
     id: "rainbow",
     name: "Rainbow",
-    blurb: "Fixed spectrum across the bar with quiet atmospheric life — no hue marquee.",
+    blurb: "Soft color bands across the bar — calm shimmer, not a scrolling rainbow.",
     detail:
-      "ROYGBIV mapped across taskbar thickness so every pixel keeps moving. Tuned for low average luminance instead of a ticker-style sweep.",
+      "Classic colors stacked through the height of the taskbar, with a gentle glow so every part of the bar keeps moving.",
     previewSrc: "/themes/rainbow.jpg",
     barClass: "theme-bar theme-bar--rainbow",
   },
   {
     id: "sea",
     name: "Sea Waves",
-    blurb: "Gerstner-style swell that rolls the full bar so no strip stays fixed.",
+    blurb: "Slow ocean swell that rolls along the whole taskbar.",
     detail:
-      "Layered ocean motion painted edge-to-edge. Locked paint path: calm time scale, full-bar coverage for OLED anti burn-in.",
+      "Deep blues and soft foam highlights. The motion covers the full bar so nothing sits still for long.",
     previewSrc: "/themes/sea.jpg",
     barClass: "theme-bar theme-bar--sea",
   },
   {
     id: "weather",
     name: "Weather",
-    blurb: "Storm loop with slanted rain and brief lightning flashes.",
+    blurb: "Rain on a dark sky, with short flashes of lightning.",
     detail:
-      "Cloud-dark luminance with intermittent flashes. Designed to keep contrast readable under tray icons while pixels keep shifting.",
+      "A simple storm loop: slanted rain, then a bright flash. Easy to see, easy on the eyes when you leave it running.",
     previewSrc: "/themes/weather.jpg",
     barClass: "theme-bar theme-bar--weather",
   },
   {
     id: "space",
     name: "Space",
-    blurb: "Forward cinematic nebula into a sparse starfield — no rewind.",
+    blurb: "Fly past a warm nebula toward the stars.",
     detail:
-      "Depth motion toward the camera, not snowfall. Locked paint path: forward-only loop with no fade-in at phase wrap.",
+      "A short space trip that always moves forward — glowing cloud, then a field of stars — then it loops again.",
     previewSrc: "/themes/space.jpg",
     barClass: "theme-bar theme-bar--space",
   },
   {
     id: "aurora",
     name: "Aurora",
-    blurb: "Green→teal→violet curtains with a standing undulation.",
+    blurb: "Northern-light curtains in green, teal, and violet.",
     detail:
-      "Soft vertical curtains that breathe in place. OLED-friendly mid tones with continuous standing-wave motion across the fill.",
+      "Soft light that waves in place across the bar — quiet, colorful, and made for long desktop sessions.",
     previewSrc: "/themes/aurora.jpg",
     barClass: "theme-bar theme-bar--aurora",
   },

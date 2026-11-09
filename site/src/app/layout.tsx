@@ -21,11 +21,11 @@ const mono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Phostide — OLED-safe taskbar themes",
+    default: "Phostide — Living taskbar themes for OLED",
     template: "%s · Phostide",
   },
   description:
-    "Animated themes on the real Windows taskbar. Protect OLED panels without autohide or overlays.",
+    "A small Windows app that animates your taskbar. Get a prettier bar and help protect OLED screens from burn-in.",
   metadataBase: new URL("https://phostide.doticca.com"),
   applicationName: "Phostide",
   icons: {
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Phostide",
     description:
-      "OLED-safe animated themes on the real Windows taskbar — Explorer composition, not overlays.",
+      "Animate your Windows taskbar with calm themes. Look better — and help OLED screens last longer.",
     url: "https://phostide.doticca.com",
     siteName: "Phostide",
     type: "website",
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
         url: "/og-ai.jpg",
         width: 1200,
         height: 630,
-        alt: "Phostide — OLED-safe taskbar themes",
+        alt: "Phostide — living taskbar themes for OLED",
       },
     ],
   },
@@ -58,7 +58,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Phostide",
     description:
-      "OLED-safe animated themes on the real Windows taskbar — Explorer composition, not overlays.",
+      "Animate your Windows taskbar with calm themes. Look better — and help OLED screens last longer.",
     images: ["/og-ai.jpg"],
   },
 };

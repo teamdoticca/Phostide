@@ -3,36 +3,36 @@ import Link from "next/link";
 import { LatestDownload } from "@/components/LatestDownload";
 
 export const metadata: Metadata = {
-  title: "Documentation",
+  title: "How to use Phostide",
   description:
-    "Install Phostide, choose themes, and keep your OLED taskbar healthy.",
+    "Install Phostide, pick a theme, and learn how it helps OLED screens.",
 };
 
 const pages = [
   {
     href: "/docs/install",
     title: "Install & run",
-    body: "Download the release, launch the tray host, and confirm themes bind.",
+    body: "Download, open the app, and pick a theme from the tray.",
   },
   {
     href: "/docs/themes",
     title: "Themes",
-    body: "Rainbow, Sea Waves, Weather, Space, and Aurora — what each paint does.",
+    body: "Rainbow, Sea Waves, Weather, Space, and Aurora — what each one looks like.",
   },
   {
     href: "/docs/oled",
     title: "OLED notes",
-    body: "Why motion matters, luminance habits, and what Phostide does not claim.",
+    body: "Why a moving taskbar helps screens, in plain language.",
   },
   {
     href: "/docs/troubleshooting",
     title: "Troubleshooting",
-    body: "Inject without killing Explorer, log paths, and common bind failures.",
+    body: "If the theme does not show up, start here.",
   },
   {
     href: "/docs/privacy",
     title: "Privacy & permissions",
-    body: "What runs locally, what permissions mean, and what never leaves your PC.",
+    body: "What runs on your PC, and what never leaves it.",
   },
 ];
 
@@ -40,11 +40,12 @@ export default function DocsIndex() {
   return (
     <div className="prose-docs">
       <h1 className="font-[family-name:var(--font-display)] text-4xl font-semibold tracking-tight">
-        Documentation
+        How to use Phostide
       </h1>
       <p className="mt-4 max-w-2xl text-lg">
-        Phostide paints animated themes into the real Windows 11 taskbar
-        background. Start with install, then skim themes and OLED guidance.
+        Phostide is a small free app for Windows 11. It puts soft animated
+        themes on your taskbar so the bar looks better — and moving pixels help
+        protect OLED screens from burn-in. Start with install.
       </p>
 
       <div className="mt-8 flex flex-wrap gap-3">

@@ -31,16 +31,17 @@ export default function Home() {
             Phostide
           </h1>
           <p className="animate-rise-delay-1 max-w-xl text-[1.35rem] leading-snug text-[var(--ink)] sm:text-2xl">
-            OLED-safe themes on the real Windows taskbar.
+            A prettier, living taskbar — kinder to OLED screens.
           </p>
-          <p className="animate-rise-delay-2 max-w-md text-base leading-relaxed text-[var(--muted)] sm:text-lg">
-            Rainbow, Sea Waves, Weather, Space, and Aurora paint Explorer’s own
-            background fill — not an overlay.
+          <p className="animate-rise-delay-2 max-w-lg text-base leading-relaxed text-[var(--muted)] sm:text-lg">
+            Phostide is a small Windows app that puts gentle animated themes on
+            your taskbar. You get a more beautiful bar, and moving pixels help
+            protect OLED screens from burn-in.
           </p>
           <div className="animate-rise-delay-3 flex flex-wrap items-center gap-3 pt-3">
             <LatestDownload />
             <Link href="/docs" className="btn-ghost">
-              Documentation
+              How to use it
             </Link>
           </div>
           <p className="font-[family-name:var(--font-mono)] text-[0.7rem] tracking-wide text-[var(--muted)]">
@@ -55,34 +56,27 @@ export default function Home() {
           <div className="mx-auto grid w-full max-w-[72rem] gap-12 px-6 py-24 sm:px-8 sm:py-32 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
             <div>
               <h2 className="font-[family-name:var(--font-display)] text-[clamp(2.25rem,5vw,3.75rem)] font-bold leading-[0.95] tracking-[-0.035em]">
-                Real taskbar pixels
+                What you get
               </h2>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-[var(--muted)]">
-                On Windows 11 the taskbar is XAML inside{" "}
-                <code className="font-[family-name:var(--font-mono)] text-[var(--ink)]">
-                  explorer.exe
-                </code>
-                . Phostide injects a tiny TAP helper, finds{" "}
-                <code className="font-[family-name:var(--font-mono)] text-[var(--ink)]">
-                  Rectangle#BackgroundFill
-                </code>
-                , and paints animated Composition surfaces into that brush.
-                Icons stay on top. When Phostide exits, brushes restore.
+                Download it, run it from the tray, pick a theme. Your icons stay
+                where they are — only the taskbar background comes alive. Quit
+                anytime and Windows looks normal again.
               </p>
             </div>
             <ul className="flex flex-col justify-center gap-0 divide-y divide-[var(--line)] border-y border-[var(--line)]">
               {[
                 {
-                  title: "Not autohide",
-                  body: "The bar stays usable. Pixels keep moving so OLED panels age more evenly.",
+                  title: "A livelier taskbar",
+                  body: "Soft motion and color make the bar feel alive — not a flat strip of static UI.",
                 },
                 {
-                  title: "Not an overlay",
-                  body: "No window on top of the taskbar. Themes live in Explorer’s own fill.",
+                  title: "Help against burn-in",
+                  body: "Still images can mark OLED screens over time. Gentle animation spreads wear across the bar.",
                 },
                 {
-                  title: "Safe exit",
-                  body: "Original brushes return on quit or crash. No system files are modified.",
+                  title: "Simple and reversible",
+                  body: "No need to hide the taskbar. Close Phostide and your original look returns.",
                 },
               ].map((item) => (
                 <li key={item.title} className="py-5">
@@ -113,8 +107,8 @@ export default function Home() {
               </Link>
             </div>
             <p className="max-w-xl text-[var(--muted)]">
-              Procedural light tuned for motion first — full-bar paint for anti
-              burn-in.
+              Five looks you can switch from the tray. Each one keeps the whole
+              bar moving — nice to watch, and better for long OLED sessions.
             </p>
           </div>
 
@@ -157,19 +151,20 @@ export default function Home() {
           <div className="relative mx-auto grid w-full max-w-[72rem] items-center gap-12 px-6 py-24 sm:px-8 sm:py-32 lg:grid-cols-2">
             <div>
               <h2 className="font-[family-name:var(--font-display)] text-[clamp(2.25rem,5vw,3.75rem)] font-bold leading-[0.95] tracking-[-0.035em]">
-                Built for OLED desktops
+                Made with OLED in mind
               </h2>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-[var(--muted)]">
-                Static taskbar chrome is a classic burn-in pattern. Phostide
-                keeps every background pixel in motion at restrained luminance
-                so the bar stays readable and the panel stays healthier.
+                The Windows taskbar sits in the same place for hours. On OLED,
+                that static strip can leave a ghost image. Phostide keeps the
+                background in soft motion — bright enough to enjoy, calm enough
+                to leave on all day.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link href="/docs/oled" className="btn-ghost">
-                  OLED notes
+                  Why OLED matters
                 </Link>
                 <Link href="/docs/install" className="btn-ghost">
-                  Install guide
+                  Get started
                 </Link>
               </div>
             </div>
@@ -191,19 +186,16 @@ export default function Home() {
           <div className="download-glow pointer-events-none absolute inset-0" aria-hidden />
           <div className="relative mx-auto flex w-full max-w-[72rem] flex-col items-start gap-6 px-6 py-24 sm:px-8 sm:py-32">
             <h2 className="font-[family-name:var(--font-display)] text-[clamp(2.25rem,5vw,3.75rem)] font-bold leading-[0.95] tracking-[-0.035em]">
-              Get Phostide
+              Try it in a minute
             </h2>
             <p className="max-w-xl text-lg text-[var(--muted)]">
-              Download the latest Windows x64 release from GitHub. Unpack, run{" "}
-              <code className="font-[family-name:var(--font-mono)] text-[var(--ink)]">
-                Phostide.exe
-              </code>
-              , pick a theme from the tray.
+              Free for Windows 11. Download, unzip, open Phostide, choose a
+              theme from the tray icon. That is the whole setup.
             </p>
             <div className="flex flex-wrap gap-3 pt-2">
               <LatestDownload />
               <Link href="/docs/troubleshooting" className="btn-ghost">
-                Troubleshooting
+                Need help?
               </Link>
             </div>
           </div>
