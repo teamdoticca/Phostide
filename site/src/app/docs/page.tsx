@@ -61,7 +61,7 @@ const cards = [
 
 export default async function DocsPage() {
   const { tag } = await resolveReleaseAssets();
-  const releaseTag = tag ?? "v0.1.4";
+  const releaseTag = tag ?? "v0.1.5";
 
   return (
     <div className="min-h-screen bg-void text-zinc-100">

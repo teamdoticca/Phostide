@@ -75,10 +75,6 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
-[UninstallRun]
-; Prefer graceful exit (restore taskbar + unhook) before files are removed.
-Filename: "{app}\{#MyAppExeName}"; Parameters: "/exit"; RunOnceId: "PhostideExit"; Flags: waituntilterminated skipifdoesntexist
-
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
 
@@ -86,21 +82,14 @@ Type: filesandordirs; Name: "{app}"
 function PostMessageW(hWnd: HWND; Msg, wParam, lParam: LongInt): BOOL;
   external 'PostMessageW@user32.dll stdcall';
 
-function PrepareToInstall(var NeedsRestart: Boolean): String;
+{ Never Exec Phostide.exe here — builds before 0.1.4 ignore /exit and START the app,
+  which spawned MessageBoxes behind the Setup wizard. }
+procedure CloseRunningPhostide;
 var
-  ResultCode: Integer;
   Wnd: HWND;
   I: Integer;
+  ResultCode: Integer;
 begin
-  Result := '';
-  NeedsRestart := False;
-
-  { Prefer /exit so Host restores the taskbar and unhooks Explorer. }
-  if FileExists(ExpandConstant('{app}\{#MyAppExeName}')) then
-    Exec(ExpandConstant('{app}\{#MyAppExeName}'), '/exit', '', SW_HIDE,
-         ewWaitUntilTerminated, ResultCode);
-
-  { Fallback for builds that do not understand /exit yet. }
   Wnd := FindWindowByClassName('PhostideTray');
   if Wnd <> 0 then
   begin
@@ -112,4 +101,27 @@ begin
       Sleep(100);
     end;
   end;
+
+  { Last resort if the tray ignored WM_CLOSE. }
+  if FindWindowByClassName('PhostideTray') <> 0 then
+    Exec('taskkill.exe', '/IM Phostide.exe /F', '', SW_HIDE,
+         ewWaitUntilTerminated, ResultCode);
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  Result := '';
+  NeedsRestart := False;
+  CloseRunningPhostide;
+  if Assigned(WizardForm) then
+  begin
+    WizardForm.BringToFront;
+    WizardForm.SetFocus;
+  end;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if CurUninstallStep = usUninstall then
+    CloseRunningPhostide;
 end;
