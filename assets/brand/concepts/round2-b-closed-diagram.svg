@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Phostide B - structure diagram</title>
+  <!-- Same geometry; labels as subtle regions for the HTML page -->
+  <path fill="#111111" fill-rule="evenodd" d="M36 36H220A22 22 0 0 1 242 58V198A22 22 0 0 1 220 220H36A22 22 0 0 1 14 198V58A22 22 0 0 1 36 36ZM58 60H198A10 10 0 0 1 208 70V140C192 124 176 156 160 140C144 124 136 124 128 124C120 124 112 124 96 140C80 156 64 124 48 140V70A10 10 0 0 1 58 60Z"/>
+  <path fill="#FF8A3D" d="M48 140C64 124 80 156 96 140C112 124 120 124 128 124C136 124 144 124 160 140C176 156 192 124 208 140V198A10 10 0 0 1 198 208H58A10 10 0 0 1 48 198V140Z"/>
+  <path d="M48 140C64 124 80 156 96 140C112 124 120 124 128 124C136 124 144 124 160 140C176 156 192 124 208 140" fill="none" stroke="#111111" stroke-width="3" stroke-linecap="round"/>
+</svg>

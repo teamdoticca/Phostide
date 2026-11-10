@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Phostide B — χρώμα κάτω από το κύμα</title>
+  <style>
+    body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; background: #f2f2f4; color: #111; }
+    header { padding: 24px 32px 8px; }
+    h1 { margin: 0 0 4px; font-size: 22px; }
+    p { margin: 0; color: #555; max-width: 40rem; line-height: 1.45; }
+    nav { display: flex; gap: 12px; flex-wrap: wrap; padding: 12px 32px 24px; }
+    nav a { color: #111; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 8px 12px; text-decoration: none; font-size: 14px; }
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; padding: 0 32px 40px; }
+    figure { margin: 0; background: #fff; border-radius: 12px; padding: 20px; text-align: center; }
+    figure.ok { outline: 2px solid #111; }
+    figure.no { opacity: 0.72; }
+    figure img { width: 100%; max-width: 300px; height: auto; }
+    figcaption { margin-top: 12px; font-size: 14px; text-align: left; }
+    strong { display: block; font-size: 16px; margin-bottom: 4px; }
+    .tag { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 6px; }
+    .tag.yes { color: #0a7a3e; }
+    .tag.nope { color: #a33; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>B — χρώμα κάτω από την κυματιστή πλευρά</h1>
+    <p>Κλειστό παραλληλόγραμμο: η κυματιστή μαύρη κάτω πλευρά μένει· το χρώμα είναι <em>κάτω</em> από αυτήν μέχρι την ίσια βάση. Όχι μέσα στην οθόνη, όχι αντί για το κύμα.</p>
+  </header>
+  <nav>
+    <a href="index.html">Round 2</a>
+  </nav>
+  <div class="grid">
+    <figure class="no">
+      <div class="tag nope">Λάθος (πριν)</div>
+      <img src="renders/round2-b-bezel-wave-color-ember.png" alt="wrong inset" />
+      <figcaption><strong>Χρώμα μέσα στην οθόνη</strong>Αυτό δεν το ήθελες.</figcaption>
+    </figure>
+    <figure class="no">
+      <div class="tag nope">Λάθος (πριν)</div>
+      <img src="renders/round2-b-bezel-wave-sealed-ember.png" alt="wrong sealed replace" />
+      <figcaption><strong>Χρώμα αντί για κυματιστή πλευρά</strong>Αντικαθιστά το κάτω bezel.</figcaption>
+    </figure>
+    <figure class="ok">
+      <div class="tag yes">Νέα δομή</div>
+      <img src="renders/round2-b-closed-ember.png" alt="hollow + ember below wave" />
+      <figcaption><strong>Hollow B + ember κάτω από το κύμα</strong>Άδεια οθόνη · μαύρο κυματιστό κάτω άκρο · ember κλείνει την ίσια βάση.</figcaption>
+    </figure>
+    <figure class="ok">
+      <div class="tag yes">Νέα δομή</div>
+      <img src="renders/round2-b-closed-cyan.png" alt="hollow + cyan below wave" />
+      <figcaption><strong>Ίδιο με cyan</strong><code>#3EC6FF</code></figcaption>
+    </figure>
+    <figure class="ok">
+      <div class="tag yes">Εναλλακτικό</div>
+      <img src="renders/round2-b-closed-solid-ember.png" alt="solid + ember below wave" />
+      <figcaption><strong>Solid οθόνη + ember κάτω από το κύμα</strong>Ίδια λογική, χωρίς κούφιο bezel.</figcaption>
+    </figure>
+  </div>
+</body>
+</html>

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Phostide R2 A - Screen Tide</title>
+  <!-- Screen silhouette; low-amplitude sine on the bottom edge (motion, not goggles). -->
+  <path fill="#000000" d="M48 40H208A16 16 0 0 1 224 56V164C208 178 192 150 176 164C160 178 144 150 128 164C112 178 96 150 80 164C64 178 48 150 32 164V56A16 16 0 0 1 48 40Z"/>
+</svg>

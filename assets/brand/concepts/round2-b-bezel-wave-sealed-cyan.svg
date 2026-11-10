@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Phostide B sealed - cyan closes the screen</title>
+  <path fill="#3EC6FF" d="M22 130H58C70 118 82 142 94 130C106 118 116 118 128 118C140 118 150 118 162 130C174 142 186 118 198 130H234V168C218 186 202 154 186 168C170 182 154 196 128 196C102 196 86 182 70 168C54 154 38 186 22 168V130Z"/>
+  <path fill="#111111" d="M42 52H214A20 20 0 0 1 234 72V130H198V88A8 8 0 0 0 190 80H66A8 8 0 0 0 58 88V130H22V72A20 20 0 0 1 42 52Z"/>
+</svg>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Phostide — solid + προστασία</title>
+  <style>
+    body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; background: #f2f2f4; color: #111; }
+    header { padding: 24px 32px 8px; }
+    h1 { margin: 0 0 4px; font-size: 22px; }
+    p { margin: 0; color: #555; max-width: 42rem; line-height: 1.45; }
+    nav { display: flex; gap: 12px; flex-wrap: wrap; padding: 12px 32px 24px; }
+    nav a { color: #111; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 8px 12px; text-decoration: none; font-size: 14px; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 0 32px 40px; }
+    figure { margin: 0; background: #fff; border-radius: 12px; padding: 18px; text-align: center; }
+    figure img { width: 100%; max-width: 260px; height: auto; }
+    figcaption { margin-top: 10px; font-size: 13px; text-align: left; }
+    strong { display: block; font-size: 15px; margin-bottom: 2px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Solid οθόνη + ember — fine-line προστασία</h1>
+    <p>Ίδια βάση που σου άρεσε. Μέσα στο μαύρο: πολύ λεπτές άσπρες γραμμές. Στο 16px favicon αυτές σχεδόν χάνονται — μένουν για tray / app icon / site· για favicon κρατάμε απλοποιημένο cut.</p>
+  </header>
+  <nav>
+    <a href="color-b.html?v=2">Πίσω στο χρώμα</a>
+    <a href="index.html">Round 2</a>
+  </nav>
+  <div class="grid">
+    <figure>
+      <img src="renders/round2-b-closed-solid-ember.png" alt="base solid" />
+      <figcaption><strong>Βάση</strong>Solid + ember, χωρίς detail</figcaption>
+    </figure>
+    <figure>
+      <img src="renders/round2-solid-protect-shield.png" alt="shield" />
+      <figcaption><strong>1 · Shield</strong>Κλασική προστασία, outline μόνο</figcaption>
+    </figure>
+    <figure>
+      <img src="renders/round2-solid-protect-arcs.png" alt="arcs" />
+      <figcaption><strong>2 · Arcs</strong>Ήπιο force-field / OLED shield</figcaption>
+    </figure>
+    <figure>
+      <img src="renders/round2-solid-protect-scan.png" alt="scan" />
+      <figcaption><strong>3 · Scan lines</strong>Pixel-refresh / safe motion</figcaption>
+    </figure>
+    <figure>
+      <img src="renders/round2-solid-protect-grid.png" alt="grid" />
+      <figcaption><strong>4 · Pixel grid</strong>Οθόνη υπό φροντίδα</figcaption>
+    </figure>
+    <figure>
+      <img src="renders/round2-solid-protect-check.png" alt="check" />
+      <figcaption><strong>5 · Guarded check</strong>Verified / protected</figcaption>
+    </figure>
+  </div>
+</body>
+</html>

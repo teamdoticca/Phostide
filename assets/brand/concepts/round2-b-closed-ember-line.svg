@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Phostide B closed - explicit black wave line over ember base</title>
+  <!-- Outer closed rect. Ember only below wave. Black wave stroke marks the screen floor. -->
+  <rect x="22" y="40" width="212" height="176" rx="20" fill="#111111"/>
+  <path fill="#FFFFFF" d="M46 64H210A8 8 0 0 1 218 72V148C202 132 186 164 170 148C154 132 142 132 128 132C114 132 102 132 86 148C70 164 54 132 38 148V72A8 8 0 0 1 46 64Z"/>
+  <path fill="#FF8A3D" d="M38 148C54 132 70 164 86 148C102 132 114 132 128 132C142 132 154 132 170 148C186 164 202 132 218 148V196A12 12 0 0 1 206 208H50A12 12 0 0 1 38 196V148Z"/>
+  <path d="M38 148C54 132 70 164 86 148C102 132 114 132 128 132C142 132 154 132 170 148C186 164 202 132 218 148" fill="none" stroke="#111111" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

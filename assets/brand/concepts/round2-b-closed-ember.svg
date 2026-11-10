@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Phostide B - colour below wavy frame, closed rect</title>
+  <!-- Colour ONLY below the black wavy bottom edge, down to a straight base
+       that closes the parallelogram. Screen aperture stays empty. Wave is not replaced. -->
+  <!-- Ember base: closed rounded rect bottom cap under the wave -->
+  <path fill="#FF8A3D" d="M22 168C38 186 54 154 70 168C86 182 102 196 128 196C154 196 170 182 186 168C202 154 218 186 234 168V200A22 22 0 0 1 212 222H44A22 22 0 0 1 22 200V168Z"/>
+  <!-- Black hollow monitor; wavy bottom edge sits ON TOP of the colour -->
+  <path fill="#111111" fill-rule="evenodd" d="M42 40H214A20 20 0 0 1 234 60V168C218 186 202 154 186 168C170 182 154 196 128 196C102 196 86 182 70 168C54 154 38 186 22 168V60A20 20 0 0 1 42 40ZM66 68H190A8 8 0 0 1 198 76V140C186 152 174 132 162 140C150 148 140 156 128 156C116 156 106 148 94 140C82 132 70 152 58 140V76A8 8 0 0 1 66 68Z"/>
+</svg>

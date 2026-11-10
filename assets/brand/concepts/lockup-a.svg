@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 256" width="720" height="256" role="img" aria-labelledby="title">
+  <title id="title">Phostide lockup A - exploration (live text)</title>
+  <g transform="translate(24,48) scale(0.625)">
+    <path fill="#000000" fill-rule="evenodd" d="M28 92H228A24 24 0 0 1 252 116V164A24 24 0 0 1 228 188H28A24 24 0 0 1 4 164V116A24 24 0 0 1 28 92ZM36 124C52 108 76 108 100 124C124 140 148 140 172 124C188 114 208 114 220 124C208 140 188 140 172 130C148 116 124 116 100 130C76 144 52 144 36 124Z"/>
+  </g>
+  <text x="220" y="158" font-family="Segoe UI, Arial, sans-serif" font-size="72" font-weight="700" fill="#000000">Phostide</text>
+</svg>

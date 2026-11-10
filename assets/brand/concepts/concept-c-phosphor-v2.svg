@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Phostide concept C v2 - Phosphor Crest</title>
+  <!-- Cleaner one-cycle sine ribbon + taskbar baseline, optically centred. -->
+  <path fill="#000000" d="M32 128C48 72 80 72 112 104C128 120 144 136 160 128C192 112 208 96 224 128C208 160 176 160 144 128C128 112 112 96 96 112C80 128 48 144 32 128Z"/>
+  <rect x="56" y="196" width="144" height="16" rx="8" fill="#000000"/>
+</svg>

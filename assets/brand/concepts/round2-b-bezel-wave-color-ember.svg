@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Phostide B - Bezel Wave ember fill</title>
+  <!-- Black bezel; ember tide closes the lower screen (motion painted into the bar). -->
+  <path fill="#111111" fill-rule="evenodd" d="M42 52H214A20 20 0 0 1 234 72V168C218 186 202 154 186 168C170 182 154 196 128 196C102 196 86 182 70 168C54 154 38 186 22 168V72A20 20 0 0 1 42 52ZM66 80H190A8 8 0 0 1 198 88V156C186 168 174 148 162 156C150 164 140 172 128 172C116 172 106 164 94 156C82 148 70 168 58 156V88A8 8 0 0 1 66 80Z"/>
+  <path fill="#FF8A3D" d="M58 128C70 116 82 140 94 128C106 116 116 116 128 116C140 116 150 116 162 128C174 140 186 116 198 128V156C186 168 174 148 162 156C150 164 140 172 128 172C116 172 106 164 94 156C82 148 70 168 58 156V128Z"/>
+</svg>

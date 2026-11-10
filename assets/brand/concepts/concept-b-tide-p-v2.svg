@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Phostide concept B v2 - Tide P</title>
+  <!-- Bold P with a breaking-tide crest extending from the bowl (ownable tip).
+       Stem 52 wide, optically centred. Counter is a soft wave teardrop. -->
+  <path fill="#000000" fill-rule="evenodd" d="M56 36H116C168 36 214 52 226 96C234 124 224 148 204 160C220 148 236 128 240 108C246 80 232 56 200 44C176 36 148 36 116 36H56V220H116V176H116C148 176 172 172 188 156C208 136 212 112 200 92C188 72 160 64 116 64V36H56ZM116 88V124C148 124 168 118 176 108C184 98 180 88 156 88H116Z"/>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Phostide concept A v2 - Horizon Tide</title>
+  <!-- Thick taskbar whose TOP edge is a single sine wave (fill living in the bar).
+       Bar body y~108-180. Corners r=20. Optical centre slightly above mid. -->
+  <path fill="#000000" d="M36 140C36 140 56 92 88 92C112 92 120 140 128 140C136 140 144 92 168 92C200 92 220 140 220 140L220 168A24 24 0 0 1 196 192L60 192A24 24 0 0 1 36 168Z"/>
+</svg>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Corona A - balanced phosphor rings</title>
+  <defs>
+    <clipPath id="cA">
+      <path d="M52 40H204A18 18 0 0 1 222 58V156C206 176 190 140 174 156C158 172 142 188 128 188C114 188 98 172 82 156C66 140 50 176 34 156V58A18 18 0 0 1 52 40Z"/>
+    </clipPath>
+  </defs>
+  <path fill="#FF8A3D" d="M34 156C50 176 66 140 82 156C98 172 114 188 128 188C142 188 158 172 174 156C190 140 206 176 222 156V200A18 18 0 0 1 204 218H52A18 18 0 0 1 34 200V156Z"/>
+  <path fill="#111111" d="M52 40H204A18 18 0 0 1 222 58V156C206 176 190 140 174 156C158 172 142 188 128 188C114 188 98 172 82 156C66 140 50 176 34 156V58A18 18 0 0 1 52 40Z"/>
+  <!-- Optically centred in the black mass (slightly above geometric mid) -->
+  <g clip-path="url(#cA)" fill="none" stroke="#FFFFFF" stroke-linecap="round">
+    <circle cx="128" cy="100" r="5" stroke-width="2.4"/>
+    <circle cx="128" cy="100" r="18" stroke-width="1.8"/>
+    <circle cx="128" cy="100" r="32" stroke-width="1.4" opacity="0.9"/>
+    <circle cx="128" cy="100" r="46" stroke-width="1.15" opacity="0.55"/>
+  </g>
+</svg>

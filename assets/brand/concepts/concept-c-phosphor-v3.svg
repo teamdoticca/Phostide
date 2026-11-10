@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Phostide concept C v3 - Phosphor Crest</title>
+  <!-- Round-cap sine stroke over taskbar baseline. -->
+  <path d="M44 140C76 68 108 68 128 128C148 188 180 188 212 140" fill="none" stroke="#000000" stroke-width="40" stroke-linecap="round"/>
+  <rect x="64" y="196" width="128" height="16" rx="8" fill="#000000"/>
+</svg>

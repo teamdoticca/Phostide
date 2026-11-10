@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Phostide — aperture full slice</title>
+  <style>
+    body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; background: #f2f2f4; color: #111; }
+    header { padding: 24px 32px 8px; }
+    h1 { margin: 0 0 4px; font-size: 22px; }
+    p { margin: 0; color: #555; max-width: 44rem; line-height: 1.45; }
+    nav { display: flex; gap: 12px; flex-wrap: wrap; padding: 12px 32px 24px; }
+    nav a { color: #111; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 8px 12px; text-decoration: none; font-size: 14px; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 0 32px 40px; }
+    figure { margin: 0; background: #fff; border-radius: 12px; padding: 18px; text-align: center; }
+    figure.base { opacity: 0.85; }
+    figure img { width: 100%; max-width: 280px; height: auto; }
+    figcaption { margin-top: 10px; font-size: 13px; text-align: left; }
+    strong { display: block; font-size: 15px; margin-bottom: 2px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Aperture — slice σε όλο το logo</h1>
+    <p>Ίδιο σχήμα #5, αλλά οι γραμμές διαπερνούν μαύρο + ember σαν να έχουν κοπεί μέσα από το mark.</p>
+  </header>
+  <nav>
+    <a href="phos-b.html?v=1">Phos / φως</a>
+  </nav>
+  <div class="grid">
+    <figure class="base">
+      <img src="renders/round2-solid-phos-aperture.png" alt="old center only" />
+      <figcaption><strong>Πριν · #5</strong>Μόνο στο κέντρο του μαύρου</figcaption>
+    </figure>
+    <figure>
+      <img src="renders/round2-solid-aperture-full.png" alt="full aperture" />
+      <figcaption><strong>A · Full aperture</strong>#5 γεωμετρία, σε όλο το logo</figcaption>
+    </figure>
+    <figure>
+      <img src="renders/round2-solid-aperture-full-dense.png" alt="dense iris" />
+      <figcaption><strong>B · Dense iris</strong>Περισσότερα blades, edge-to-edge</figcaption>
+    </figure>
+    <figure>
+      <img src="renders/round2-solid-aperture-blades.png" alt="diameter blades" />
+      <figcaption><strong>C · Diameter blades</strong>Ακτίνες που κόβουν διάμετρο</figcaption>
+    </figure>
+    <figure>
+      <img src="renders/round2-solid-aperture-slice.png" alt="grid slice" />
+      <figcaption><strong>D · Chord grid</strong>Οριζόντια/κάθετα slices + ring</figcaption>
+    </figure>
+  </div>
+</body>
+</html>

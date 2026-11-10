@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Solid + ember + fine pixel grid</title>
+  <defs>
+    <clipPath id="gridBody">
+      <path d="M52 40H204A18 18 0 0 1 222 58V156C206 176 190 140 174 156C158 172 142 188 128 188C114 188 98 172 82 156C66 140 50 176 34 156V58A18 18 0 0 1 52 40Z"/>
+    </clipPath>
+  </defs>
+  <path fill="#FF8A3D" d="M34 156C50 176 66 140 82 156C98 172 114 188 128 188C142 188 158 172 174 156C190 140 206 176 222 156V200A18 18 0 0 1 204 218H52A18 18 0 0 1 34 200V156Z"/>
+  <path fill="#111111" d="M52 40H204A18 18 0 0 1 222 58V156C206 176 190 140 174 156C158 172 142 188 128 188C114 188 98 172 82 156C66 140 50 176 34 156V58A18 18 0 0 1 52 40Z"/>
+  <g clip-path="url(#gridBody)" fill="none" stroke="#FFFFFF" stroke-width="1.35" opacity="0.9">
+    <path d="M80 68V138M100 68V144M120 68V148M140 68V144M160 68V138M180 68V128"/>
+    <path d="M70 80H186M68 98H188M70 116H186M78 134H178"/>
+  </g>
+</svg>

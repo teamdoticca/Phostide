@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Phostide — corona refine</title>
+  <style>
+    body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; background: #f2f2f4; color: #111; }
+    header { padding: 24px 32px 8px; }
+    h1 { margin: 0 0 4px; font-size: 22px; }
+    p { margin: 0; color: #555; max-width: 42rem; line-height: 1.45; }
+    nav { display: flex; gap: 12px; flex-wrap: wrap; padding: 12px 32px 24px; }
+    nav a { color: #111; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 8px 12px; text-decoration: none; font-size: 14px; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 0 32px 40px; }
+    figure { margin: 0; background: #fff; border-radius: 12px; padding: 18px; text-align: center; }
+    figure img { width: 100%; max-width: 260px; height: auto; }
+    figcaption { margin-top: 10px; font-size: 13px; text-align: left; }
+    strong { display: block; font-size: 15px; margin-bottom: 2px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Corona refine</h1>
+    <p>Solid + ember βάση. Φωσφορίζουσα άλως στο μαύρο — λεπτή, κεντραρισμένη οπτικά (όχι full-slice).</p>
+  </header>
+  <nav>
+    <a href="phos-b.html?v=1">Phos set</a>
+    <a href="aperture-full.html?v=3">Aperture (παλιό)</a>
+  </nav>
+  <div class="grid">
+    <figure>
+      <img src="renders/round2-b-closed-solid-ember.png" alt="base" />
+      <figcaption><strong>Βάση</strong>Χωρίς corona</figcaption>
+    </figure>
+    <figure>
+      <img src="renders/corona-a.png" alt="corona A" />
+      <figcaption><strong>A · Balanced</strong>Πυρήνας + 3 rings που σβήνουν</figcaption>
+    </figure>
+    <figure>
+      <img src="renders/corona-b.png" alt="corona B" />
+      <figcaption><strong>B · Finer fade</strong>5 rings, πιο απαλό</figcaption>
+    </figure>
+    <figure>
+      <img src="renders/corona-c.png" alt="corona C" />
+      <figcaption><strong>C · Three only</strong>Χωρίς πυρήνα — πιο minimal</figcaption>
+    </figure>
+    <figure>
+      <img src="renders/corona-d.png" alt="corona D" />
+      <figcaption><strong>D · Solid core</strong>Γεμάτο κέντρο + απαλό halo</figcaption>
+    </figure>
+  </div>
+</body>
+</html>
