@@ -20,9 +20,13 @@ export function SiteHeader({ active }: { active?: string }) {
           href="/"
           className="flex items-center gap-3 text-[15px] font-semibold text-zinc-100"
         >
-          <span className="grid h-7 w-7 place-items-center rounded-md bg-ember text-xs font-bold text-black">
-            P
-          </span>
+          <img
+            src="/phostide-mark.svg"
+            alt=""
+            width={28}
+            height={28}
+            className="h-7 w-7"
+          />
           Phostide
         </Link>
         <nav className="hidden items-center gap-8 text-sm text-soft md:flex">

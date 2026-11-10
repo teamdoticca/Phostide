@@ -1,58 +1,8 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Phostide">
-  <title>Phostide</title>
-  <defs>
-    <linearGradient id="core" x1="0%" y1="50%" x2="100%" y2="50%">
-      <stop offset="0%" stop-color="#22d3ee"/>
-      <stop offset="35%" stop-color="#38bdf8"/>
-      <stop offset="70%" stop-color="#2563eb"/>
-      <stop offset="100%" stop-color="#67e8f9"/>
-    </linearGradient>
-    <linearGradient id="edge" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#a5f3fc" stop-opacity="0.85"/>
-      <stop offset="50%" stop-color="#60a5fa" stop-opacity="0.55"/>
-      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0.75"/>
-    </linearGradient>
-    <filter id="glow" x="-35%" y="-80%" width="170%" height="260%">
-      <feGaussianBlur stdDeviation="18" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-    <filter id="soft" x="-20%" y="-50%" width="140%" height="200%">
-      <feGaussianBlur stdDeviation="6" result="b"/>
-      <feMerge>
-        <feMergeNode in="b"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-  </defs>
-  <rect width="1024" height="1024" fill="#07080c"/>
-  <!-- Soft bloom under the ribbon -->
-  <path d="M120 540 C 260 420, 420 680, 560 520 S 820 380, 920 500"
-        fill="none" stroke="#38bdf8" stroke-width="90" stroke-linecap="round"
-        opacity="0.18" filter="url(#glow)"/>
-  <!-- Outer strands -->
-  <path d="M140 560 C 280 430, 430 690, 570 530 S 800 400, 900 520"
-        fill="none" stroke="url(#edge)" stroke-width="42" stroke-linecap="round"
-        opacity="0.55" filter="url(#soft)"/>
-  <path d="M130 520 C 270 400, 410 660, 550 500 S 810 360, 910 480"
-        fill="none" stroke="url(#edge)" stroke-width="36" stroke-linecap="round"
-        opacity="0.45" filter="url(#soft)"/>
-  <!-- Bright core ribbon -->
-  <path d="M150 540 C 290 420, 430 680, 560 520 S 800 390, 890 500"
-        fill="none" stroke="url(#core)" stroke-width="28" stroke-linecap="round"
-        filter="url(#glow)"/>
-  <!-- Hot cyan spine -->
-  <path d="M180 535 C 310 430, 440 650, 565 525 S 780 405, 870 495"
-        fill="none" stroke="#e0faff" stroke-width="10" stroke-linecap="round"
-        opacity="0.9" filter="url(#soft)"/>
-  <!-- Fine sparkles -->
-  <circle cx="280" cy="470" r="3" fill="#ffffff" opacity="0.9"/>
-  <circle cx="420" cy="590" r="2" fill="#a5f3fc" opacity="0.75"/>
-  <circle cx="610" cy="500" r="2.5" fill="#ffffff" opacity="0.85"/>
-  <circle cx="760" cy="430" r="2" fill="#67e8f9" opacity="0.7"/>
-  <circle cx="520" cy="545" r="1.5" fill="#ffffff" opacity="0.65"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Phostide</title>
+  <!-- Ember under wave. Black screen. White bezel = inset frame (black rim outside white). -->
+  <path fill="#FF8A3D" d="M34 156C50 176 66 140 82 156C98 172 114 188 128 188C142 188 158 172 174 156C190 140 206 176 222 156V200A18 18 0 0 1 204 218H52A18 18 0 0 1 34 200V156Z"/>
+  <path fill="#111111" d="M52 40H204A18 18 0 0 1 222 58V156C206 176 190 140 174 156C158 172 142 188 128 188C114 188 98 172 82 156C66 140 50 176 34 156V58A18 18 0 0 1 52 40Z"/>
+  <!-- Bezel ring: outer inset ~4, inner inset ~12 from screen edge -->
+  <path fill="#FFFFFF" fill-rule="evenodd" d="M58 48H198A12 12 0 0 1 210 60V150C198 164 184 140 170 150C156 160 142 170 128 170C114 170 100 160 86 150C72 140 58 164 46 150V60A12 12 0 0 1 58 48ZM68 60H188A6 6 0 0 1 194 66V140C184 152 172 132 160 140C148 148 138 156 128 156C118 156 108 148 96 140C84 132 72 152 62 140V66A6 6 0 0 1 68 60Z"/>
 </svg>

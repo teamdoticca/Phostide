@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Phostide (one-colour silhouette)</title>
+  <!-- Single filled silhouette for stamps / embroidery / favicon mono. -->
+  <path fill="#000000" d="M52 40H204A18 18 0 0 1 222 58V200A18 18 0 0 1 204 218H52A18 18 0 0 1 34 200V58A18 18 0 0 1 52 40Z"/>
+</svg>

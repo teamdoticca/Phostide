@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Phostide — icon rollout</title>
+  <style>
+    body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; background: #111; color: #eee; }
+    header { padding: 28px 32px 12px; }
+    h1 { margin: 0 0 6px; font-size: 22px; }
+    p { margin: 0; color: #aaa; max-width: 44rem; line-height: 1.45; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px; padding: 20px 32px 40px; }
+    figure { margin: 0; background: #1a1a1a; border-radius: 12px; padding: 14px; text-align: center; }
+    figure.light { background: #f2f2f4; color: #111; }
+    figure img { image-rendering: auto; display: block; margin: 0 auto; }
+    figcaption { margin-top: 8px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Screen Tide — shipped sizes</h1>
+    <p>Ίδιο mark σε tray/exe ICO, setup ICO, favicon και site. Regenerated via <code>python scripts/build-icons.py</code>. Serve from <code>assets/brand</code> (not kit alone).</p>
+  </header>
+  <div class="grid">
+    <figure class="light"><img src="/png/phostide-16.png" width="16" height="16" alt="16" /><figcaption>16 tray</figcaption></figure>
+    <figure class="light"><img src="/png/phostide-24.png" width="24" height="24" alt="24" /><figcaption>24</figcaption></figure>
+    <figure class="light"><img src="/png/phostide-32.png" width="32" height="32" alt="32" /><figcaption>32 favicon/tray</figcaption></figure>
+    <figure class="light"><img src="/png/phostide-48.png" width="48" height="48" alt="48" /><figcaption>48</figcaption></figure>
+    <figure class="light"><img src="/png/phostide-64.png" width="64" height="64" alt="64" /><figcaption>64</figcaption></figure>
+    <figure><img src="/png/phostide-256.png" width="128" height="128" alt="256" /><figcaption>256</figcaption></figure>
+    <figure><img src="/icon-512.png" width="128" height="128" alt="512" /><figcaption>512</figcaption></figure>
+  </div>
+</body>
+</html>

@@ -1,0 +1,38 @@
+{
+  "brand": "Phostide",
+  "tagline": "Animated themes, painted into your real taskbar",
+  "brief": "Windows 11 OLED-safe taskbar themes. Local, MIT, dark-first. Logo should read as display + motion + phosphor light (phos / φως), not a generic P-tile.",
+  "adjectives": ["luminous", "calm", "precise", "OLED-dark", "local-trust"],
+  "criteria": "Works as tray + favicon, ember under wavy edge (not inside screen), corona reads as light not protection badge.",
+  "industry": "consumer-app",
+  "nav": ["Download", "Themes", "Docs"],
+  "brand_color": "#FF8A3D",
+  "tile_color": "#111111",
+  "greyscale": false,
+  "final": true,
+  "designer": "Doticca",
+  "round": 2,
+  "concepts": [
+    {
+      "name": "Corona Tide",
+      "symbol": "phostide-mark.svg",
+      "lockup": "phostide-horizontal.svg",
+      "stacked": "phostide-stacked.svg",
+      "symbol_on_tile": "phostide-mark.svg",
+      "symbol_on_dark": "phostide-on-void.svg",
+      "lockup_on_dark": "phostide-horizontal.svg",
+      "idea": "A solid screen with a phosphor corona; ember closes the parallelogram under the wavy tide edge.",
+      "rationale": [
+        "Phos / φως as fading corona — light without a shield cliché",
+        "Wavy bottom = motion in the taskbar; ember stays below the wave",
+        "Small-size cut keeps core + one ring for tray and favicon"
+      ]
+    }
+  ],
+  "recommendation": "Corona Tide (final). Ship colour master + small cut + mono silhouette; retire the orange P-tile.",
+  "next_steps": [
+    "Drop web/ icons into site/public and assets/brand",
+    "Outline wordmark for print if needed",
+    "Optional trademark search"
+  ]
+}

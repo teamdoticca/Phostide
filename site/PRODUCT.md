@@ -39,7 +39,7 @@ Themes live inside Explorer’s own fill via a TAP helper — icons stay on top;
 
 ## Confirmed assets
 
-- `assets/brand/` and `site/public/`: cyan-wave mark, tray chip icons, theme preview JPGs under `/themes/*.jpg`, `og-ai.jpg` for Open Graph
+- `assets/brand/` and `site/public/`: Screen Tide mark (solid screen + white bezel + ember under wavy edge); tray/exe/setup ICOs from `scripts/build-icons.py`; theme preview JPGs under `/themes/*.jpg`; `og-ai.jpg` for Open Graph
 - Product name: Phostide
 
 ## Voice

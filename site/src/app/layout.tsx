@@ -23,6 +23,10 @@ export const metadata: Metadata = {
     "Phostide paints OLED-safe motion directly into the Windows taskbar background. Free, MIT, signed installer.",
   metadataBase: new URL("https://phostide.doticca.com"),
   applicationName: "Phostide",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+    { media: "(prefers-color-scheme: light)", color: "#000000" },
+  ],
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
@@ -42,10 +46,10 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/og-ai.jpg",
+        url: "/og.png",
         width: 1200,
         height: 630,
-        alt: "Phostide — animated taskbar themes",
+        alt: "Phostide — animated themes for the Windows taskbar",
       },
     ],
   },
@@ -54,7 +58,7 @@ export const metadata: Metadata = {
     title: "Phostide",
     description:
       "Animated themes, painted into your real Windows taskbar. Free · MIT · Windows 11.",
-    images: ["/og-ai.jpg"],
+    images: ["/og.png"],
   },
 };
 

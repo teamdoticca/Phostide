@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Phostide — logo kit (Screen Tide)</title>
+  <style>
+    body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; background: #f2f2f4; color: #111; }
+    header { padding: 28px 32px 8px; }
+    h1 { margin: 0 0 6px; font-size: 24px; }
+    p { margin: 0; color: #555; max-width: 48rem; line-height: 1.45; }
+    nav { display: flex; gap: 10px; flex-wrap: wrap; padding: 16px 32px 24px; }
+    nav a { color: #111; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 8px 12px; text-decoration: none; font-size: 14px; }
+    section { padding: 0 32px 36px; }
+    h2 { font-size: 16px; margin: 0 0 12px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+    figure { margin: 0; background: #fff; border-radius: 12px; padding: 16px; text-align: center; }
+    figure.void { background: #000; color: #eee; }
+    figure img { width: 100%; max-width: 200px; height: auto; }
+    figcaption { margin-top: 8px; font-size: 13px; }
+    .swatches { display: flex; gap: 12px; flex-wrap: wrap; }
+    .swatch { width: 120px; border-radius: 10px; overflow: hidden; background: #fff; border: 1px solid #ddd; }
+    .swatch i { display: block; height: 56px; }
+    .swatch span { display: block; padding: 8px 10px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Phostide logo kit — Screen Tide</h1>
+    <p>Solid screen + white bezel + ember under the wavy edge (no corona). Masters in this folder; web icons in <code>web/</code>.</p>
+  </header>
+  <nav>
+    <a href="presentation.html">Presentation board</a>
+    <a href="USAGE.md">Usage notes</a>
+    <a href="web/head-snippet.html">Head snippet</a>
+  </nav>
+  <section>
+    <h2>Colour</h2>
+    <div class="swatches">
+      <div class="swatch"><i style="background:#111111"></i><span>Screen #111111</span></div>
+      <div class="swatch"><i style="background:#FF8A3D"></i><span>Ember #FF8A3D</span></div>
+      <div class="swatch"><i style="background:#FFFFFF;border-bottom:1px solid #eee"></i><span>Bezel #FFFFFF</span></div>
+      <div class="swatch"><i style="background:#000000"></i><span>Void #000000</span></div>
+    </div>
+  </section>
+  <section>
+    <h2>Masters</h2>
+    <div class="grid">
+      <figure>
+        <img src="renders/phostide-mark.png" alt="colour master" />
+        <figcaption>Colour master</figcaption>
+      </figure>
+      <figure>
+        <img src="renders/phostide-mark-small.png" alt="small cut" />
+        <figcaption>Small-size cut</figcaption>
+      </figure>
+      <figure>
+        <img src="renders/phostide-horizontal.png" alt="horizontal lockup" />
+        <figcaption>Horizontal lockup</figcaption>
+      </figure>
+      <figure class="void">
+        <img src="renders/phostide-on-void.png" alt="on void" />
+        <figcaption>On OLED void</figcaption>
+      </figure>
+    </div>
+  </section>
+</body>
+</html>

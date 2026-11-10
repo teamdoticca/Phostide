@@ -1,0 +1,14 @@
+---
+description: Always show visual design results in Cursor's internal browser
+alwaysApply: true
+---
+
+# Show visuals in Cursor browser
+
+When producing anything the user needs to *see* (logo concepts, favicons, mockups, preview sheets, screenshots, design boards, OG images, HTML previews):
+
+1. Serve local files over `http://127.0.0.1` (Python `http.server` or the project's own dev server). Never rely on `file://` — the browser tool blocks it.
+2. Open the result with the Cursor IDE browser (`browser_navigate`) using `position: "active"` so the panel is visible.
+3. Prefer a single overview page (concept sheet / preview HTML) first; then individual assets if needed.
+4. Do not assume markdown image paths or Read-tool image attachments are visible to the user.
+5. After navigating, confirm with a screenshot when verifying the page loaded.
