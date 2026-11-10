@@ -4,6 +4,13 @@ export const FALLBACK_RELEASES =
   "https://github.com/teamdoticca/Phostide/releases/latest";
 export const GITHUB_REPO = "https://github.com/teamdoticca/Phostide";
 
+/** Bump with each published GitHub Release (used when the API is unreachable). */
+const FALLBACK_TAG = "v0.1.2";
+const FALLBACK_SETUP =
+  "https://github.com/teamdoticca/Phostide/releases/download/v0.1.2/Phostide-Setup-0.1.2-win-x64.exe";
+const FALLBACK_ZIP =
+  "https://github.com/teamdoticca/Phostide/releases/download/v0.1.2/Phostide-0.1.2-win-x64.zip";
+
 export type ReleaseAssets = {
   tag: string | null;
   pageUrl: string;
@@ -11,22 +18,26 @@ export type ReleaseAssets = {
   zipUrl: string;
 };
 
+function fallbackAssets(tag: string | null = FALLBACK_TAG): ReleaseAssets {
+  return {
+    tag,
+    pageUrl: FALLBACK_RELEASES,
+    setupUrl: FALLBACK_SETUP,
+    zipUrl: FALLBACK_ZIP,
+  };
+}
+
 export async function resolveReleaseAssets(): Promise<ReleaseAssets> {
   try {
     const res = await fetch(RELEASES_API, {
-      next: { revalidate: 300 },
+      next: { revalidate: 60 },
       headers: {
         Accept: "application/vnd.github+json",
         "User-Agent": "phostide-site",
       },
     });
     if (!res.ok) {
-      return {
-        tag: null,
-        pageUrl: FALLBACK_RELEASES,
-        setupUrl: FALLBACK_RELEASES,
-        zipUrl: FALLBACK_RELEASES,
-      };
+      return fallbackAssets(null);
     }
     const data = (await res.json()) as {
       tag_name?: string;
@@ -43,17 +54,12 @@ export async function resolveReleaseAssets(): Promise<ReleaseAssets> {
     const pageUrl = data.html_url ?? FALLBACK_RELEASES;
 
     return {
-      tag: data.tag_name ?? null,
+      tag: data.tag_name ?? FALLBACK_TAG,
       pageUrl,
-      setupUrl: setup?.browser_download_url ?? pageUrl,
-      zipUrl: zip?.browser_download_url ?? pageUrl,
+      setupUrl: setup?.browser_download_url ?? FALLBACK_SETUP,
+      zipUrl: zip?.browser_download_url ?? FALLBACK_ZIP,
     };
   } catch {
-    return {
-      tag: null,
-      pageUrl: FALLBACK_RELEASES,
-      setupUrl: FALLBACK_RELEASES,
-      zipUrl: FALLBACK_RELEASES,
-    };
+    return fallbackAssets();
   }
 }
