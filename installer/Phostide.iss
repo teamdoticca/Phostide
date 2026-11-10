@@ -44,6 +44,9 @@ ArchitecturesInstallIn64BitMode=x64compatible
 UninstallDisplayIcon={app}\{#MyAppExeName}
 CloseApplications=yes
 RestartApplications=no
+; Same folder + AppId on upgrade so Windows keeps treating this as one app.
+UsePreviousAppDir=yes
+AppMutex=Local\Phostide.SingleInstance
 VersionInfoVersion={#MyAppVersion}.0
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoProductName={#MyAppName}
@@ -62,9 +65,10 @@ Source: "{#StageDir}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#StageDir}\README.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
+; AppUserModelID must stay stable so taskbar / tray prefs survive updates.
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; AppUserModelID: "Doticca.Phostide"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; AppUserModelID: "Doticca.Phostide"
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent

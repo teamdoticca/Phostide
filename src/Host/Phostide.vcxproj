@@ -32,32 +32,39 @@
     <ClCompile>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/EHsc %(AdditionalOptions)</AdditionalOptions>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;WIN32;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>shell32.lib;ole32.lib;wtsapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>shell32.lib;ole32.lib;wtsapi32.lib;winhttp.lib;comctl32.lib;dwmapi.lib;uxtheme.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ApplicationIcon>phostide.ico</ApplicationIcon>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Injector.h" />
     <ClInclude Include="SettingsStore.h" />
+    <ClInclude Include="SettingsWindow.h" />
+    <ClInclude Include="UpdateCheck.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="..\Common\PhostideCommon.h" />
+    <ClInclude Include="..\ExplorerTAP\PixelThemes.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Injector.cpp" />
     <ClCompile Include="SettingsStore.cpp" />
+    <ClCompile Include="SettingsWindow.cpp" />
+    <ClCompile Include="UpdateCheck.cpp" />
     <ClCompile Include="..\Common\TaskbarAccent.cpp" />
+    <ClCompile Include="..\ExplorerTAP\PixelThemes.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Phostide.rc" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="phostide.ico" />
+    <Manifest Include="Phostide.manifest" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

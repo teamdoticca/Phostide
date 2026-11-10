@@ -1,3 +1,41 @@
 #include "resource.h"
+#include <winver.h>
 
 IDI_APPICON ICON "phostide.ico"
+
+#ifdef APSTUDIO_INVOKED
+1 TEXTINCLUDE BEGIN "resource.h\0" END
+#endif
+
+#ifndef VS_VERSION_INFO
+#define VS_VERSION_INFO 1
+#endif
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION    0,1,2,0
+PRODUCTVERSION 0,1,2,0
+FILEFLAGSMASK  0x3fL
+FILEFLAGS      0x0L
+FILEOS         VOS_NT_WINDOWS32
+FILETYPE       VFT_APP
+FILESUBTYPE    VFT2_UNKNOWN
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "CompanyName",      "Doticca"
+      VALUE "FileDescription",  "Phostide"
+      VALUE "FileVersion",      "0.1.2"
+      VALUE "InternalName",     "Phostide"
+      VALUE "LegalCopyright",   "Copyright (C) 2026 Doticca"
+      VALUE "OriginalFilename", "Phostide.exe"
+      VALUE "ProductName",      "Phostide"
+      VALUE "ProductVersion",   "0.1.2"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+END
