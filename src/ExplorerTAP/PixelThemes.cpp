@@ -735,8 +735,10 @@ void PaintSpace(uint8_t* bgra, int stride, int w, int h, float intensity, float 
   const float cy = (static_cast<float>(h) - 1.f) * 0.50f;
   const float halfW = (std::max)(1.f, static_cast<float>(w) * 0.5f);
   const float halfH = (std::max)(1.f, static_cast<float>(h) * 0.5f);
-  const float maxReach =
-      std::sqrt(halfW * halfW + halfH * halfH) / (std::min)(halfW, halfH) * 1.15f;
+  // Isotropic px scale so star rush stays circular on any bar width/DPI (wide
+  // 2560×48 bars used to squash angles via radius*halfW / radius*halfH).
+  const float iso = (std::min)(halfW, halfH);
+  const float maxReach = ((std::max)(halfW, halfH) / iso) * 1.15f;
 
   // --- Pass 1: void + warm volumetric nebula (camera-mapped world) ---
   for (int alongI = 0; alongI < along; ++alongI) {
@@ -969,8 +971,8 @@ void PaintSpace(uint8_t* bgra, int stride, int w, int h, float intensity, float 
     const float uEase = u * u * (0.65f + 0.35f * u);
     const float radius = uEase * maxReach;
 
-    const float dx = cosA * radius * halfW;
-    const float dy = sinA * radius * halfH * (vertical ? 1.f : 0.85f);
+    const float dx = cosA * radius * iso;
+    const float dy = sinA * radius * iso;
     const float px = cx + dx;
     const float py = cy + dy;
 

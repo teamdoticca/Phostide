@@ -46,13 +46,47 @@ void MeasureShape(wuxs::Shape const& shape, int& w, int& h) {
     w = static_cast<int>(std::lround(size.Width));
     h = static_cast<int>(std::lround(size.Height));
     if (auto fe = shape.try_as<wux::FrameworkElement>()) {
-      if (w <= 1) w = static_cast<int>(std::lround(fe.ActualWidth()));
-      if (h <= 1) h = static_cast<int>(std::lround(fe.ActualHeight()));
+      const int aw = static_cast<int>(std::lround(fe.ActualWidth()));
+      const int ah = static_cast<int>(std::lround(fe.ActualHeight()));
+      // Win11 BackgroundFill often keeps a stub RenderSize (8×8) while Actual*
+      // already reflects the laid-out bar. Prefer the larger reliable measure.
+      if (aw > w) w = aw;
+      if (ah > h) h = ah;
+      try {
+        const auto as = fe.ActualSize();
+        const int asw = static_cast<int>(std::lround(as.x));
+        const int ash = static_cast<int>(std::lround(as.y));
+        if (asw > w) w = asw;
+        if (ash > h) h = ash;
+      } catch (...) {
+      }
+    }
+    // On-screen bounds beat local stub sizes when the shell scales the fill.
+    try {
+      if (auto fe = shape.try_as<wux::FrameworkElement>()) {
+        const float localW =
+            (std::max)(1.f, static_cast<float>((std::max)(w, static_cast<int>(
+                                                                  std::lround(size.Width)))));
+        const float localH =
+            (std::max)(1.f, static_cast<float>((std::max)(h, static_cast<int>(
+                                                                  std::lround(size.Height)))));
+        const auto tt = fe.TransformToVisual(nullptr);
+        const auto rc = tt.TransformBounds(
+            winrt::Windows::Foundation::Rect{0.f, 0.f, localW, localH});
+        const int bw = static_cast<int>(std::lround(std::abs(rc.Width)));
+        const int bh = static_cast<int>(std::lround(std::abs(rc.Height)));
+        // Only trust transformed bounds when they look like a taskbar strip.
+        if (bw >= 64 && bh >= 8 && (bw * bh) > (w * h)) {
+          w = bw;
+          h = bh;
+        }
+      }
+    } catch (...) {
     }
   } catch (...) {
   }
-  w = (std::max)(8, (std::min)(w, 4096));
-  h = (std::max)(8, (std::min)(h, 4096));
+  w = (std::max)(8, (std::min)(w, 7680));
+  h = (std::max)(8, (std::min)(h, 7680));
 }
 
 const wchar_t* EdgeName(TaskbarEdge e) {
@@ -130,9 +164,9 @@ void TaskbarAppearanceService::RegisterBackground(wuxs::Shape const& shape) {
     boundCount_.fetch_add(1);
     SignalBound();
     EnsureUiTimer();
-    wchar_t geomLine[192];
+    wchar_t geomLine[256];
     swprintf_s(geomLine,
-               L"Bound fill %dx%d edge=%s length=%d thickness=%d vertical=%d",
+               L"Bound fill paint=%dx%d edge=%s appbar=%dx%d vertical=%d",
                target->pixelWidth, target->pixelHeight, EdgeName(target->geom.edge),
                target->geom.length, target->geom.thickness, target->geom.vertical ? 1 : 0);
     LogService(geomLine);
@@ -184,10 +218,46 @@ void TaskbarAppearanceService::RestoreAll() {
 
 void TaskbarAppearanceService::RefreshGeomAndBitmap(TaskbarVisual& tv) {
   if (!tv.background) return;
-  int w = 0, h = 0;
-  MeasureShape(tv.background, w, h);
-  tv.geom = ResolveTaskbarGeomForSize(w, h);
-  // Prefer live XAML size (handles DPI / auto-hide thickness), keep edge from geom.
+  int measuredW = 0, measuredH = 0;
+  MeasureShape(tv.background, measuredW, measuredH);
+  tv.geom = ResolveTaskbarGeomForSize(measuredW, measuredH);
+
+  // Win11 often reports BackgroundFill as a tiny stub (e.g. 8×8) that the shell
+  // then non-uniformly scales across the bar. Painting into that stub + Stretch::Fill
+  // makes themes look stretched; Settings preview is fine because it uses real px.
+  int w = measuredW;
+  int h = measuredH;
+  const int geomArea =
+      (std::max)(1, tv.geom.length) * (std::max)(1, tv.geom.thickness);
+  const int measuredArea = (std::max)(1, measuredW) * (std::max)(1, measuredH);
+  const bool stubSize =
+      (measuredW <= 32 && measuredH <= 32) ||
+      (tv.geom.length >= 64 && tv.geom.thickness >= 8 && measuredArea * 16 < geomArea);
+  if (stubSize && tv.geom.length >= 64 && tv.geom.thickness >= 8) {
+    if (tv.geom.vertical) {
+      w = tv.geom.thickness;
+      h = tv.geom.length;
+    } else {
+      w = tv.geom.length;
+      h = tv.geom.thickness;
+    }
+  } else {
+    // Match composition pixels when XAML size is already the laid-out bar.
+    double scale = 1.0;
+    try {
+      if (auto root = tv.background.XamlRoot()) {
+        scale = root.RasterizationScale();
+      }
+    } catch (...) {
+    }
+    if (scale > 1.01) {
+      w = (std::max)(8, static_cast<int>(std::lround(measuredW * scale)));
+      h = (std::max)(8, static_cast<int>(std::lround(measuredH * scale)));
+    }
+  }
+  w = (std::max)(8, (std::min)(w, 7680));
+  h = (std::max)(8, (std::min)(h, 7680));
+
   if (w != tv.pixelWidth || h != tv.pixelHeight || !tv.bitmap) {
     try {
       tv.pixelWidth = w;
@@ -247,17 +317,21 @@ void TaskbarAppearanceService::PaintVisual(TaskbarVisual& tv, float timeSeconds)
     uint8_t* data = BufferData(buffer);
     if (!data) return;
 
+    // Orientation + paint metrics always follow the bitmap pixels so themes stay
+    // undistorted regardless of display resolution / stub XAML sizes.
+    const bool vertical = tv.pixelHeight > tv.pixelWidth * 3 / 2;
     PaintContext ctx;
     ctx.theme = static_cast<ThemeId>(command_.theme);
     ctx.intensity = command_.intensity / 100.f;
     ctx.timeSeconds = timeSeconds;
-    ctx.edge = tv.geom.edge;
-    ctx.vertical = tv.geom.vertical || (tv.pixelHeight > tv.pixelWidth * 3 / 2);
-    ctx.thickness = tv.geom.thickness > 0
-                        ? tv.geom.thickness
-                        : (ctx.vertical ? tv.pixelWidth : tv.pixelHeight);
-    ctx.length = tv.geom.length > 0 ? tv.geom.length
-                                    : (ctx.vertical ? tv.pixelHeight : tv.pixelWidth);
+    ctx.vertical = vertical;
+    ctx.length = vertical ? tv.pixelHeight : tv.pixelWidth;
+    ctx.thickness = vertical ? tv.pixelWidth : tv.pixelHeight;
+    if (vertical) {
+      ctx.edge = (tv.geom.edge == TaskbarEdge::Right) ? TaskbarEdge::Right : TaskbarEdge::Left;
+    } else {
+      ctx.edge = (tv.geom.edge == TaskbarEdge::Top) ? TaskbarEdge::Top : TaskbarEdge::Bottom;
+    }
 
     PaintThemePixels(ctx, data, tv.pixelWidth, tv.pixelHeight, tv.pixelWidth * 4);
     tv.bitmap.Invalidate();

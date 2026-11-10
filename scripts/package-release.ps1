@@ -1,7 +1,7 @@
 ﻿param(
   [string]$Configuration = "Release",
   # Keep in sync with src/Common/PhostideCommon.h kAppVersion and Host VERSIONINFO.
-  [string]$Version = "0.1.5",
+  [string]$Version = "0.1.6",
   [switch]$SkipBuild,
   [switch]$SkipCodeSign,
   [switch]$SkipInno,
