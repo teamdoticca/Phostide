@@ -114,10 +114,7 @@ begin
   NeedsRestart := False;
   CloseRunningPhostide;
   if Assigned(WizardForm) then
-  begin
     WizardForm.BringToFront;
-    WizardForm.SetFocus;
-  end;
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
