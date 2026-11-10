@@ -11,17 +11,18 @@ Publisher: Doticca (https://doticca.com)
 - Platform: Windows 11 22H2+ (x64)
 - Mechanism: TAP helper paints the taskbar's own background fill; icons stay on top; quitting restores the normal bar
 - Themes: Rainbow, Sea Waves, Weather, Space, Aurora
-- Privacy: local only — no account, no telemetry, no network required to run
+- Privacy: local by default — no account, no telemetry; themes work offline; optional GitHub update check
+- Settings: tray › Settings… › theme + intensity › Apply; System tab for Start with Windows / updates
 - Distribution: signed Setup.exe (per-user, no admin) and portable zip via GitHub Releases
 
 ## Docs
 
 - [Docs hub](https://phostide.doticca.com/docs): overview and download
-- [Install & run](https://phostide.doticca.com/docs/install): Setup.exe, portable zip, uninstall
-- [Themes](https://phostide.doticca.com/docs/themes): the five built-in looks
+- [Install & run](https://phostide.doticca.com/docs/install): Setup.exe, tray menu, Settings, uninstall
+- [Themes](https://phostide.doticca.com/docs/themes): five looks, intensity, Apply flow
 - [OLED notes](https://phostide.doticca.com/docs/oled): why motion helps OLED taskbars
 - [Troubleshooting](https://phostide.doticca.com/docs/troubleshooting): common fixes
-- [Privacy](https://phostide.doticca.com/docs/privacy): local-only policy
+- [Privacy](https://phostide.doticca.com/docs/privacy): what is stored and optional network use
 
 ## Optional
 

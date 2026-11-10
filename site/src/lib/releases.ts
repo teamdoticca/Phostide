@@ -5,7 +5,7 @@ export const FALLBACK_RELEASES =
 export const GITHUB_REPO = "https://github.com/teamdoticca/Phostide";
 
 /** Bump with each published GitHub Release (used when the API is unreachable). */
-const FALLBACK_TAG = "v0.1.7";
+export const FALLBACK_TAG = "v0.1.7";
 const FALLBACK_SETUP =
   "https://github.com/teamdoticca/Phostide/releases/download/v0.1.7/Phostide-Setup-0.1.7-win-x64.exe";
 const FALLBACK_ZIP =
@@ -37,7 +37,7 @@ export async function resolveReleaseAssets(): Promise<ReleaseAssets> {
       },
     });
     if (!res.ok) {
-      return fallbackAssets(null);
+      return fallbackAssets();
     }
     const data = (await res.json()) as {
       tag_name?: string;

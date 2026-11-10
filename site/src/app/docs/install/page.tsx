@@ -4,7 +4,7 @@ import { IconArrowLeft, IconArrowRight, IconDownload } from "@/components/Icons"
 import { LatestDownload } from "@/components/LatestDownload";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
-import { resolveReleaseAssets } from "@/lib/releases";
+import { FALLBACK_TAG, resolveReleaseAssets } from "@/lib/releases";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
@@ -17,15 +17,15 @@ export const metadata: Metadata = pageMetadata({
 const toc = [
   { href: "#setup", label: "1 · Setup.exe" },
   { href: "#files", label: "2 · Where it goes" },
-  { href: "#run", label: "3 · Run from tray" },
+  { href: "#run", label: "3 · Tray & Settings" },
   { href: "#portable", label: "Portable zip" },
-  { href: "#settings", label: "Settings file" },
+  { href: "#settings-file", label: "Settings file" },
   { href: "#uninstall", label: "Uninstall" },
 ];
 
 export default async function InstallPage() {
   const { tag } = await resolveReleaseAssets();
-  const releaseTag = tag ?? "v0.1.5";
+  const releaseTag = tag ?? FALLBACK_TAG;
 
   return (
     <div className="min-h-screen bg-void text-zinc-100">
@@ -58,7 +58,7 @@ export default async function InstallPage() {
             Install Phostide
           </h1>
           <p className="mt-5 text-lg text-soft">
-            Windows 11 22H2 or newer, x64. No admin rights needed.
+            Windows 11 22H2 or newer, x64. Per‑user install — no admin rights.
           </p>
 
           <section
@@ -77,8 +77,9 @@ export default async function InstallPage() {
               </span>
             </div>
             <p className="mt-3 text-soft">
-              Download the latest Setup.exe from GitHub Releases and run it. It
-              installs just for your user account.
+              Download the latest Setup.exe from GitHub Releases (or this site)
+              and run it. It installs for your user account only and can launch
+              Phostide when it finishes.
             </p>
             <LatestDownload className="btn-ember mt-6">
               <span className="inline-flex items-center gap-2">
@@ -97,19 +98,52 @@ export default async function InstallPage() {
               <p className="pl-5">ExplorerTAP.dll</p>
             </div>
             <p className="mt-4 text-sm text-soft">
-              Phostide.exe is the tray app. ExplorerTAP.dll is what lets it paint
-              inside the taskbar.
+              <code className="text-zinc-100">Phostide.exe</code> is the tray
+              host. <code className="text-zinc-100">ExplorerTAP.dll</code> is
+              injected into Explorer so themes paint the real taskbar
+              background — keep both in the same folder.
             </p>
           </section>
 
           <section id="run" className="mt-6 rounded-xl border border-line bg-panel p-8">
             <p className="text-xs text-soft">Step 3</p>
-            <h2 className="mt-1 text-2xl font-semibold">Run it from the tray</h2>
+            <h2 className="mt-1 text-2xl font-semibold">Tray menu &amp; Settings</h2>
             <p className="mt-3 text-soft">
-              Open Phostide from the Start menu. An icon appears in the system
-              tray — right‑click it to pick a theme or quit. Quitting brings the
-              normal taskbar back.
+              Open Phostide from the Start menu. A tray icon appears. Right‑click
+              it for:
             </p>
+            <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-soft">
+              <li>
+                <span className="text-zinc-100">Enable Phostide</span> — toggle
+                themes on or off without quitting
+              </li>
+              <li>
+                <span className="text-zinc-100">Settings…</span> — themes,
+                intensity, Start with Windows, updates
+              </li>
+              <li>
+                <span className="text-zinc-100">Exit</span> — quit and restore
+                the normal Windows taskbar
+              </li>
+            </ul>
+            <div className="mt-6 rounded-lg border border-line bg-black p-5 text-sm text-soft">
+              <p className="font-medium text-zinc-100">In Settings</p>
+              <ul className="mt-3 list-disc space-y-2 pl-5">
+                <li>
+                  <span className="text-zinc-100">Taskbar</span> tab — live
+                  preview, pick a theme, set intensity (0–100%), then{" "}
+                  <span className="text-zinc-100">Apply</span>
+                </li>
+                <li>
+                  <span className="text-zinc-100">System</span> tab — Start with
+                  Windows, check for updates
+                </li>
+              </ul>
+              <p className="mt-3">
+                Preview changes are draft until you click Apply. Closing without
+                Apply keeps your previous look.
+              </p>
+            </div>
           </section>
 
           <section id="portable" className="mt-14">
@@ -119,17 +153,20 @@ export default async function InstallPage() {
             <p className="mt-3 text-soft">
               Grab the zip from the same release, unzip it anywhere, and run
               Phostide.exe. Keep ExplorerTAP.dll in the same folder. To remove
-              it, quit from the tray and delete the folder.
+              it, Exit from the tray and delete the folder. Settings still live
+              under %APPDATA%\Phostide.
             </p>
             <LatestDownload kind="zip" className="btn-ghost mt-5">
               Download zip
             </LatestDownload>
           </section>
 
-          <section id="settings" className="mt-14">
+          <section id="settings-file" className="mt-14">
             <h2 className="text-2xl font-semibold">Settings file</h2>
             <p className="mt-3 text-soft">
-              Your theme choice is saved here. Delete it to go back to defaults.
+              Theme, intensity, Start with Windows, and a few runtime flags are
+              saved here. Delete the file to reset to defaults (Rainbow, 45%
+              intensity).
             </p>
             <div className="mt-4 rounded-lg border border-line bg-panel px-5 py-4 font-mono text-sm">
               %APPDATA%\Phostide\settings.json
@@ -141,7 +178,7 @@ export default async function InstallPage() {
             <ol className="mt-4 space-y-3 text-soft">
               <li>
                 <span className="mr-2 font-medium text-white">1.</span>
-                Quit Phostide from the tray icon.
+                Exit Phostide from the tray icon (restores the normal taskbar).
               </li>
               <li>
                 <span className="mr-2 font-medium text-white">2.</span>

@@ -8,7 +8,7 @@ import { pageMetadata } from "@/lib/seo";
 export const metadata: Metadata = pageMetadata({
   title: "Privacy",
   description:
-    "Phostide is local only — no account, no telemetry, MIT open source.",
+    "Phostide is local by default — no account, no telemetry; optional GitHub update checks only.",
   path: "/docs/privacy",
 });
 
@@ -27,40 +27,73 @@ export default function PrivacyPage() {
         </Link>
         <p className="mt-6 eyebrow">Privacy</p>
         <h1 className="mt-3 max-w-2xl text-4xl font-semibold tracking-tight sm:text-5xl">
-          Local only. That&apos;s the whole policy.
+          Local by default. That&apos;s the policy.
         </h1>
         <p className="mt-5 max-w-2xl text-lg text-soft">
-          Phostide runs entirely on your PC. There&apos;s no account, no
-          telemetry, and it doesn&apos;t need network access to work. The only
-          thing it saves is your theme choice in a local settings file.
+          Phostide does not require an account, does not ship telemetry, and
+          does not need the network to paint themes. What it stores and when it
+          talks to the network is listed below.
         </p>
 
         <ul className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {["Local only", "No account", "No telemetry", "MIT open source"].map(
-            (label) => (
-              <li
-                key={label}
-                className="rounded-xl border border-line bg-panel p-5 text-sm font-medium"
-              >
-                {label}
-              </li>
-            )
-          )}
+          {[
+            "No account",
+            "No telemetry",
+            "Themes work offline",
+            "MIT open source",
+          ].map((label) => (
+            <li
+              key={label}
+              className="rounded-xl border border-line bg-panel p-5 text-sm font-medium"
+            >
+              {label}
+            </li>
+          ))}
         </ul>
 
-        <div className="mt-12 max-w-2xl space-y-4 text-soft leading-relaxed">
-          <p>
-            Settings live at{" "}
-            <code className="rounded bg-panel px-1.5 py-0.5 font-mono text-sm text-zinc-100">
-              %APPDATA%\Phostide\settings.json
-            </code>
-            . Delete that file anytime to reset.
-          </p>
-          <p>
-            The installer and portable builds are published on GitHub Releases
-            and signed by Doticca SRL. Source code is available under the MIT
-            License so you can read every line.
-          </p>
+        <div className="mt-12 max-w-2xl space-y-8 text-soft leading-relaxed">
+          <div>
+            <h2 className="text-xl font-semibold text-zinc-100">
+              What stays on your PC
+            </h2>
+            <p className="mt-3">
+              Settings live at{" "}
+              <code className="rounded bg-panel px-1.5 py-0.5 font-mono text-sm text-zinc-100">
+                %APPDATA%\Phostide\settings.json
+              </code>
+              . That file holds your theme, intensity, Start with Windows
+              preference, enable flag, and (if any) pending update tag/URL from
+              a check you already ran. Delete it anytime to reset.
+            </p>
+            <p className="mt-3">
+              Start with Windows also writes a value under the current‑user Run
+              key so Windows can launch Phostide at sign‑in. Clearing the
+              setting in the app removes that value.
+            </p>
+          </div>
+
+          <div>
+            <h2 className="text-xl font-semibold text-zinc-100">
+              Optional network use
+            </h2>
+            <p className="mt-3">
+              Checking for updates (automatic about once a day while running, or
+              when you click Check for updates) contacts GitHub&apos;s public
+              Releases API for this repository. Themes keep working if that
+              request fails or you are offline.
+            </p>
+          </div>
+
+          <div>
+            <h2 className="text-xl font-semibold text-zinc-100">
+              Builds &amp; source
+            </h2>
+            <p className="mt-3">
+              The installer and portable builds are published on GitHub Releases
+              and signed by Doticca SRL. Source is MIT so you can read every
+              line.
+            </p>
+          </div>
         </div>
 
         <a

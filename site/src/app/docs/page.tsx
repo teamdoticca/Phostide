@@ -12,12 +12,13 @@ import {
 import { LatestDownload } from "@/components/LatestDownload";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
-import { resolveReleaseAssets } from "@/lib/releases";
+import { FALLBACK_TAG, resolveReleaseAssets } from "@/lib/releases";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Docs",
-  description: "Install Phostide, pick a theme, and fix the odd hiccup.",
+  description:
+    "Install Phostide, pick a theme in Settings, and fix the odd hiccup.",
   path: "/docs",
 });
 
@@ -26,13 +27,13 @@ const cards = [
     href: "/docs/install",
     icon: IconDownload,
     title: "Install & run",
-    body: "Setup.exe, portable zip, where files go, uninstall.",
+    body: "Setup.exe, portable zip, tray menu, Settings, uninstall.",
   },
   {
     href: "/docs/themes",
     icon: IconPalette,
     title: "Themes",
-    body: "The five built‑in looks and how to switch from the tray.",
+    body: "Five looks, intensity, and how to Apply from Settings.",
   },
   {
     href: "/docs/oled",
@@ -50,7 +51,7 @@ const cards = [
     href: "/docs/privacy",
     icon: IconLock,
     title: "Privacy",
-    body: "Local only. No account, no telemetry, open source.",
+    body: "Local by default. No account, no telemetry, optional update check.",
   },
   {
     href: "https://github.com/teamdoticca/Phostide",
@@ -63,7 +64,7 @@ const cards = [
 
 export default async function DocsPage() {
   const { tag } = await resolveReleaseAssets();
-  const releaseTag = tag ?? "v0.1.5";
+  const releaseTag = tag ?? FALLBACK_TAG;
 
   return (
     <div className="min-h-screen bg-void text-zinc-100">
@@ -77,8 +78,8 @@ export default async function DocsPage() {
               Everything you need to run Phostide.
             </h1>
             <p className="mt-5 max-w-xl text-lg text-soft">
-              Short pages. Install it, pick a theme, fix the odd hiccup.
-              That&apos;s about it.
+              Short pages. Install it, open Settings from the tray, Apply a
+              theme, fix the odd hiccup.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <LatestDownload className="btn-ember">

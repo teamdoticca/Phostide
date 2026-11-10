@@ -10,7 +10,7 @@ import { themes } from "@/lib/themes";
 export const metadata: Metadata = pageMetadata({
   title: "Themes",
   description:
-    "Five built-in Phostide themes — real taskbar captures, switch from the tray.",
+    "Five built-in Phostide themes — real taskbar captures, switch from Settings.",
   path: "/docs/themes",
 });
 
@@ -33,17 +33,23 @@ export default function ThemesPage() {
             Five built‑in themes
           </h1>
           <p className="mt-5 max-w-xl text-lg text-soft">
-            Each strip below is a real capture of the taskbar running that theme.
+            Each strip is a real Native‑48px capture of the taskbar painter.
+            Hover a strip on desktop to play the loop.
           </p>
         </div>
         <div className="rounded-xl border border-line bg-panel p-6 text-sm lg:col-span-5">
           <p className="inline-flex items-center gap-2 font-medium">
             <IconSliders className="text-ember" />
-            Switching themes
+            How to switch
           </p>
-          <p className="mt-2 text-soft">
-            Right‑click the Phostide tray icon › pick a theme. It changes right
-            away and is remembered next time.
+          <ol className="mt-3 list-decimal space-y-2 pl-5 text-soft">
+            <li>Right‑click the tray icon › Settings…</li>
+            <li>On the Taskbar tab, pick a theme and set intensity.</li>
+            <li>Click Apply — the live bar updates immediately.</li>
+          </ol>
+          <p className="mt-4 text-soft">
+            Default intensity is 45%. Lower keeps OLED quieter; higher makes
+            motion and color stronger.
           </p>
         </div>
       </section>
@@ -59,7 +65,7 @@ export default function ThemesPage() {
               <div>
                 <span className="text-lg font-semibold">{theme.name}</span>
                 <span className="ml-0 mt-1 block text-sm text-soft sm:ml-4 sm:mt-0 sm:inline">
-                  {theme.blurb}
+                  {theme.detail}
                 </span>
               </div>
               <span className="text-sm text-soft">
@@ -69,6 +75,24 @@ export default function ThemesPage() {
             <ThemeStrip theme={theme} rounded />
           </div>
         ))}
+
+        <div className="rounded-xl border border-line bg-panel p-6 text-sm text-soft">
+          <p className="font-medium text-zinc-100">Tips</p>
+          <ul className="mt-3 list-disc space-y-2 pl-5">
+            <li>
+              Space and Aurora stay darkest — good everyday OLED choices.
+            </li>
+            <li>
+              Weather and Sea Waves are busier; dial intensity down if you want
+              calmer motion.
+            </li>
+            <li>
+              Tray › Enable Phostide unchecks to pause painting without losing
+              your settings.
+            </li>
+          </ul>
+        </div>
+
         <div className="flex justify-between pt-6 text-sm">
           <Link
             href="/docs/install"

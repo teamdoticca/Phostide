@@ -41,8 +41,8 @@ Most OLED taskbar tools **hide** the bar. Phostide keeps it usable and moves the
 ## Install
 
 1. Get the latest **Setup.exe** from [phostide.doticca.com](https://phostide.doticca.com) or [Releases](https://github.com/teamdoticca/Phostide/releases).
-2. Run it — tray icon appears; pick a theme.
-3. Optional: **Start with Windows** in Settings.
+2. Run it — tray icon appears. Right‑click › **Settings…** › pick a theme › **Apply**.
+3. Optional: System tab › **Start with Windows** › Apply.
 
 Portable zip: unzip anywhere and run `Phostide.exe`.
 

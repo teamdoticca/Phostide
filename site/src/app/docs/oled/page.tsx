@@ -43,14 +43,15 @@ export default function OledPage() {
         <p className="mt-5 max-w-2xl text-lg text-soft">
           OLED pixels light themselves. When the same bright shape sits in the
           same spot for hours, those pixels age faster than the rest. The
-          taskbar is about the most static thing on a Windows screen.
+          Windows taskbar is one of the most static bright strips on the
+          desktop — which is why many OLED tools simply hide it.
         </p>
       </section>
 
       <section className="border-y border-line">
         <div className="mx-auto flex max-w-site justify-between px-6 py-3 text-xs text-soft sm:px-10">
           <span>Space theme · mostly black, always moving</span>
-          <span>1920 × 48, real taskbar</span>
+          <span>1920 × 48, real taskbar painter</span>
         </div>
         <ThemeStrip theme={space} />
       </section>
@@ -62,36 +63,54 @@ export default function OledPage() {
           <p className="mt-2 text-soft">
             Phostide replaces the flat taskbar background with slow motion on a
             dark base, so the background isn&apos;t one fixed block of light.
+            Intensity in Settings lets you keep that motion quiet.
           </p>
         </div>
         <div className="rounded-xl border border-line bg-panel p-8">
           <IconEye className="h-5 w-5 text-soft" />
           <h2 className="mt-5 text-xl font-semibold">It&apos;s not auto‑hide</h2>
           <p className="mt-2 text-soft">
-            The taskbar stays visible and usable. You don&apos;t have to hunt for
-            it at the screen edge.
+            The taskbar stays visible and usable. You don&apos;t have to hunt
+            the screen edge every time you need Start, pinned apps, or the
+            clock.
           </p>
         </div>
         <div className="rounded-xl border border-line bg-panel p-8">
           <IconLayers className="h-5 w-5 text-soft" />
           <h2 className="mt-5 text-xl font-semibold">It&apos;s not an overlay</h2>
           <p className="mt-2 text-soft">
-            Nothing floats on top of the bar. The fill is drawn inside Explorer,
-            behind your icons, tray and clock.
+            Nothing floats on top of the bar. The fill is drawn inside Explorer
+            (the real <code className="text-zinc-100">BackgroundFill</code>),
+            behind your icons, tray, and clock.
           </p>
         </div>
         <div className="rounded-xl border border-line bg-panel p-8">
           <IconUndo className="h-5 w-5 text-soft" />
           <h2 className="mt-5 text-xl font-semibold">Quitting restores it</h2>
           <p className="mt-2 text-soft">
-            Close Phostide from the tray and the normal Windows taskbar comes
-            straight back.
+            Exit from the tray and the normal Windows taskbar brushes come
+            straight back. Phostide does not patch system files.
           </p>
         </div>
-        <p className="mt-4 text-sm text-soft md:col-span-2">
-          Note: icons and the clock are still drawn by Windows and stay static.
-          Phostide only changes the background.
-        </p>
+
+        <div className="rounded-xl border border-line bg-panel p-8 md:col-span-2">
+          <h2 className="text-xl font-semibold">Honest limits</h2>
+          <ul className="mt-3 list-disc space-y-2 pl-5 text-soft">
+            <li>
+              Icons, Start, the tray, and the clock are still drawn by Windows
+              and stay static — Phostide only changes the background fill.
+            </li>
+            <li>
+              Motion reduces how long the same background pixels stay locked
+              bright; it is not a burn‑in warranty.
+            </li>
+            <li>
+              For the darkest everyday look, start with Space or Aurora and keep
+              intensity modest.
+            </li>
+          </ul>
+        </div>
+
         <div className="flex justify-between pt-4 text-sm md:col-span-2">
           <Link
             href="/docs/themes"

@@ -17,19 +17,21 @@ const fixes = [
     id: "fix-theme",
     title: "Theme not showing",
     items: [
-      "Check you're on Windows 11 22H2 or newer, x64.",
+      "Confirm Windows 11 22H2 or newer, x64.",
       "Make sure ExplorerTAP.dll sits next to Phostide.exe.",
-      "Quit from the tray and open Phostide again.",
-      "Pick a different theme from the tray, then switch back.",
+      "Tray › Enable Phostide must be checked.",
+      "Open Settings…, pick a theme, then click Apply (preview alone does not paint the live bar).",
+      "Raise intensity if the bar looks almost black — default is 45%.",
+      "Exit from the tray and start Phostide again.",
     ],
   },
   {
     id: "fix-explorer",
     title: "After Explorer restarts",
     items: [
-      "If Explorer crashed or was restarted, the theme may drop.",
-      "Quit Phostide from the tray and start it again.",
-      "To restart Explorer yourself: Task Manager › Windows Explorer › Restart.",
+      "If Explorer crashed or was restarted, the theme may drop until Phostide reinjects.",
+      "Exit Phostide from the tray and start it again.",
+      "To restart Explorer yourself: Task Manager › Windows Explorer › Restart, then relaunch Phostide.",
     ],
   },
   {
@@ -37,17 +39,35 @@ const fixes = [
     title: "SmartScreen warning",
     items: [
       "New releases can trigger SmartScreen until they build reputation.",
-      'Check the publisher shows Doticca SRL.',
-      'Click "More info" › "Run anyway". Only download from GitHub Releases.',
+      "Check the publisher shows Doticca SRL.",
+      'Click "More info" › "Run anyway". Only download from this site or GitHub Releases.',
+    ],
+  },
+  {
+    id: "fix-autostart",
+    title: "Start with Windows not sticking",
+    items: [
+      "Open Settings… › System › enable Start with Windows › Apply.",
+      "Confirm a Phostide value exists under HKCU\\…\\Run (the app writes this on Apply).",
+      "If you use the portable zip from a removable path, move it to a fixed folder first.",
+    ],
+  },
+  {
+    id: "fix-update",
+    title: "Update check fails",
+    items: [
+      "Checking for updates contacts api.github.com — needs network briefly.",
+      "Themes keep working offline; only the update check needs GitHub.",
+      "You can always install the latest Setup.exe from the site or Releases page.",
     ],
   },
   {
     id: "fix-restore",
     title: "Restore the default taskbar",
     items: [
-      "Right‑click the tray icon › Quit. The normal bar returns.",
+      "Right‑click the tray icon › Exit. The normal bar returns.",
       "Still odd? Restart Windows Explorer from Task Manager.",
-      "Reset settings by deleting %APPDATA%\\Phostide\\settings.json.",
+      "Reset settings by deleting %APPDATA%\\Phostide\\settings.json, then restart Phostide.",
     ],
   },
 ];
@@ -71,7 +91,7 @@ export default function TroubleshootingPage() {
         </h1>
         <p className="mt-5 max-w-2xl text-lg text-soft">
           Most issues are solved in under a minute. If not, open an issue on
-          GitHub.
+          GitHub with your Windows build and what you tried.
         </p>
         <div className="mt-12 grid gap-5 lg:grid-cols-2">
           {fixes.map((fix) => (
@@ -96,13 +116,12 @@ export default function TroubleshootingPage() {
           <div>
             <p className="eyebrow">Privacy</p>
             <h2 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-              Local only.
+              Local by default.
             </h2>
             <p className="mt-5 max-w-lg leading-relaxed text-soft">
-              Phostide runs entirely on your PC. There&apos;s no account, no
-              telemetry, and it doesn&apos;t send your data anywhere. The only
-              thing it saves is your settings file. The code is open under MIT,
-              so you can check for yourself.
+              Themes run entirely on your PC. There is no account and no
+              telemetry. The only optional network use is checking GitHub
+              Releases for updates. Full detail on the Privacy page.
             </p>
             <a
               href="https://github.com/teamdoticca/Phostide"
@@ -120,7 +139,7 @@ export default function TroubleshootingPage() {
             </p>
           </div>
           <ul className="grid grid-cols-2 gap-4 text-sm">
-            {["Local only", "No account", "No telemetry", "MIT open source"].map(
+            {["Local themes", "No account", "No telemetry", "MIT open source"].map(
               (label) => (
                 <li
                   key={label}
