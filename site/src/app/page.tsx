@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   IconDownload,
@@ -5,12 +6,21 @@ import {
   IconLayers,
   IconUndo,
 } from "@/components/Icons";
+import { JsonLd } from "@/components/JsonLd";
 import { LatestDownload } from "@/components/LatestDownload";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ThemeStrip } from "@/components/ThemeStrip";
 import { resolveReleaseAssets } from "@/lib/releases";
+import { pageMetadata, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from "@/lib/seo";
 import { themes } from "@/lib/themes";
+
+export const metadata: Metadata = pageMetadata({
+  title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+  description: SITE_DESCRIPTION,
+  path: "/",
+  absoluteTitle: true,
+});
 
 export default async function Home() {
   const release = await resolveReleaseAssets();
@@ -18,6 +28,7 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen bg-void text-zinc-100">
+      <JsonLd softwareVersion={tag} />
       <SiteHeader />
 
       <section className="border-b border-line">

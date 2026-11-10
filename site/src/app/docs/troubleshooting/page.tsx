@@ -3,12 +3,14 @@ import Link from "next/link";
 import { IconArrowLeft, IconGithub } from "@/components/Icons";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Troubleshooting",
   description:
     "Fix theme not showing, Explorer restarts, SmartScreen warnings, and restore the default taskbar.",
-};
+  path: "/docs/troubleshooting",
+});
 
 const fixes = [
   {

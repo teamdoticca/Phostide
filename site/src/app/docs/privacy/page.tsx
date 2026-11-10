@@ -3,12 +3,14 @@ import Link from "next/link";
 import { IconArrowLeft, IconGithub } from "@/components/Icons";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Privacy",
   description:
     "Phostide is local only — no account, no telemetry, MIT open source.",
-};
+  path: "/docs/privacy",
+});
 
 export default function PrivacyPage() {
   return (

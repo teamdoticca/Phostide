@@ -29,7 +29,7 @@ export function SiteHeader({ active }: { active?: string }) {
           />
           Phostide
         </Link>
-        <nav className="hidden items-center gap-8 text-sm text-soft md:flex">
+        <nav aria-label="Primary" className="hidden items-center gap-8 text-sm text-soft md:flex">
           {nav.map((item) => {
             const isActive =
               active === item.match ||

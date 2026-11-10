@@ -11,13 +11,15 @@ import {
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ThemeStrip } from "@/components/ThemeStrip";
+import { pageMetadata } from "@/lib/seo";
 import { themeById } from "@/lib/themes";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "OLED notes",
   description:
     "Why a still taskbar matters on OLED, and how Phostide keeps the fill moving.",
-};
+  path: "/docs/oled",
+});
 
 export default function OledPage() {
   const space = themeById("space");

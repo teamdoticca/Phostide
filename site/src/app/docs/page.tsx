@@ -13,11 +13,13 @@ import { LatestDownload } from "@/components/LatestDownload";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { resolveReleaseAssets } from "@/lib/releases";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Docs",
   description: "Install Phostide, pick a theme, and fix the odd hiccup.",
-};
+  path: "/docs",
+});
 
 const cards = [
   {

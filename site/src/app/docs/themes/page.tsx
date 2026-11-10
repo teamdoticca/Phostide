@@ -4,13 +4,15 @@ import { IconArrowLeft, IconArrowRight, IconSliders } from "@/components/Icons";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ThemeStrip } from "@/components/ThemeStrip";
+import { pageMetadata } from "@/lib/seo";
 import { themes } from "@/lib/themes";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Themes",
   description:
     "Five built-in Phostide themes — real taskbar captures, switch from the tray.",
-};
+  path: "/docs/themes",
+});
 
 export default function ThemesPage() {
   return (

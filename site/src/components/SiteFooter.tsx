@@ -6,18 +6,21 @@ export function SiteFooter() {
     <footer className="border-t border-line">
       <div className="mx-auto flex max-w-site flex-col gap-3 px-6 py-8 text-sm text-soft sm:flex-row sm:items-center sm:justify-between sm:px-10">
         <span>Phostide · a Doticca utility · MIT</span>
-        <div className="flex flex-wrap gap-5">
+        <nav aria-label="Footer" className="flex flex-wrap gap-5">
           <Link href="/docs" className="hover:text-white">
             Docs
+          </Link>
+          <Link href="/docs/privacy" className="hover:text-white">
+            Privacy
           </Link>
           <a
             href="https://github.com/teamdoticca/Phostide"
             className="hover:text-white"
             rel="noreferrer"
           >
-            github.com/teamdoticca/Phostide
+            GitHub
           </a>
-        </div>
+        </nav>
       </div>
       <div className="strip">
         <Image

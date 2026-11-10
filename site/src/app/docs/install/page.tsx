@@ -5,12 +5,14 @@ import { LatestDownload } from "@/components/LatestDownload";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { resolveReleaseAssets } from "@/lib/releases";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Install & run",
   description:
     "Install Phostide with the signed Setup.exe or run the portable zip. No admin required.",
-};
+  path: "/docs/install",
+});
 
 const toc = [
   { href: "#setup", label: "1 · Setup.exe" },
