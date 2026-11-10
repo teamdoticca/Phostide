@@ -10,19 +10,18 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ThemeStrip } from "@/components/ThemeStrip";
 import { resolveReleaseAssets } from "@/lib/releases";
-import { themeById, themes } from "@/lib/themes";
+import { themes } from "@/lib/themes";
 
 export default async function Home() {
   const release = await resolveReleaseAssets();
   const tag = release.tag ?? "v0.1.4";
-  const aurora = themeById("aurora");
 
   return (
     <div className="min-h-screen bg-void text-zinc-100">
       <SiteHeader />
 
-      <section className="flex min-h-[min(760px,100svh)] flex-col justify-between border-b border-line">
-        <div className="mx-auto grid w-full max-w-site gap-10 px-6 pt-16 sm:px-10 sm:pt-24 lg:grid-cols-12">
+      <section className="border-b border-line">
+        <div className="mx-auto grid w-full max-w-site gap-10 px-6 py-16 sm:px-10 sm:py-24 lg:grid-cols-12">
           <div className="lg:col-span-7">
             <span className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1 text-xs text-soft">
               <span className="h-1.5 w-1.5 rounded-full bg-ember" />
@@ -68,15 +67,6 @@ export default async function Home() {
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-        <div>
-          <div className="mx-auto flex max-w-site justify-between px-6 pb-3 text-xs text-soft sm:px-10">
-            <span>Live capture · Aurora</span>
-            <span>1920 × 48, real taskbar</span>
-          </div>
-          <div className="border-t border-line">
-            <ThemeStrip theme={aurora} />
           </div>
         </div>
       </section>
