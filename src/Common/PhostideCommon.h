@@ -10,7 +10,7 @@ namespace phostide {
 
 inline constexpr std::wstring_view kAppName = L"Phostide";
 // Keep in sync with scripts/package-release.ps1 -Version default and GitHub release tags (vX.Y.Z).
-inline constexpr std::wstring_view kAppVersion = L"0.1.3";
+inline constexpr std::wstring_view kAppVersion = L"0.1.4";
 // Stable across installs/updates so Windows taskbar / Start treat us as the same app.
 inline constexpr std::wstring_view kAppUserModelId = L"Doticca.Phostide";
 inline constexpr std::wstring_view kMutexName = L"Local\\Phostide.SingleInstance";
