@@ -5,9 +5,9 @@
 //   Defaults: ../../site/public/themes  1920  48
 //
 // Animated sequences (Native 48px Lab painter, intensity 100%):
-//   ThemePreviewExport.exe --sequence [framesRoot] [width] [height] [fps] [durationSec]
-//   Defaults: ../../out/theme-frames  1920  48  20  6
-//   Writes framesRoot/{stem}/frame_XXXX.png
+//   ThemePreviewExport.exe --sequence [framesRoot] [width] [height] [fps] [durationSec] [stem?]
+//   Defaults: ../../out/theme-frames  1920  48  20  12
+//   Optional stem filters to one theme (e.g. space). Writes framesRoot/{stem}/frame_XXXX.png
 
 #include "../ExplorerTAP/PixelThemes.h"
 
@@ -108,7 +108,8 @@ int wmain(int argc, wchar_t** argv) {
   int width = 1920;
   int height = 48;
   int fps = 20;
-  float durationSec = 6.f;
+  float durationSec = 12.f;
+  std::string onlyStem;
   constexpr float kIntensity = 1.0f;  // ThemeLab default
 
   if (sequence) {
@@ -117,6 +118,13 @@ int wmain(int argc, wchar_t** argv) {
     if (argc >= 5) height = _wtoi(argv[4]);
     if (argc >= 6) fps = _wtoi(argv[5]);
     if (argc >= 7) durationSec = static_cast<float>(_wtof(argv[6]));
+    if (argc >= 8) {
+      // Optional single-theme filter (e.g. "space").
+      char narrow[64]{};
+      WideCharToMultiByte(CP_UTF8, 0, argv[7], -1, narrow, static_cast<int>(sizeof(narrow)),
+                          nullptr, nullptr);
+      onlyStem = narrow;
+    }
   } else {
     if (argc >= 2) outDir = argv[1];
     if (argc >= 3) width = _wtoi(argv[2]);
@@ -127,7 +135,7 @@ int wmain(int argc, wchar_t** argv) {
     std::fwprintf(stderr, L"Invalid size %dx%d\n", width, height);
     return 1;
   }
-  if (sequence && (fps < 1 || fps > 60 || durationSec < 0.5f || durationSec > 30.f)) {
+  if (sequence && (fps < 1 || fps > 60 || durationSec < 0.5f || durationSec > 60.f)) {
     std::fwprintf(stderr, L"Invalid sequence fps=%d duration=%.2f\n", fps, durationSec);
     return 1;
   }
@@ -178,6 +186,7 @@ int wmain(int argc, wchar_t** argv) {
     int total = 0;
 
     for (const auto& theme : kThemes) {
+      if (!onlyStem.empty() && onlyStem != theme.fileStem) continue;
       const fs::path themeDir = outDir / theme.fileStem;
       fs::remove_all(themeDir, ec);
       fs::create_directories(themeDir, ec);

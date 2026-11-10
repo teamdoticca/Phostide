@@ -3,9 +3,12 @@
   [int]$Width = 1920,
   [int]$Height = 48,
   [int]$Fps = 20,
-  [double]$DurationSec = 6,
+  [double]$DurationSec = 12,
+  # Space full film loop: tCalm=t*0.20, kPeriod=7 → real = 35s until nebula returns.
+  [double]$SpaceDurationSec = 35,
   [switch]$SkipBuild,
-  [switch]$PostersOnly
+  [switch]$PostersOnly,
+  [string]$OnlyStem = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -37,28 +40,42 @@ if (-not $exe) { throw "ThemePreviewExport.exe not found under out\" }
 
 New-Item -ItemType Directory -Force -Path $outThemes | Out-Null
 
-# Still PNG posters (intensity 100%, ThemeLab start times).
-& $exe $outThemes $Width $Height
+# Still PNG posters via temp (avoids locks on site/public/themes/*.png).
+$posterTmp = Join-Path $root "out\theme-posters-tmp"
+if (Test-Path -LiteralPath $posterTmp) { Remove-Item -LiteralPath $posterTmp -Recurse -Force }
+New-Item -ItemType Directory -Force -Path $posterTmp | Out-Null
+& $exe $posterTmp $Width $Height
 if ($LASTEXITCODE -ne 0) { throw "ThemePreviewExport posters failed" }
+Copy-Item -Force (Join-Path $posterTmp "*.png") $outThemes
 
 if ($PostersOnly) {
   Write-Host "Posters only — done in $outThemes"
   exit 0
 }
 
-# Animated Native-48px sequences → WebM.
-if (Test-Path -LiteralPath $framesRoot) {
-  Remove-Item -LiteralPath $framesRoot -Recurse -Force
+$durations = @{
+  rainbow = $DurationSec
+  sea     = $DurationSec
+  weather = $DurationSec
+  space   = $SpaceDurationSec
+  aurora  = $DurationSec
 }
+$stems = @("rainbow", "sea", "weather", "space", "aurora")
+if (-not [string]::IsNullOrWhiteSpace($OnlyStem)) {
+  if (-not $durations.ContainsKey($OnlyStem)) { throw "Unknown theme stem: $OnlyStem" }
+  $stems = @($OnlyStem)
+}
+
 New-Item -ItemType Directory -Force -Path $framesRoot | Out-Null
 
-& $exe --sequence $framesRoot $Width $Height $Fps $DurationSec
-if ($LASTEXITCODE -ne 0) { throw "ThemePreviewExport --sequence failed" }
-
-$stems = @("rainbow", "sea", "weather", "space", "aurora")
-$mid = [int]([math]::Floor(($Fps * $DurationSec) / 2))
 foreach ($stem in $stems) {
+  $dur = [double]$durations[$stem]
   $dir = Join-Path $framesRoot $stem
+  if (Test-Path -LiteralPath $dir) { Remove-Item -LiteralPath $dir -Recurse -Force }
+  Write-Host "Capturing $stem ($dur s @ ${Fps}fps) ..."
+  & $exe --sequence $framesRoot $Width $Height $Fps $dur $stem
+  if ($LASTEXITCODE -ne 0) { throw "ThemePreviewExport --sequence failed for $stem" }
+
   $pattern = Join-Path $dir "frame_%04d.png"
   $webm = Join-Path $outThemes "$stem.webm"
   Write-Host "Encoding $stem.webm ..."
@@ -68,7 +85,7 @@ foreach ($stem in $stems) {
     -an $webm
   if ($LASTEXITCODE -ne 0) { throw "ffmpeg failed for $stem" }
 
-  # Mid-loop poster (more representative than t0).
+  $mid = [int]([math]::Floor(($Fps * $dur) / 2))
   $midFrame = Join-Path $dir ("frame_{0:D4}.png" -f $mid)
   if (-not (Test-Path -LiteralPath $midFrame)) {
     $midFrame = Join-Path $dir "frame_0000.png"
@@ -77,7 +94,6 @@ foreach ($stem in $stems) {
   Write-Host "Poster $stem.png ← $(Split-Path $midFrame -Leaf)"
 }
 
-# Remove legacy moodboard JPEGs so the site cannot accidentally use them.
 Get-ChildItem -LiteralPath $outThemes -Filter "*.jpg" -ErrorAction SilentlyContinue |
   ForEach-Object {
     Write-Host "Removing moodboard $($_.Name)"

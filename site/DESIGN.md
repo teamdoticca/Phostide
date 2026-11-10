@@ -20,7 +20,7 @@ Port of the UX Pilot suite (page `UE6tIDfhvVybZY9Cmzx3`): black OLED ground, emb
 
 ## Theme previews
 
-Use `/themes/*.webm` (VP9, ~6s @ 20fps Native 48px from `PaintThemePixels` / ThemeLab) with `/themes/*.png` posters. Regenerate via `scripts/export-theme-previews.ps1`. Render with `ThemeStrip` (`<video>` + poster, full-bleed, no fake moodboard chrome).
+Use `/themes/*.webm` (VP9, Native 48px from `PaintThemePixels` / ThemeLab) with `/themes/*.png` posters. Default clips ~12s @ 20fps; Space is a full ~35s film loop (nebula → stars → nebula). Regenerate via `scripts/export-theme-previews.ps1`. `ThemeStrip` plays on hover only; idle sheen cues the pointer.
 
 ## Screens mapped
 
