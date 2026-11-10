@@ -1,4 +1,3 @@
-import Image from "next/image";
 import type { ThemeInfo } from "@/lib/themes";
 
 type ThemeStripProps = {
@@ -7,7 +6,7 @@ type ThemeStripProps = {
   rounded?: boolean;
 };
 
-/** Honest PaintThemePixels capture — full-width strip, no fake chrome. */
+/** Honest PaintThemePixels capture — animated WebM with PNG poster fallback. */
 export function ThemeStrip({
   theme,
   className = "",
@@ -15,14 +14,20 @@ export function ThemeStrip({
 }: ThemeStripProps) {
   return (
     <div className={`strip overflow-hidden ${rounded ? "rounded" : ""} ${className}`.trim()}>
-      <Image
-        src={theme.previewSrc}
-        alt={`${theme.name} taskbar theme`}
+      <video
+        className="h-auto w-full"
         width={1920}
         height={48}
-        className="h-auto w-full"
-        unoptimized
-      />
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        poster={theme.previewSrc}
+        aria-label={`${theme.name} taskbar theme`}
+      >
+        <source src={theme.previewVideo} type="video/webm" />
+      </video>
     </div>
   );
 }

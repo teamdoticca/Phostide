@@ -5,8 +5,10 @@ export type ThemeInfo = {
   name: string;
   blurb: string;
   detail: string;
-  /** Real PaintThemePixels capture (1920×48 taskbar strip). */
+  /** Still poster from PaintThemePixels (1920×48). */
   previewSrc: string;
+  /** Animated Native-48px capture (WebM VP9). */
+  previewVideo: string;
 };
 
 export const themes: ThemeInfo[] = [
@@ -17,20 +19,24 @@ export const themes: ThemeInfo[] = [
     detail:
       "Soft color bands drifting slowly across the bar — calm shimmer, not a scrolling rainbow.",
     previewSrc: "/themes/rainbow.png",
+    previewVideo: "/themes/rainbow.webm",
   },
   {
     id: "sea",
     name: "Sea Waves",
-    blurb: "Dark blue water with gentle moving waves.",
-    detail: "Dark blue water with gentle moving waves across the full bar.",
+    blurb: "Side-on ocean silhouette with foam and spray.",
+    detail: "Side-on ocean silhouette with foam under the crest and breaking spray.",
     previewSrc: "/themes/sea.png",
+    previewVideo: "/themes/sea.webm",
   },
   {
     id: "weather",
     name: "Weather",
-    blurb: "A small sky scene with drifting weather.",
-    detail: "A small sky scene with drifting weather — rain and short flashes.",
+    blurb: "Night storm sky with purple flashes and soft bolts.",
+    detail:
+      "Dark blue night storm — slate clouds, localized purple flash, soft branching bolts.",
     previewSrc: "/themes/weather.png",
+    previewVideo: "/themes/weather.webm",
   },
   {
     id: "space",
@@ -38,13 +44,15 @@ export const themes: ThemeInfo[] = [
     blurb: "Mostly black with slow, scattered stars.",
     detail: "Mostly black with slow, scattered stars — quiet motion for OLED.",
     previewSrc: "/themes/space.png",
+    previewVideo: "/themes/space.webm",
   },
   {
     id: "aurora",
     name: "Aurora",
-    blurb: "Faint northern-light ribbons over black.",
-    detail: "Faint northern-light ribbons over black — quiet and colorful.",
+    blurb: "Falling magenta curtains drifting across black.",
+    detail: "Falling magenta/violet curtains that drift along the bar over black.",
     previewSrc: "/themes/aurora.png",
+    previewVideo: "/themes/aurora.webm",
   },
 ];
 

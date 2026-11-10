@@ -20,7 +20,7 @@ Port of the UX Pilot suite (page `UE6tIDfhvVybZY9Cmzx3`): black OLED ground, emb
 
 ## Theme previews
 
-Use `/themes/*.png` — real `PaintThemePixels` captures at 1920×48. Render with `ThemeStrip` (full-bleed strip, no fake moodboard chrome).
+Use `/themes/*.webm` (VP9, ~6s @ 20fps Native 48px from `PaintThemePixels` / ThemeLab) with `/themes/*.png` posters. Regenerate via `scripts/export-theme-previews.ps1`. Render with `ThemeStrip` (`<video>` + poster, full-bleed, no fake moodboard chrome).
 
 ## Screens mapped
 

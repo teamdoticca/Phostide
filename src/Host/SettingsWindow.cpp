@@ -256,7 +256,9 @@ void ReadDraftFromControls(HWND hwnd) {
   g_draftIntensity =
       static_cast<int>(SendDlgItemMessageW(hwnd, IDC_INTENSITY, TBM_GETPOS, 0, 0));
   g_draftIntensity = (std::max)(0, (std::min)(100, g_draftIntensity));
-  g_draftAutostart = IsDlgButtonChecked(hwnd, IDC_AUTOSTART) == BST_CHECKED;
+  // Autostart is BS_OWNERDRAW — g_draftAutostart is the source of truth (toggled on
+  // click). Do not overwrite from IsDlgButtonChecked; that stays stale.
+  (void)hwnd;
 }
 
 void ApplyDraft(HWND hwnd) {
@@ -665,6 +667,8 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
       }
       if (id == IDC_AUTOSTART) {
         g_draftAutostart = !g_draftAutostart;
+        CheckDlgButton(hwnd, IDC_AUTOSTART,
+                       g_draftAutostart ? BST_CHECKED : BST_UNCHECKED);
         InvalidateRect(GetDlgItem(hwnd, IDC_AUTOSTART), nullptr, TRUE);
         return 0;
       }
