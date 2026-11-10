@@ -674,13 +674,16 @@ void PaintSpace(uint8_t* bgra, int stride, int w, int h, float intensity, float 
   };
 
   // Act envelopes (soft overlaps — no hard cuts).
-  // A wide ~0.00–0.28 | B pan ~0.18–0.55 | C flight ~0.48–0.88 | arrive ~0.84–1.00
+  // A wide ~0.00–0.28 | B pan ~0.18–0.55 | C flight ~0.32–0.88 | arrive ~0.84–1.00
   // Loop closes FORWARD: next nebula ahead becomes Act A (no camX/camYaw rewind).
   // actA starts FULL at phase=0 (no fade-in) so wrap from arrive is seamless.
   const float actA = pulse(phase, 0.00f, 0.00f, 0.18f, 0.30f);
   const float actB = pulse(phase, 0.16f, 0.26f, 0.46f, 0.58f);
-  const float actC = pulse(phase, 0.46f, 0.58f, 0.82f, 0.94f);
+  // C overlaps B so stars/tunnel rise while the nebula is still exiting left.
+  const float actC = pulse(phase, 0.28f, 0.40f, 0.82f, 0.94f);
   const float arrive = ramp(phase, 0.84f, 0.98f);  // next nebula approaches ahead
+  // Starfield reveal tracks the pan exit (not waiting for full Act C).
+  const float starsIn = ramp(phase, 0.18f, 0.38f);
 
   // Camera: along-bar pan (world scroll) + vanishing-point yaw (side → tunnel).
   // Positive camX scrolls world LEFT on screen = classic rightward pan (nebula
@@ -697,8 +700,8 @@ void PaintSpace(uint8_t* bgra, int stride, int w, int h, float intensity, float 
   const float camX = camXHold + camXPan * kCamXPanAmt + camXFly + camXArrive;
 
   // 0 = looking sideways along nebula, 1 = centered depth tunnel into stars.
-  // Yaw eases as the NEXT cloud fills frame (still traveling forward — not a reverse pan).
-  float camYaw = ramp(phase, 0.48f, 0.68f) * (1.f - arrive);
+  // Yaw begins mid-pan so streaks read as the cloud leaves, not after a void beat.
+  float camYaw = ramp(phase, 0.28f, 0.52f) * (1.f - arrive);
   camYaw = std::clamp(camYaw, 0.f, 1.f);
 
   // Nebula dominates A/B; thins hard in C; returns via the cloud ahead (arrive).
@@ -707,9 +710,10 @@ void PaintSpace(uint8_t* bgra, int stride, int w, int h, float intensity, float 
                      (1.f - camYaw) * 0.22f * (1.f - actC) + arrive * 0.90f -
                      actC * 0.55f * camYaw,
                  0.04f, 1.15f);
-  // Star rush: readable early, hero in C; yields as next nebula fills the frame.
+  // Stars rise with the exit pan, peak in C; yield as next nebula fills the frame.
   const float starHero =
-      std::clamp(0.16f + 0.28f * actB + 1.05f * actC + 0.10f * actA, 0.f, 1.15f) *
+      std::clamp(0.08f + 0.70f * starsIn + 0.40f * actB + 0.90f * actC + 0.06f * actA,
+                 0.f, 1.20f) *
       (1.f - arrive * 0.85f);
 
   const float breath = 0.90f + 0.10f * std::sin(tCalm * 0.48f);
@@ -764,13 +768,16 @@ void PaintSpace(uint8_t* bgra, int stride, int w, int h, float intensity, float 
       // As camYaw rises, nebula drifts left/behind (parallax) and thins.
       // Two cores: current + next ahead (period = camX travel) so phase wrap
       // lands on the same opening composition without reversing the pan.
+      // Gate the ahead cloud with arrive only — otherwise camX drift shows it
+      // peeking from the right during the star stretch after the first exit.
       const float nebShift = camYaw * 0.38f;
       const float dAlong0 = (worldAlong - nebCoreWorld - nebShift) / nebAlongSigma;
       const float dAlong1 =
           (worldAlong - (nebCoreWorld + kWorldPeriod) - nebShift) / nebAlongSigma;
       const float dDepth = (depth - nebCoreDepth) / nebDepthSigma;
       const float env0 = std::exp(-(dAlong0 * dAlong0 + dDepth * dDepth * 0.55f));
-      const float env1 = std::exp(-(dAlong1 * dAlong1 + dDepth * dDepth * 0.55f));
+      const float env1Raw = std::exp(-(dAlong1 * dAlong1 + dDepth * dDepth * 0.55f));
+      const float env1 = env1Raw * arrive;
       const float envelope = (std::max)(env0, env1);
       const float dAlong = (env1 > env0) ? dAlong1 : dAlong0;
 
@@ -892,7 +899,8 @@ void PaintSpace(uint8_t* bgra, int stride, int w, int h, float intensity, float 
   // Dense cool-white sparkle — pan parallax only (never snow-falling / vertical drift).
   constexpr int kFieldStars = 150;
   const float fieldBoost =
-      (0.48f + 0.55f * (1.f - std::min(nebPresence, 1.f)) + 0.75f * actC + 0.30f * camYaw) *
+      (0.40f + 0.55f * (1.f - std::min(nebPresence, 1.f)) + 0.55f * starsIn +
+       0.35f * actB + 0.55f * actC + 0.25f * camYaw) *
       (0.70f + 0.40f * intensity);
   for (int i = 0; i < kFieldStars; ++i) {
     const float fi = static_cast<float>(i);
@@ -909,13 +917,13 @@ void PaintSpace(uint8_t* bgra, int stride, int w, int h, float intensity, float 
     const float twinkle =
         0.72f + 0.28f * std::sin(tCalm * (0.55f + hTw * 0.4f) + hTw * 6.2831853f);
     const float fieldAmt =
-        fieldBoost * twinkle * (0.50f + 0.55f * hBright) * (0.60f + 0.45f * starHero);
+        fieldBoost * twinkle * (0.50f + 0.55f * hBright) * (0.55f + 0.50f * starHero);
     if (fieldAmt < 0.03f) continue;
     // Cool-white / pale-gold cores against the void (space.jpg starfield).
     const float sr = 0.90f + 0.10f * hBright;
     const float sg = 0.92f + 0.07f * hBright;
     const float sb = 0.98f + 0.02f * hBright;
-    const float a = std::clamp(alpha * fieldAmt * (0.82f + 0.28f * actC), 0.f, 1.f);
+    const float a = std::clamp(alpha * fieldAmt * (0.72f + 0.28f * starHero), 0.f, 1.f);
     const int ix = static_cast<int>(sx + 0.5f);
     const int iy = static_cast<int>(sy + 0.5f);
     Put(bgra, stride, ix, iy, w, h, {sr, sg, sb, a});
@@ -976,7 +984,8 @@ void PaintSpace(uint8_t* bgra, int stride, int w, int h, float intensity, float 
         0.80f + 0.20f * std::sin(tCalm * (1.05f + hSpeed * 0.55f) + hPhase * 6.2831853f);
     const float bright =
         (0.22f + 0.90f * uEase) * (0.55f + 0.45f * intensity) * (0.50f + 0.50f * hBright) *
-        twinkle * (0.35f + 0.75f * starHero) * (0.55f + 0.45f * camYaw + 0.35f * actC);
+        twinkle * (0.40f + 0.70f * starHero) *
+        (0.72f + 0.28f * camYaw + 0.22f * actC);
     if (bright < 0.030f) continue;
 
     // Cool-white with tiny warmth variation — readable on dark void.

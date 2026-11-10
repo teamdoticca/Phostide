@@ -14,7 +14,7 @@ import { themeById, themes } from "@/lib/themes";
 
 export default async function Home() {
   const release = await resolveReleaseAssets();
-  const tag = release.tag ?? "v0.1.2";
+  const tag = release.tag ?? "v0.1.3";
   const aurora = themeById("aurora");
 
   return (

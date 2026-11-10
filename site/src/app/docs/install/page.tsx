@@ -23,7 +23,7 @@ const toc = [
 
 export default async function InstallPage() {
   const { tag } = await resolveReleaseAssets();
-  const releaseTag = tag ?? "v0.1.2";
+  const releaseTag = tag ?? "v0.1.3";
 
   return (
     <div className="min-h-screen bg-void text-zinc-100">
