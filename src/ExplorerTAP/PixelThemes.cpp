@@ -454,17 +454,19 @@ void PaintSeaWavesGerstner(uint8_t* bgra, int stride, int w, int h, float intens
   }
 }
 
-// Calm OLED storm film: dark sky + wind-driven rain sheets + brief bolts.
-// Seamless forward loop (~30s real with tCalm = t * 0.20); no cam rewind / no fade-in.
+// Night thunderstorm: near-black sky, volumetric clouds, purple flash glow, branching bolts.
+// Intensity raises drama/contrast — never a continuous white veil.
 void PaintWeather(uint8_t* bgra, int stride, int w, int h, float intensity, float t,
                   TaskbarEdge edge) {
+  // Night thunderstorm (reference): high-contrast cloud volumes, purple-lit
+  // interiors, white branching forks. Intensity raises drama — not white fill.
   const bool vertical = (edge == TaskbarEdge::Left || edge == TaskbarEdge::Right);
   const int along = vertical ? h : w;
   const int across = vertical ? w : h;
   if (along < 2 || across < 2) return;
 
-  const float tCalm = t * 0.20f;
-  constexpr float kPeriod = 6.0f;  // ~30s real time at tCalm = t * 0.20
+  const float tCalm = t * 0.40f;
+  constexpr float kPeriod = 4.8f;  // ~12s real
   float phase = std::fmod(tCalm, kPeriod) / kPeriod;
   if (phase < 0.f) phase += 1.f;
 
@@ -472,230 +474,295 @@ void PaintWeather(uint8_t* bgra, int stride, int w, int h, float intensity, floa
     x = std::clamp(x, 0.f, 1.f);
     return x * x * (3.f - 2.f * x);
   };
-  auto ramp = [&](float p, float a, float b) {
-    if (b <= a) return p >= b ? 1.f : 0.f;
-    return smoother((p - a) / (b - a));
-  };
-  auto pulse = [&](float p, float a, float b, float c, float d) {
-    return ramp(p, a, b) * (1.f - ramp(p, c, d));
-  };
-
-  // Timeline (phase 0→1, seamless wrap into steady rain — no fade-in at 0):
-  //   0.00–0.22  steady wind rain (full at wrap)
-  //   0.18–0.52  build: denser sheets + harder slant
-  //   0.44–0.78  storm peak + lightning windows
-  //   0.72–1.00  ease back to steady (matches phase 0)
-  const float build = pulse(phase, 0.18f, 0.30f, 0.50f, 0.62f);
-  const float peak = pulse(phase, 0.44f, 0.54f, 0.70f, 0.82f);
-  const float ease = ramp(phase, 0.72f, 0.96f);  // 0→1 toward calm again
-  const float storm =
-      std::clamp(0.22f + 0.55f * build + 0.85f * peak * (1.f - 0.75f * ease), 0.18f, 1.15f);
-
-  // Wind slant grows mid-loop (diagonal rain — never straight-down snow).
-  const float windBase = 0.55f + 0.12f * std::sin(tCalm * 0.37f + 0.6f);
-  const float wind = windBase + 0.55f * build + 0.70f * peak * (1.f - ease);
-  // Rain density / brightness envelope — push for OLED-readable slant.
-  const float rainAmt =
-      std::clamp(0.55f + 0.55f * intensity + 0.60f * storm, 0.45f, 1.55f);
-
-  // Brief full-bar flashes (1–3 frames of film time ≈ short tCalm blips).
   auto flashEnv = [&](float center, float width, float seed) {
-    const float d = std::fabs(phase - center);
+    float d = std::fabs(phase - center);
+    d = (std::min)(d, 1.f - d);
     const float half = width * 0.5f;
     if (d > half) return 0.f;
     const float u = 1.f - d / half;
-    // Hard-ish core so bolts read as strikes, soft wings for afterglow.
-    return std::pow(smoother(u), 0.55f) *
-           (0.75f + 0.25f * Hash21(seed, center * 17.f));
+    return std::pow(smoother(u), 0.45f) * (0.85f + 0.15f * Hash21(seed, center * 17.f));
   };
-  const float flashA = flashEnv(0.50f, 0.036f, 1.1f);  // main strike
-  const float flashB = flashEnv(0.58f, 0.024f, 2.7f);  // quick follow
-  const float flashC = flashEnv(0.66f, 0.028f, 4.3f);  // late fork
-  const float flash =
-      std::clamp(flashA * 1.15f + flashB * 0.82f + flashC * 0.95f, 0.f, 1.55f);
 
-  const float breath = 0.92f + 0.08f * std::sin(tCalm * 0.41f);
-  const float alpha = 0.82f + 0.14f * intensity;
+  // Cores long enough to read on a 48px bar; purple afterglow hangs longer.
+  const float flashA = flashEnv(0.12f, 0.11f, 1.1f);
+  const float flashB = flashEnv(0.34f, 0.10f, 2.7f);
+  const float flashC = flashEnv(0.58f, 0.12f, 4.3f);
+  const float flashD = flashEnv(0.82f, 0.10f, 6.1f);
+  const float glowA = flashEnv(0.13f, 0.28f, 1.2f);
+  const float glowB = flashEnv(0.35f, 0.26f, 2.8f);
+  const float glowC = flashEnv(0.59f, 0.30f, 4.4f);
+  const float glowD = flashEnv(0.83f, 0.26f, 6.2f);
+
+  const float loop = std::floor(tCalm / kPeriod);
+  const float epicA = 0.16f + 0.12f * Hash21(loop + 1.f, 3.1f);
+  const float epicB = 0.40f + 0.12f * Hash21(loop + 2.f, 5.7f);
+  const float epicC = 0.64f + 0.12f * Hash21(loop + 3.f, 8.2f);
+  const float epicD = 0.86f + 0.09f * Hash21(loop + 4.f, 9.4f);
+
+  const float i = std::clamp(intensity, 0.f, 1.f);
+  const float breath = 0.94f + 0.06f * std::sin(tCalm * 0.55f);
+  const float alpha = 0.95f + 0.04f * i;
   const float alongScale = static_cast<float>((std::max)(1, along));
   const float acrossScale = static_cast<float>((std::max)(1, across));
-
-  // Wind direction in along/across UV (bottom bar: rain falls "down" toward desktop
-  // = across+, drifting along+ with wind). Vertical edges remap similarly.
   const float windSign = (edge == TaskbarEdge::Right || edge == TaskbarEdge::Top) ? -1.f : 1.f;
 
-  // --- Pass 1: dark storm sky + rain sheets (every pixel, anti burn-in) ---
+  auto wrapDist = [](float a, float b) {
+    float d = std::fabs(a - b);
+    return (std::min)(d, 1.f - d);
+  };
+
   for (int alongI = 0; alongI < along; ++alongI) {
     const float alongF = static_cast<float>(alongI);
-    const float alongU = alongF / alongScale;
+    const float alongN = alongF / alongScale;
+
+    // Tight falloff — purple only near the strike, rest stays night-blue.
+    const float nearGlow =
+        std::clamp(glowA * std::exp(-wrapDist(alongN, epicA) * 9.5f) +
+                       glowB * std::exp(-wrapDist(alongN, epicB) * 10.0f) +
+                       glowC * std::exp(-wrapDist(alongN, epicC) * 9.0f) +
+                       glowD * std::exp(-wrapDist(alongN, epicD) * 9.8f),
+                   0.f, 1.15f);
+    const float nearCore =
+        std::clamp(flashA * std::exp(-wrapDist(alongN, epicA) * 13.0f) +
+                       flashB * std::exp(-wrapDist(alongN, epicB) * 13.5f) +
+                       flashC * std::exp(-wrapDist(alongN, epicC) * 12.5f) +
+                       flashD * std::exp(-wrapDist(alongN, epicD) * 13.2f),
+                   0.f, 1.15f);
 
     for (int acrossI = 0; acrossI < across; ++acrossI) {
       const float sampleV =
           across <= 1 ? 0.5f : static_cast<float>(acrossI) / static_cast<float>(across - 1);
-      float depth = sampleV;
+      float sky = sampleV;
       int x = 0, y = 0;
       if (!vertical) {
         x = alongI;
         y = acrossI;
-        // Bottom: depth 1 = desktop side (top of bar / "skyward" rain origin feel).
-        depth = (edge == TaskbarEdge::Bottom) ? (1.f - sampleV) : sampleV;
+        sky = (edge == TaskbarEdge::Bottom) ? (1.f - sampleV) : sampleV;
       } else {
         y = alongI;
         x = acrossI;
-        depth = (edge == TaskbarEdge::Left) ? sampleV : (1.f - sampleV);
+        sky = (edge == TaskbarEdge::Left) ? sampleV : (1.f - sampleV);
       }
-      depth = std::clamp(depth, 0.f, 1.f);
+      sky = std::clamp(sky, 0.f, 1.f);
+      const float ground = 1.f - sky;
 
-      // Deep navy / charcoal storm base — weather.jpg contrast for OLED rain.
-      const float skyN =
-          Noise2(alongF * 0.006f + tCalm * 0.04f, depth * 2.1f + tCalm * 0.03f + 1.4f);
-      const float skyN2 =
-          Noise2(alongF * 0.018f - tCalm * 0.025f, depth * 3.6f + tCalm * 0.05f + 4.2f);
-      const float murk = 0.42f + 0.32f * skyN + 0.20f * skyN2;
-      float r = (0.025f + 0.025f * intensity) * murk * breath;
-      float g = (0.035f + 0.035f * intensity) * murk * breath;
-      float b = (0.070f + 0.065f * intensity) * murk * breath;
-      // Cooler lift toward sky (outer) edge — storm volume.
-      const float skyLift = 0.82f + 0.22f * (1.f - depth);
-      r *= skyLift * 0.88f;
-      g *= skyLift * 0.94f;
-      b *= skyLift * 1.18f;
+      // Deep night-blue sky (not magenta wash). Gaps stay near-black indigo.
+      float r = 0.010f + 0.012f * i;
+      float g = 0.018f + 0.022f * i;
+      float b = 0.045f + 0.050f * i;
 
-      // Slanted rain UV: fall along depth, wind shear along bar — diagonal sheets.
-      const float fallSpeed = 1.70f + 1.00f * storm;
-      const float shear = wind * windSign * 1.55f;
-      const float rainU =
-          alongU * (16.f + 8.f * storm) + depth * shear * 3.6f - tCalm * fallSpeed * 0.55f;
-      const float rainV =
-          depth * (10.f + 5.f * storm) - alongU * shear * 2.8f + tCalm * fallSpeed;
+      // Large cauliflower lobes (low frequency) + edge ridge — not soft fog.
+      const float drift = tCalm * 0.10f;
+      const float n1 = Noise2(alongN * 1.15f + drift, sky * 1.05f + 0.15f);
+      const float n2 = Noise2(alongN * 2.6f - drift * 0.55f, sky * 2.2f + 1.6f);
+      const float n3 = Noise2(alongN * 5.5f + drift * 0.35f, sky * 4.0f + 3.5f);
+      const float n4 = Noise2(alongN * 0.55f + drift * 0.12f, sky * 0.45f + 6.2f);
+      float fbm = n1 * 0.50f + n2 * 0.28f + n3 * 0.14f + n4 * 0.20f;
+      const float ridge = 1.f - std::fabs(n2 * 2.f - 1.f);
+      fbm = std::clamp(fbm * 0.62f + ridge * 0.48f, 0.f, 1.f);
+      // Harder lobe cut → readable masses with dark night gaps.
+      float cloud = smoother((fbm - (0.38f - 0.05f * i)) / (0.28f + 0.05f * i));
+      cloud *= smoother(0.12f + 1.10f * ground + 0.40f * sky);
+      cloud = std::clamp(cloud * (0.88f + 0.28f * i), 0.f, 1.f);
 
-      // Layered sheets (fine streaks + denser curtains) — never vertical-only.
-      const float sheetA = Noise2(rainU, rainV * 0.55f + 2.1f);
-      const float sheetB = Noise2(rainU * 1.7f + 3.3f, rainV * 0.9f - tCalm * 0.2f);
-      const float sheetC = Noise2(rainU * 3.1f - 1.7f, rainV * 1.4f + 5.5f);
-      // Streak ridges: thin bright diagonals via absolute saw — readable on OLED.
-      const float streak = 1.f - std::fabs(sheetA * 2.f - 1.f);
-      const float streak2 = 1.f - std::fabs(sheetB * 2.f - 1.f);
-      const float drops = std::pow(streak, 2.6f + 0.9f * (1.f - storm)) * 0.95f +
-                          std::pow(streak2, 3.2f) * 0.62f +
-                          std::pow(sheetC, 4.5f) * 0.38f * rainAmt;
+      const float underside = smoother(ground);
+      const float topLit = smoother(sky);
+      const float rim = std::exp(-ground * 2.2f) * cloud;
+      const float body = cloud * cloud;
 
-      // Soft curtain veil so the bar reads wet, not sparse snow.
-      const float veil =
-          std::pow(std::clamp(0.35f + 0.55f * sheetA + 0.25f * sheetB, 0.f, 1.f), 1.45f) *
-          (0.22f + 0.32f * rainAmt);
+      // Cool slate-blue cloud volumes (storm sky, not purple fog).
+      const float micro =
+          Noise2(alongN * 14.f - drift * 0.9f, sky * 10.f + 3.3f) * 0.55f +
+          Noise2(alongN * 28.f + drift * 0.5f, sky * 18.f + 1.1f) * 0.45f;
+      const float relief = 0.55f + 0.55f * micro;  // ~0.55–1.10
+      const float slate = 0.16f + 0.18f * i;
+      const float shade =
+          (0.22f + 0.58f * topLit + 0.28f * (1.f - underside)) * relief;
+      r += cloud * slate * 0.42f * shade;
+      g += cloud * slate * 0.58f * shade;
+      b += cloud * slate * 0.95f * shade;
+      // Cooler blue rim on cloud tops.
+      r += rim * (0.03f + 0.04f * i) * relief;
+      g += rim * (0.05f + 0.06f * i) * relief;
+      b += rim * (0.12f + 0.12f * i) * relief;
 
-      const float rainVis =
-          std::clamp((drops * 1.15f + veil) * rainAmt * (0.85f + 0.40f * storm), 0.f, 1.45f);
-      // Cool electric rain highlights (not dim grey).
-      const float rr = 0.62f + 0.22f * intensity;
-      const float rg = 0.72f + 0.18f * intensity;
-      const float rb = 0.92f + 0.08f * intensity;
-      const float rainMix = std::clamp(rainVis * (0.48f + 0.42f * intensity), 0.f, 0.92f);
-      r = r * (1.f - rainMix) + rr * rainMix;
-      g = g * (1.f - rainMix) + rg * rainMix;
-      b = b * (1.f - rainMix) + rb * rainMix;
+      // Resting ambient = faint cold blue in denser undersides (no magenta).
+      const float blueNoise =
+          0.45f + 0.55f * Noise2(alongN * 2.2f + drift * 0.35f, sky * 1.6f + 2.4f);
+      const float ambient =
+          body * (0.06f + 0.10f * i) * (0.40f + 0.60f * underside) * blueNoise;
+      r += ambient * 0.18f;
+      g += ambient * 0.35f;
+      b += ambient * 0.85f;
 
-      // Full-bar lightning wash (electric blue/white) — readable flash on OLED.
-      if (flash > 0.01f) {
-        const float wash = flash * (0.55f + 0.55f * intensity) *
-                           (0.70f + 0.30f * Noise2(alongF * 0.02f, depth * 2.f + tCalm));
-        r = std::clamp(r + wash * 0.68f, 0.f, 1.f);
-        g = std::clamp(g + wash * 0.88f, 0.f, 1.f);
-        b = std::clamp(b + wash * 1.15f, 0.f, 1.f);
+      // Strike bloom — purple/magenta only locally around the bolt.
+      if (cloud > 0.05f && (nearGlow > 0.02f || nearCore > 0.015f)) {
+        const float bloom =
+            body * (nearGlow * (0.38f + 0.40f * i) + nearCore * (0.28f + 0.32f * i));
+        r = std::clamp(r + bloom * 0.70f, 0.f, 1.f);
+        g = std::clamp(g + bloom * 0.18f, 0.f, 1.f);
+        b = std::clamp(b + bloom * 0.88f, 0.f, 1.f);
+        const float hot = body * nearCore * nearCore * (0.22f + 0.28f * i);
+        r = std::clamp(r + hot * 0.48f, 0.f, 1.f);
+        g = std::clamp(g + hot * 0.14f, 0.f, 1.f);
+        b = std::clamp(b + hot * 0.32f, 0.f, 1.f);
       }
 
-      // Micro-shimmer (anti burn-in) across every pixel.
-      const float sheen =
-          0.5f + 0.5f * std::sin(alongF * 0.009f + depth * 3.1f + tCalm * 0.62f);
-      const float live = 0.93f + 0.04f * skyN2 + 0.03f * sheen;
+      // Sparse rain threads (secondary).
+      const float shear = 1.30f * windSign;
+      const float rainU = alongN * 28.f + sky * shear * 3.2f - tCalm * 1.3f;
+      const float rainV = sky * 18.f - alongN * shear * 2.6f + tCalm * 3.4f;
+      const float streak = 1.f - std::fabs(Noise2(rainU, rainV) * 2.f - 1.f);
+      const float drops =
+          std::pow(streak, 6.0f) * (0.08f + 0.12f * i) * (0.30f + 0.70f * cloud);
+      r = std::clamp(r + drops * 0.07f, 0.f, 1.f);
+      g = std::clamp(g + drops * 0.08f, 0.f, 1.f);
+      b = std::clamp(b + drops * 0.11f, 0.f, 1.f);
+
+      const float live =
+          breath * (0.97f + 0.03f * Noise2(alongF * 0.016f + tCalm * 0.14f, sky * 3.0f));
       r = std::clamp(r * live, 0.f, 1.f);
       g = std::clamp(g * live, 0.f, 1.f);
       b = std::clamp(b * live, 0.f, 1.f);
+
+      // Cap: purple peaks ok, no white sky wash (bolts drawn opaque later).
+      const float luma = 0.30f * r + 0.59f * g + 0.11f * b;
+      if (luma > 0.58f) {
+        const float scale = 0.58f / luma;
+        r *= scale;
+        g *= scale;
+        b *= scale;
+      }
 
       Put(bgra, stride, x, y, w, h, {r, g, b, alpha});
     }
   }
 
-  // --- Pass 2: branching bolt silhouettes (glow polylines) during flash windows ---
-  auto drawBolt = [&](float originAlong, float seed, float strength) {
-    if (strength < 0.04f) return;
-    // Start near sky edge (depth≈0), strike toward desktop edge (depth≈1).
+  // Soft anti-aliased bolt stamp (subpixel) — continuous glow, not hard neighbor pixels.
+  auto stampBolt = [&](float fx, float fy, float energy, float radiusPx) {
+    if (energy < 0.02f) return;
+    const float r = (std::max)(1.4f, radiusPx);
+    const int x0 = static_cast<int>(std::floor(fx - r * 1.7f - 1.f));
+    const int x1 = static_cast<int>(std::ceil(fx + r * 1.7f + 1.f));
+    const int y0 = static_cast<int>(std::floor(fy - r * 1.7f - 1.f));
+    const int y1 = static_cast<int>(std::ceil(fy + r * 1.7f + 1.f));
+    const float invR = 1.f / r;
+    for (int py = y0; py <= y1; ++py) {
+      for (int px = x0; px <= x1; ++px) {
+        const float dx = static_cast<float>(px) + 0.5f - fx;
+        const float dy = static_cast<float>(py) + 0.5f - fy;
+        const float d = std::sqrt(dx * dx + dy * dy) * invR;
+        if (d > 1.85f) continue;
+        // Soft core (not 1px hard white) + wide violet bloom — kills stair-steps.
+        const float core = std::exp(-d * d * 2.35f);
+        const float mid = std::exp(-d * d * 1.15f);
+        const float halo = std::exp(-d * d * 0.55f);
+        const float a =
+            std::clamp(energy * (core * 0.82f + mid * 0.58f + halo * 0.28f), 0.f, 1.f);
+        if (a < 0.012f) continue;
+        const float mix = std::clamp(core * 0.75f + mid * 0.55f, 0.f, 1.f);
+        const float rr = 0.70f + 0.30f * mix;
+        const float gg = 0.40f + 0.55f * mix;
+        const float bb = 0.92f + 0.08f * mix;
+        Put(bgra, stride, px, py, w, h, {rr, gg, bb, a});
+      }
+    }
+  };
+
+  auto uvToPixel = [&](float u, float v, float& outX, float& outY) {
+    if (!vertical) {
+      outX = u * (alongScale - 1.f);
+      const float sampleV = (edge == TaskbarEdge::Bottom) ? (1.f - v) : v;
+      outY = sampleV * (acrossScale - 1.f);
+    } else {
+      outY = u * (alongScale - 1.f);
+      const float sampleV = (edge == TaskbarEdge::Left) ? v : (1.f - v);
+      outX = sampleV * (acrossScale - 1.f);
+    }
+  };
+
+  auto drawBolt = [&](float originAlong, float seed, float strength, bool spider) {
+    if (strength < 0.035f) return;
+    // Fewer, longer segments + mid-point displacement = organic forks, not pixel zigzags.
     float ax = originAlong;
     float ay = 0.02f + 0.06f * Hash21(seed, 1.3f);
     const int segs = 5 + static_cast<int>(Hash21(seed, 2.9f) * 3.f);
+    const float mainRadius = (across >= 40 ? 2.35f : 1.85f) * (0.90f + 0.20f * i);
     for (int s = 0; s < segs; ++s) {
       const float sf = static_cast<float>(s);
       const float prog = (sf + 1.f) / static_cast<float>(segs);
-      const float jitter =
-          (Hash21(seed + sf * 0.37f, 4.1f) * 2.f - 1.f) * (0.035f + 0.04f * (1.f - prog));
+      // Smaller angular steps — real bolts kink gently, not every pixel.
+      const float sway =
+          (Hash21(seed + sf * 0.37f, 4.1f) * 2.f - 1.f) *
+          (spider ? 0.038f : 0.022f) * (1.05f - prog * 0.25f);
       const float branchChance = Hash21(seed + sf, 7.7f);
-      float bx = ax + (Hash21(seed + sf, 5.5f) * 2.f - 1.f) * 0.045f + jitter;
-      // Keep bolt traveling across the short axis.
-      float by = ay + (0.14f + 0.10f * Hash21(seed + sf, 8.2f));
+      float bx = ax + (Hash21(seed + sf, 5.5f) * 2.f - 1.f) * (spider ? 0.045f : 0.024f) + sway;
+      float by = ay + (spider ? 0.10f : 0.145f) + 0.04f * Hash21(seed + sf, 8.2f);
       by = std::clamp(by, 0.f, 1.f);
       bx = std::clamp(bx, 0.f, 1.f);
 
-      auto plotSeg = [&](float u0, float v0, float u1, float v1, float glow) {
-        const int steps = 6 + static_cast<int>(across * 0.35f);
-        for (int i = 0; i <= steps; ++i) {
-          const float tt = static_cast<float>(i) / static_cast<float>((std::max)(1, steps));
-          const float u = u0 + (u1 - u0) * tt;
-          const float v = v0 + (v1 - v0) * tt;
-          int px = 0, py = 0;
-          if (!vertical) {
-            px = static_cast<int>(u * (alongScale - 1.f) + 0.5f);
-            const float sampleV =
-                (edge == TaskbarEdge::Bottom) ? (1.f - v) : v;
-            py = static_cast<int>(sampleV * (acrossScale - 1.f) + 0.5f);
-          } else {
-            py = static_cast<int>(u * (alongScale - 1.f) + 0.5f);
-            const float sampleV =
-                (edge == TaskbarEdge::Left) ? v : (1.f - v);
-            px = static_cast<int>(sampleV * (acrossScale - 1.f) + 0.5f);
-          }
-          const float core = glow * strength * (0.72f + 0.45f * intensity);
-          const float br = 0.82f + 0.16f * intensity;
-          const float bg = 0.92f + 0.08f * intensity;
-          const float bb = 1.00f;
-          Put(bgra, stride, px, py, w, h, {br, bg, bb, std::clamp(core, 0.f, 1.f)});
-          Put(bgra, stride, px + 1, py, w, h, {br, bg, bb, std::clamp(core * 0.55f, 0.f, 1.f)});
-          Put(bgra, stride, px - 1, py, w, h, {br, bg, bb, std::clamp(core * 0.55f, 0.f, 1.f)});
-          Put(bgra, stride, px + 2, py, w, h, {br * 0.7f, bg * 0.85f, bb, std::clamp(core * 0.28f, 0.f, 1.f)});
-          Put(bgra, stride, px - 2, py, w, h, {br * 0.7f, bg * 0.85f, bb, std::clamp(core * 0.28f, 0.f, 1.f)});
-          if (across > 2) {
-            Put(bgra, stride, px, py + 1, w, h,
-                {br, bg, bb, std::clamp(core * 0.45f, 0.f, 1.f)});
-            Put(bgra, stride, px, py - 1, w, h,
-                {br, bg, bb, std::clamp(core * 0.45f, 0.f, 1.f)});
-          }
+      auto plotSeg = [&](float u0, float v0, float u1, float v1, float glow, float radiusScale) {
+        // One mid control point for a gentle S-curve instead of a hard corner.
+        const float midT = 0.45f + 0.12f * Hash21(u0 * 17.f + seed, v1 * 13.f);
+        const float midJ =
+            (Hash21(u0 * 9.f + seed, v0 * 11.f) * 2.f - 1.f) * (spider ? 0.028f : 0.016f);
+        const float um = std::clamp(u0 + (u1 - u0) * midT + midJ, 0.f, 1.f);
+        const float vm = std::clamp(v0 + (v1 - v0) * midT + midJ * 0.35f, 0.f, 1.f);
+
+        float x0 = 0.f, y0 = 0.f, x1 = 0.f, y1 = 0.f, xm = 0.f, ym = 0.f;
+        uvToPixel(u0, v0, x0, y0);
+        uvToPixel(um, vm, xm, ym);
+        uvToPixel(u1, v1, x1, y1);
+        const float lenApprox =
+            std::fabs(x1 - x0) + std::fabs(y1 - y0) + 0.55f * (std::fabs(xm - x0) + std::fabs(ym - y0));
+        const int steps = 18 + static_cast<int>(lenApprox * 2.1f);
+        const float energy = glow * strength * (0.92f + 0.18f * i);
+        const float radius = mainRadius * radiusScale;
+
+        for (int k = 0; k <= steps; ++k) {
+          const float tt = static_cast<float>(k) / static_cast<float>((std::max)(1, steps));
+          // Quadratic Bezier through mid control.
+          const float omt = 1.f - tt;
+          const float fx = omt * omt * x0 + 2.f * omt * tt * xm + tt * tt * x1;
+          const float fy = omt * omt * y0 + 2.f * omt * tt * ym + tt * tt * y1;
+          // Slight taper toward the tip.
+          const float taper = 1.f - 0.28f * tt;
+          stampBolt(fx, fy, energy * taper, radius * (0.85f + 0.20f * taper));
         }
       };
 
-      plotSeg(ax, ay, bx, by, 0.95f * (1.f - prog * 0.25f));
-
-      // Occasional fork branch.
-      if (branchChance > 0.62f && s >= 1 && s < segs - 1) {
+      plotSeg(ax, ay, bx, by, 1.0f * (1.f - prog * 0.12f), 1.0f);
+      if (branchChance > 0.45f && s >= 1 && s < segs - 1) {
         const float fx =
-            std::clamp(bx + (branchChance * 2.f - 1.f) * 0.08f, 0.f, 1.f);
-        const float fy = std::clamp(by + 0.12f + Hash21(seed + sf, 9.9f) * 0.10f, 0.f, 1.f);
-        plotSeg(bx, by, fx, fy, 0.55f);
+            std::clamp(bx + (branchChance * 2.f - 1.f) * (spider ? 0.11f : 0.07f), 0.f, 1.f);
+        const float fy = std::clamp(by + 0.08f + Hash21(seed + sf, 9.9f) * 0.12f, 0.f, 1.f);
+        plotSeg(bx, by, fx, fy, 0.62f, 0.72f);
       }
-
+      if (spider && branchChance > 0.68f && s >= 1) {
+        const float fx2 =
+            std::clamp(bx + (Hash21(seed + sf, 11.2f) * 2.f - 1.f) * 0.10f, 0.f, 1.f);
+        const float fy2 = std::clamp(by + 0.04f + Hash21(seed + sf, 12.5f) * 0.08f, 0.f, 1.f);
+        plotSeg(bx, by, fx2, fy2, 0.42f, 0.55f);
+      }
       ax = bx;
       ay = by;
     }
   };
 
-  if (flashA > 0.05f) {
-    drawBolt(0.22f + 0.08f * Hash21(phase * 10.f, 1.f), 11.f, flashA);
-    drawBolt(0.61f + 0.05f * Hash21(phase * 10.f, 3.f), 13.f, flashA * 0.75f);
+  if (flashA > 0.04f) {
+    drawBolt(epicA, 11.f, flashA, true);
+    if (flashA > 0.22f) drawBolt(epicA + 0.06f, 13.f, flashA * 0.68f, false);
   }
-  if (flashB > 0.05f) {
-    drawBolt(0.78f + 0.06f * Hash21(phase * 12.f, 2.f), 17.f, flashB);
+  if (flashB > 0.04f) {
+    drawBolt(epicB, 17.f, flashB, false);
+    if (flashB > 0.30f) drawBolt(epicB - 0.05f, 18.f, flashB * 0.50f, true);
   }
-  if (flashC > 0.05f) {
-    drawBolt(0.38f + 0.07f * Hash21(phase * 14.f, 5.f), 19.f, flashC);
-    drawBolt(0.12f + 0.04f * Hash21(phase * 14.f, 6.f), 23.f, flashC * 0.65f);
+  if (flashC > 0.04f) {
+    drawBolt(epicC, 19.f, flashC, true);
+    if (flashC > 0.20f) drawBolt(epicC - 0.07f, 23.f, flashC * 0.60f, false);
+  }
+  if (flashD > 0.04f) {
+    drawBolt(epicD, 29.f, flashD, false);
   }
 }
 

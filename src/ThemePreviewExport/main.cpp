@@ -31,7 +31,7 @@ struct ThemeExport {
 constexpr ThemeExport kThemes[] = {
     {phostide::ThemeId::Rainbow, "rainbow", 3.2f},
     {phostide::ThemeId::SeaWaves, "sea", 5.5f},
-    {phostide::ThemeId::Weather, "weather", 8.0f},
+    {phostide::ThemeId::Weather, "weather", 1.5f},  // near purple flash
     {phostide::ThemeId::Space, "space", 6.0f},
     {phostide::ThemeId::Aurora, "aurora", 4.5f},
 };
@@ -107,29 +107,45 @@ int wmain(int argc, wchar_t** argv) {
   const int stride = width * 4;
   std::vector<uint8_t> pixels(static_cast<size_t>(stride) * static_cast<size_t>(height));
 
-  int ok = 0;
-  for (const auto& theme : kThemes) {
+  auto exportOne = [&](phostide::ThemeId id, const char* stem, float intensity,
+                       float timeSeconds) -> bool {
     phostide::PaintContext ctx;
-    ctx.theme = theme.id;
-    ctx.intensity = 0.45f;
-    ctx.timeSeconds = theme.timeSeconds;
+    ctx.theme = id;
+    ctx.intensity = intensity;
+    ctx.timeSeconds = timeSeconds;
     ctx.edge = phostide::TaskbarEdge::Bottom;
     ctx.vertical = false;
     ctx.thickness = height;
     ctx.length = width;
-
+    std::memset(pixels.data(), 0, pixels.size());
     phostide::PaintThemePixels(ctx, pixels.data(), width, height, stride);
-
-    const fs::path out = outDir / (std::string(theme.fileStem) + ".png");
+    const fs::path out = outDir / (std::string(stem) + ".png");
     if (!WritePngBgra(out, pixels.data(), width, height, stride)) {
       std::fwprintf(stderr, L"Failed writing %s\n", out.c_str());
+      return false;
+    }
+    std::wprintf(L"Wrote %s (%dx%d t=%.1f i=%.2f)\n", out.c_str(), width, height,
+                 timeSeconds, intensity);
+    return true;
+  };
+
+  int ok = 0;
+  for (const auto& theme : kThemes) {
+    const float intensity = (theme.id == phostide::ThemeId::Weather) ? 1.0f : 0.45f;
+    if (!exportOne(theme.id, theme.fileStem, intensity, theme.timeSeconds)) {
       CoUninitialize();
       return 2;
     }
-    std::wprintf(L"Wrote %s (%dx%d t=%.1f)\n", out.c_str(), width, height,
-                 theme.timeSeconds);
     ++ok;
   }
+  // Extra Weather frames for visual QA (flash vs calm).
+  if (!exportOne(phostide::ThemeId::Weather, "weather-flash", 1.0f, 1.5f) ||
+      !exportOne(phostide::ThemeId::Weather, "weather-calm", 1.0f, 5.2f) ||
+      !exportOne(phostide::ThemeId::Weather, "weather-40", 0.40f, 1.5f)) {
+    CoUninitialize();
+    return 2;
+  }
+  ok += 3;
 
   CoUninitialize();
   std::wprintf(L"Exported %d theme strips to %s\n", ok, outDir.c_str());

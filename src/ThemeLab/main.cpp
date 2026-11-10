@@ -48,7 +48,7 @@ float ThemeBaseTime(phostide::ThemeId id) {
   switch (id) {
     case phostide::ThemeId::Rainbow:  return 3.2f;
     case phostide::ThemeId::SeaWaves: return 5.5f;
-    case phostide::ThemeId::Weather:  return 8.0f;
+    case phostide::ThemeId::Weather:  return 1.5f;  // near first purple flash
     case phostide::ThemeId::Space:    return 6.0f;
     case phostide::ThemeId::Aurora:   return 4.5f;
     default:                          return 3.0f;
