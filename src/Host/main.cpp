@@ -204,6 +204,26 @@ void RemoveTrayIcon() {
   g_trayAdded = false;
 }
 
+void ShutdownHost() {
+  static bool once = false;
+  if (once) return;
+  once = true;
+
+  if (g_hwnd) {
+    KillTimer(g_hwnd, ID_ANIM_TIMER);
+    WTSUnRegisterSessionNotification(g_hwnd);
+  }
+  if (phostide::SettingsWindowIsOpen()) {
+    DestroyWindow(phostide::SettingsWindowHwnd());
+  }
+  RemoveTrayIcon();
+  // Restore stock taskbar in Explorer, then drop our hook so Setup can replace files.
+  phostide::RequestTapRestore();
+  Sleep(60);
+  phostide::ClearTaskbarAccent();
+  phostide::DetachExplorerTap();
+}
+
 void StartUpdateCheck(bool manual) {
   if (g_updateCheckRunning) return;
   g_updateCheckRunning = true;
@@ -316,6 +336,18 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
       }
       return 0;
     }
+    case WM_CLOSE:
+      DestroyWindow(hwnd);
+      return 0;
+    case WM_QUERYENDSESSION:
+      // Allow Restart Manager / Inno CloseApplications to shut us down.
+      return TRUE;
+    case WM_ENDSESSION:
+      if (wParam) {
+        ShutdownHost();
+        PostQuitMessage(0);
+      }
+      return 0;
     case WM_WTSSESSION_CHANGE:
       if (g_settings.pauseWhenLocked) {
         if (wParam == WTS_SESSION_LOCK) {
@@ -330,9 +362,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
       }
       return 0;
     case WM_DESTROY:
-      KillTimer(hwnd, ID_ANIM_TIMER);
-      RemoveTrayIcon();
-      phostide::ClearTaskbarAccent();
+      ShutdownHost();
       PostQuitMessage(0);
       return 0;
     default:
@@ -342,7 +372,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
 }  // namespace
 
-int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR, int) {
+int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR cmdLine, int) {
+  // Setup / scripts: Phostide.exe /exit → ask the live tray instance to quit.
+  if (cmdLine && (wcsstr(cmdLine, L"/exit") || wcsstr(cmdLine, L"--exit"))) {
+    return phostide::RequestExistingInstanceExit(20000) ? 0 : 1;
+  }
+
   HANDLE mutex = CreateMutexW(nullptr, TRUE, phostide::kMutexName.data());
   if (!mutex || GetLastError() == ERROR_ALREADY_EXISTS) {
     return 0;
@@ -428,6 +463,10 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR, int) {
     DispatchMessageW(&msg);
   }
 
-  phostide::ClearTaskbarAccent();
+  ShutdownHost();
+  if (mutex) {
+    ReleaseMutex(mutex);
+    CloseHandle(mutex);
+  }
   return 0;
 }

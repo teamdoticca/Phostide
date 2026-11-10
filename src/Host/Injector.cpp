@@ -133,4 +133,49 @@ bool SendThemeCommand(const ThemeCommand& cmd) {
   return ok && written == sizeof(cmd);
 }
 
+bool RequestTapRestore() {
+  ThemeCommand cmd{};
+  cmd.apiVersion = kTapApiVersion;
+  cmd.enabled = 0;
+  return SendThemeCommand(cmd);
+}
+
+void DetachExplorerTap() {
+  if (g_hook) {
+    UnhookWindowsHookEx(g_hook);
+    g_hook = nullptr;
+    LogInject(L"unhooked");
+  }
+  if (g_tapModule) {
+    FreeLibrary(g_tapModule);
+    g_tapModule = nullptr;
+    LogInject(L"freed tap module");
+  }
+}
+
+bool RequestExistingInstanceExit(DWORD timeoutMs) {
+  HWND hwnd = FindWindowW(L"PhostideTray", nullptr);
+  if (!hwnd) {
+    // No window — still wait briefly in case mutex is held during teardown.
+    HANDLE existing = OpenMutexW(SYNCHRONIZE, FALSE, kMutexName.data());
+    if (!existing) return true;
+    const DWORD wait = WaitForSingleObject(existing, timeoutMs);
+    CloseHandle(existing);
+    return wait == WAIT_OBJECT_0 || wait == WAIT_ABANDONED;
+  }
+
+  PostMessageW(hwnd, WM_CLOSE, 0, 0);
+  // Nudge the UI thread in case it is sitting in a modal / SendMessage.
+  SendNotifyMessageW(hwnd, WM_NULL, 0, 0);
+
+  HANDLE existing = OpenMutexW(SYNCHRONIZE, FALSE, kMutexName.data());
+  if (!existing) return true;
+  const DWORD wait = WaitForSingleObject(existing, timeoutMs);
+  CloseHandle(existing);
+  LogInject(wait == WAIT_OBJECT_0 || wait == WAIT_ABANDONED
+                ? L"exit signal: mutex released"
+                : L"exit signal: mutex wait timed out");
+  return wait == WAIT_OBJECT_0 || wait == WAIT_ABANDONED;
+}
+
 }  // namespace phostide

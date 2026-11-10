@@ -42,11 +42,13 @@ PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 UninstallDisplayIcon={app}\{#MyAppExeName}
-CloseApplications=yes
+; force = Restart Manager closes us without a stuck "applications still running" prompt.
+CloseApplications=force
 RestartApplications=no
 ; Same folder + AppId on upgrade so Windows keeps treating this as one app.
 UsePreviousAppDir=yes
-AppMutex=Local\Phostide.SingleInstance
+; Do not prefix Local\ — Inno tries Local\ and Global\ itself.
+AppMutex=Phostide.SingleInstance
 VersionInfoVersion={#MyAppVersion}.0
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoProductName={#MyAppName}
@@ -73,5 +75,41 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
+[UninstallRun]
+; Prefer graceful exit (restore taskbar + unhook) before files are removed.
+Filename: "{app}\{#MyAppExeName}"; Parameters: "/exit"; RunOnceId: "PhostideExit"; Flags: waituntilterminated skipifdoesntexist
+
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
+
+[Code]
+function PostMessageW(hWnd: HWND; Msg, wParam, lParam: LongInt): BOOL;
+  external 'PostMessageW@user32.dll stdcall';
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  ResultCode: Integer;
+  Wnd: HWND;
+  I: Integer;
+begin
+  Result := '';
+  NeedsRestart := False;
+
+  { Prefer /exit so Host restores the taskbar and unhooks Explorer. }
+  if FileExists(ExpandConstant('{app}\{#MyAppExeName}')) then
+    Exec(ExpandConstant('{app}\{#MyAppExeName}'), '/exit', '', SW_HIDE,
+         ewWaitUntilTerminated, ResultCode);
+
+  { Fallback for builds that do not understand /exit yet. }
+  Wnd := FindWindowByClassName('PhostideTray');
+  if Wnd <> 0 then
+  begin
+    PostMessageW(Wnd, 16, 0, 0); { WM_CLOSE }
+    for I := 1 to 50 do
+    begin
+      if FindWindowByClassName('PhostideTray') = 0 then
+        Break;
+      Sleep(100);
+    end;
+  end;
+end;
