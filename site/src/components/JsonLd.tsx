@@ -63,6 +63,7 @@ export function JsonLd({ softwareVersion }: JsonLdProps) {
     featureList: [
       "OLED-safe animated taskbar themes",
       "Paints Explorer BackgroundFill (not an overlay)",
+      "Auto / GPU / CPU rendering (D3D11 with CPU fallback)",
       "Five built-in themes: Rainbow, Sea Waves, Weather, Space, Aurora",
       "Signed per-user installer, no admin required",
       "Local-only — no account, no telemetry",

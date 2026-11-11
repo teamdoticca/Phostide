@@ -49,7 +49,9 @@ export default function ThemesPage() {
           </ol>
           <p className="mt-4 text-soft">
             Default intensity is 45%. Lower keeps OLED quieter; higher makes
-            motion and color stronger.
+            motion and color stronger. All five themes use the same GPU or CPU
+            painter (System › RENDERING) — the look matches; GPU is smoother and
+            lighter on the CPU.
           </p>
         </div>
       </section>

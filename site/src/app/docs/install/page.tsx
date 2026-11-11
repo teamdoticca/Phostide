@@ -96,12 +96,15 @@ export default async function InstallPage() {
               <p className="text-soft">%LOCALAPPDATA%\Programs\Phostide\</p>
               <p className="pl-5">Phostide.exe</p>
               <p className="pl-5">ExplorerTAP.dll</p>
+              <p className="pl-5">Themes.hlsl</p>
             </div>
             <p className="mt-4 text-sm text-soft">
               <code className="text-zinc-100">Phostide.exe</code> is the tray
               host. <code className="text-zinc-100">ExplorerTAP.dll</code> is
               injected into Explorer so themes paint the real taskbar
-              background — keep both in the same folder.
+              background. <code className="text-zinc-100">Themes.hlsl</code> is
+              the GPU shader pack — keep all three in the same folder. CPU
+              painting still works if the HLSL file is missing.
             </p>
           </section>
 
@@ -119,7 +122,8 @@ export default async function InstallPage() {
               </li>
               <li>
                 <span className="text-zinc-100">Settings…</span> — themes,
-                intensity, Start with Windows, updates
+                intensity, rendering (Auto / GPU / CPU), Start with Windows,
+                updates
               </li>
               <li>
                 <span className="text-zinc-100">Exit</span> — quit and restore
@@ -135,11 +139,13 @@ export default async function InstallPage() {
                   <span className="text-zinc-100">Apply</span>
                 </li>
                 <li>
-                  <span className="text-zinc-100">System</span> tab — Start with
-                  Windows, check for updates
+                  <span className="text-zinc-100">System</span> tab —{" "}
+                  <span className="text-zinc-100">RENDERING</span> (Auto
+                  default, GPU, or CPU), Start with Windows, check for updates
                 </li>
               </ul>
               <p className="mt-3">
+                Auto uses D3D11 GPU paint when it can and falls back to CPU.
                 Preview changes are draft until you click Apply. Closing without
                 Apply keeps your previous look.
               </p>
@@ -152,9 +158,9 @@ export default async function InstallPage() {
             </h2>
             <p className="mt-3 text-soft">
               Grab the zip from the same release, unzip it anywhere, and run
-              Phostide.exe. Keep ExplorerTAP.dll in the same folder. To remove
-              it, Exit from the tray and delete the folder. Settings still live
-              under %APPDATA%\Phostide.
+              Phostide.exe. Keep ExplorerTAP.dll and Themes.hlsl in the same
+              folder. To remove it, Exit from the tray and delete the folder.
+              Settings still live under %APPDATA%\Phostide.
             </p>
             <LatestDownload kind="zip" className="btn-ghost mt-5">
               Download zip
@@ -164,9 +170,10 @@ export default async function InstallPage() {
           <section id="settings-file" className="mt-14">
             <h2 className="text-2xl font-semibold">Settings file</h2>
             <p className="mt-3 text-soft">
-              Theme, intensity, Start with Windows, and a few runtime flags are
+              Theme, intensity, <code className="text-zinc-100">renderMode</code>{" "}
+              (Auto / GPU / CPU), Start with Windows, and a few runtime flags are
               saved here. Delete the file to reset to defaults (Rainbow, 45%
-              intensity).
+              intensity, Auto rendering).
             </p>
             <div className="mt-4 rounded-lg border border-line bg-panel px-5 py-4 font-mono text-sm">
               %APPDATA%\Phostide\settings.json

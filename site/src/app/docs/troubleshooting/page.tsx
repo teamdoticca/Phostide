@@ -35,6 +35,15 @@ const fixes = [
     ],
   },
   {
+    id: "fix-gpu",
+    title: "GPU / rendering",
+    items: [
+      "Odd flicker or a black flash on the bar: Settings › System › RENDERING › CPU, then Apply.",
+      "Prefer GPU: choose Auto or GPU and Apply. Keep Themes.hlsl next to ExplorerTAP.dll.",
+      "Auto already falls back to CPU if D3D11 cannot start — you do not need to pick CPU unless you want to force it.",
+    ],
+  },
+  {
     id: "fix-smartscreen",
     title: "SmartScreen warning",
     items: [

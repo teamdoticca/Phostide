@@ -45,8 +45,8 @@ export default async function Home() {
             </h1>
             <p className="mt-6 max-w-xl text-base leading-relaxed text-soft sm:text-lg">
               Phostide draws OLED‑safe motion directly into the Windows taskbar
-              background inside Explorer. Your icons stay on top. Quit, and the
-              normal bar comes back.
+              background inside Explorer — GPU when available, CPU otherwise.
+              Your icons stay on top. Quit, and the normal bar comes back.
             </p>
             <div className="mt-9 flex flex-wrap items-center gap-3">
               <LatestDownload className="btn-ember">
@@ -124,7 +124,7 @@ export default async function Home() {
             {
               icon: IconLayers,
               title: "Real background fill",
-              body: "Phostide paints the taskbar's own background inside Explorer. No floating window covering anything.",
+              body: "Phostide paints the taskbar's own background inside Explorer — D3D11 GPU when the hardware allows, with a CPU fallback. No floating window covering anything.",
             },
             {
               icon: IconGrid,
