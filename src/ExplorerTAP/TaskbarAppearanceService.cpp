@@ -272,7 +272,7 @@ void TaskbarAppearanceService::RefreshGeomAndBitmap(TaskbarVisual& tv) {
 
   // Cap the long axis so CPU theme painters stay cheap; ImageBrush Stretch::Fill
   // upscales to the real BackgroundFill. Thickness keeps full detail.
-  constexpr int kMaxPaintAlongPx = 960;
+  constexpr int kMaxPaintAlongPx = 720;
   if (h > w * 3 / 2) {
     if (h > kMaxPaintAlongPx) h = kMaxPaintAlongPx;
   } else if (w > kMaxPaintAlongPx) {
@@ -364,8 +364,6 @@ void TaskbarAppearanceService::EnsureUiTimer() {
   if (!dispatcher_) return;
   if (!timer_) {
     timer_ = dispatcher_.CreateTimer();
-    // ~12.5 fps: enough for calm OLED motion, much cheaper on the Explorer UI thread.
-    timer_.Interval(std::chrono::milliseconds{80});
     timer_.IsRepeating(true);
     timer_.Tick([this](auto&&, auto&&) { TickUi(); });
   }
@@ -373,7 +371,14 @@ void TaskbarAppearanceService::EnsureUiTimer() {
     StopUiTimer();
     return;
   }
+  // Heavier themes (Aurora / Sea / Weather) run slower; calm ones can tick a bit faster.
+  const auto theme = static_cast<ThemeId>(command_.theme);
+  const int intervalMs = (theme == ThemeId::Aurora || theme == ThemeId::SeaWaves ||
+                          theme == ThemeId::Weather)
+                             ? 110
+                             : 90;
   try {
+    timer_.Interval(std::chrono::milliseconds{intervalMs});
     timer_.Start();
   } catch (...) {
   }

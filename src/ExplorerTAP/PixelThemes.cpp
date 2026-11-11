@@ -1156,27 +1156,41 @@ void PaintAurora(uint8_t* bgra, int stride, int w, int h, float intensity, float
   const float breath2 = 0.90f + 0.10f * std::sin(tCalm * 0.31f + 1.9f);
 
   // Curtain pillars wander along the bar so every region gets light over time.
-  constexpr int kCurtains = 8;
+  // Keep the count modest — each pillar is evaluated per along-column.
+  constexpr int kCurtains = 5;
   float cHome[kCurtains];
   float cPhase[kCurtains];
   float cWidth[kCurtains];
   float cHue[kCurtains];  // 0 violet → 1 magenta/pink
   float cDrift[kCurtains];
+  float cWander[kCurtains];
+  float cPulse[kCurtains];
+  float cHueNow[kCurtains];
+  float cWidthNow[kCurtains];
   for (int s = 0; s < kCurtains; ++s) {
     const float fs = static_cast<float>(s);
     cHome[s] = Hash21(fs + 0.37f, 1.91f);
     cPhase[s] = Hash21(fs + 2.83f, 6.41f);
-    cWidth[s] = 0.026f + 0.052f * Hash21(fs + 0.77f, 3.55f);
+    cWidth[s] = 0.032f + 0.058f * Hash21(fs + 0.77f, 3.55f);
     cHue[s] = Hash21(fs + 4.12f, 8.09f);
     // Unique speed + direction; wraps the bar in ~25–70s of calm time.
     const float spd = 0.014f + 0.030f * Hash21(fs + 5.55f, 9.17f);
     const float dir = (Hash21(fs + 6.02f, 1.33f) > 0.5f) ? 1.f : -1.f;
     cDrift[s] = spd * dir;
+    // Precompute per-frame pillar motion (avoid Noise2 in the along loop).
+    cWander[s] =
+        0.10f * std::sin(tCalm * 0.13f + cPhase[s] * 5.1f + cHome[s] * 3.7f) +
+        0.045f * std::sin(tCalm * (0.28f + cPhase[s] * 0.22f) + cPhase[s] * 6.2831853f);
+    cPulse[s] =
+        0.15f + 0.85f * (0.5f + 0.5f * std::sin(tCalm * (0.55f + cPhase[s] * 0.40f) +
+                                                 cPhase[s] * 6.2831853f));
+    cHueNow[s] = std::fmod(cHue[s] + tCalm * (0.02f + 0.03f * cPhase[s]) + 1.f, 1.f);
+    cWidthNow[s] =
+        cWidth[s] * (0.85f + 0.25f * (0.5f + 0.5f * std::sin(tCalm * 0.45f + cPhase[s] * 4.f)));
   }
 
   for (int alongI = 0; alongI < along; ++alongI) {
-    const float alongF = static_cast<float>(alongI);
-    const float alongN = alongF / alongScale;
+    const float alongN = static_cast<float>(alongI) / alongScale;
 
     // Slow lateral fabric sway of the whole field.
     const float sway =
@@ -1187,28 +1201,15 @@ void PaintAurora(uint8_t* bgra, int stride, int w, int h, float intensity, float
     float hueField = 0.f;
     float hueW = 0.f;
     for (int s = 0; s < kCurtains; ++s) {
-      // Continuous drift + slow noise wander (not fixed hotspots).
-      const float wander =
-          0.10f * (Noise2(tCalm * 0.065f + cPhase[s] * 3.1f, cHome[s] * 5.7f) * 2.f - 1.f) +
-          0.045f * std::sin(tCalm * (0.28f + cPhase[s] * 0.22f) + cPhase[s] * 6.2831853f);
-      float pos = cHome[s] + cDrift[s] * tCalm + wander;
+      float pos = cHome[s] + cDrift[s] * tCalm + cWander[s];
       pos -= std::floor(pos);  // wrap 0..1 across the full bar
       float d = alongN - pos - sway;
       d -= std::round(d);
-      // Width also breathes a little so pillars don't look stamped.
-      const float width =
-          cWidth[s] * (0.85f + 0.25f * (0.5f + 0.5f * std::sin(tCalm * 0.45f + cPhase[s] * 4.f)));
+      const float width = cWidthNow[s];
       const float env = std::exp(-(d * d) / (width * width));
-      // Can dip near-dark so a curtain "leaves" and later returns elsewhere.
-      const float pulse =
-          0.15f + 0.85f * (0.5f + 0.5f * std::sin(tCalm * (0.55f + cPhase[s] * 0.40f) +
-                                                   cPhase[s] * 6.2831853f));
-      const float contrib = env * pulse;
+      const float contrib = env * cPulse[s];
       curtainField = (std::max)(curtainField, contrib);
-      // Hue drifts slowly per pillar so color patches also migrate.
-      const float hueNow =
-          std::fmod(cHue[s] + tCalm * (0.02f + 0.03f * cPhase[s]) + 1.f, 1.f);
-      hueField += hueNow * contrib;
+      hueField += cHueNow[s] * contrib;
       hueW += contrib;
     }
     curtainField = std::clamp(curtainField, 0.f, 1.f);
@@ -1216,7 +1217,7 @@ void PaintAurora(uint8_t* bgra, int stride, int w, int h, float intensity, float
 
     // Fine vertical ray density between pillars (combed light).
     const float rays =
-        0.55f + 0.45f * Noise2(alongN * 28.f + tCalm * 0.15f, tCalm * 0.08f + 2.1f);
+        0.55f + 0.45f * (0.5f + 0.5f * std::sin(alongN * 28.f + tCalm * 0.15f));
 
     for (int acrossI = 0; acrossI < across; ++acrossI) {
       const float sampleV =
@@ -1242,7 +1243,7 @@ void PaintAurora(uint8_t* bgra, int stride, int w, int h, float intensity, float
       float b = 0.040f + 0.025f * i;
 
       // Sparse stars in the dark sky gaps (not inside bright curtains).
-      const float starN = Noise2(alongF * 0.55f, sky * 11.f + 3.7f);
+      const float starN = Hash21(alongN * 97.f + 0.13f, sky * 41.f + 3.7f);
       const float star = std::pow(std::clamp((starN - 0.88f) / 0.12f, 0.f, 1.f), 3.f) *
                          (1.f - curtainField) * sky;
       r += star * 0.55f;
@@ -1256,14 +1257,12 @@ void PaintAurora(uint8_t* bgra, int stride, int w, int h, float intensity, float
       float curtain = std::clamp(tip * 0.95f + body * 0.75f, 0.f, 1.4f);
       curtain *= curtainField * rays * breath;
 
-      // Vertical fall motion — light streams sky → ground (the curtain drop).
+      // Vertical fall motion — light streams sky → ground (cheap sin grain).
       const float flowV = fall * 5.5f - tCalm * 1.85f;
       const float flowU = alongN * 14.f + sway * 40.f;
-      const float stream1 = Noise2(flowU, flowV);
-      const float stream2 = Noise2(flowU * 1.7f + 2.4f, flowV * 0.85f + tCalm * 0.2f);
-      const float stream3 = Noise2(alongN * 55.f + tCalm * 0.3f, fall * 8.f - tCalm * 2.4f);
-      const float silk =
-          0.55f + 0.28f * stream1 + 0.17f * stream2 + 0.12f * std::pow(stream3, 2.2f);
+      const float stream1 = 0.5f + 0.5f * std::sin(flowU * 1.7f + flowV * 2.1f);
+      const float stream2 = 0.5f + 0.5f * std::sin(flowU * 2.9f - flowV * 1.4f + 2.4f);
+      const float silk = 0.62f + 0.24f * stream1 + 0.14f * stream2;
       curtain *= silk;
 
       // Palette from reference: deep violet → magenta → pink-red toward tips.

@@ -60,14 +60,47 @@ bool InjectExplorerTap(std::wstring* errorOut) {
   const fs::path destDir = fs::path(temp) / L"Phostide";
   std::error_code ec;
   fs::create_directories(destDir, ec);
-  const fs::path dest = destDir / L"ExplorerTAP.dll";
+  // Explorer keeps the previous TAP mapped after host exit, which locks this
+  // path. Prefer overwrite; if locked, reuse when size matches. Never LoadLibrary
+  // a second side-by-side TAP (would double-paint). If a different build is locked
+  // but Bound is already set, skip re-hook and drive the live TAP over the pipe.
+  fs::path dest = destDir / L"ExplorerTAP.dll";
   fs::copy_file(src, dest, fs::copy_options::overwrite_existing, ec);
   if (ec) {
-    if (errorOut) *errorOut = L"Failed to copy ExplorerTAP.dll to temp";
-    LogInject(L"copy failed");
-    return false;
+    std::error_code se;
+    const auto srcSize = fs::file_size(src, se);
+    const auto dstSize = fs::exists(dest) ? fs::file_size(dest, se) : static_cast<uintmax_t>(-1);
+    if (fs::exists(dest) && srcSize == dstSize) {
+      LogInject(L"copy locked; reusing temp dll (same size)");
+    } else {
+      HANDLE bound = OpenEventW(SYNCHRONIZE, FALSE, kTapBoundEvent.data());
+      const bool alreadyBound =
+          bound && WaitForSingleObject(bound, 0) == WAIT_OBJECT_0;
+      if (bound) CloseHandle(bound);
+      if (alreadyBound) {
+        LogInject(L"copy locked; TAP already bound — skip rehook");
+        return true;
+      }
+      dest = destDir / (std::wstring(L"ExplorerTAP-") + std::wstring(kAppVersion) + L".dll");
+      std::error_code ec2;
+      fs::copy_file(src, dest, fs::copy_options::overwrite_existing, ec2);
+      if (ec2) {
+        const auto altSize =
+            fs::exists(dest) ? fs::file_size(dest, se) : static_cast<uintmax_t>(-1);
+        if (fs::exists(dest) && srcSize == altSize) {
+          LogInject(L"copy locked; reusing versioned temp dll");
+        } else {
+          if (errorOut) *errorOut = L"Failed to copy ExplorerTAP.dll to temp";
+          LogInject(L"copy failed");
+          return false;
+        }
+      } else {
+        LogInject(L"copied versioned dll");
+      }
+    }
+  } else {
+    LogInject(L"copied dll");
   }
-  LogInject(L"copied dll");
 
   HWND tray = nullptr;
   for (int i = 0; i < 40 && !tray; ++i) {
