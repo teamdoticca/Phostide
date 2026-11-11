@@ -35,6 +35,7 @@ phostide::Settings g_settings{};
 HMENU g_menu = nullptr;
 bool g_trayAdded = false;
 bool g_trayIconOwned = false;
+UINT g_taskbarCreatedMsg = 0;
 bool g_sessionLocked = false;
 bool g_tapBound = false;
 bool g_clearedAccentForTap = false;
@@ -56,6 +57,7 @@ phostide::ThemeCommand MakeCommand() {
   cmd.enabled = g_settings.enabled ? 1u : 0u;
   cmd.paused =
       (g_settings.pauseWhenLocked && g_sessionLocked && g_settings.enabled) ? 1u : 0u;
+  cmd.renderMode = static_cast<uint32_t>(g_settings.renderMode);
   return cmd;
 }
 
@@ -162,8 +164,23 @@ void ShowContextMenu(HWND hwnd) {
   PostMessageW(hwnd, WM_NULL, 0, 0);
 }
 
-void AddTrayIcon(HWND hwnd, HINSTANCE hi) {
+void AddTrayIcon(HWND hwnd, HINSTANCE hi, bool force = false) {
+  // Explorer restarts wipe the notification area; NIM_MODIFY may still succeed
+  // against a stale GUID entry, so force a delete+add after TaskbarCreated.
+  if (g_trayAdded && !force) {
+    if (Shell_NotifyIconW(NIM_MODIFY, &g_nid)) return;
+    force = true;
+  }
+  if (force && g_trayAdded) {
+    NOTIFYICONDATAW del = g_nid;
+    del.uFlags = NIF_GUID;
+    Shell_NotifyIconW(NIM_DELETE, &del);
+    g_trayAdded = false;
+  }
   if (g_trayAdded) return;
+
+  HICON oldIcon = g_nid.hIcon;
+  const bool oldOwned = g_trayIconOwned;
 
   g_nid = {};
   g_nid.cbSize = sizeof(NOTIFYICONDATAW);
@@ -190,6 +207,14 @@ void AddTrayIcon(HWND hwnd, HINSTANCE hi) {
   if (Shell_NotifyIconW(NIM_ADD, &g_nid)) {
     Shell_NotifyIconW(NIM_SETVERSION, &g_nid);
     g_trayAdded = true;
+    if (oldOwned && oldIcon && oldIcon != g_nid.hIcon) {
+      DestroyIcon(oldIcon);
+    }
+  } else if (oldOwned && oldIcon && oldIcon != g_nid.hIcon) {
+    // Keep previous icon handle if ADD failed.
+    DestroyIcon(g_nid.hIcon);
+    g_nid.hIcon = oldIcon;
+    g_trayIconOwned = oldOwned;
   }
 }
 
@@ -275,6 +300,11 @@ void HandleUpdateDone(UpdateDonePayload* payload) {
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+  if (g_taskbarCreatedMsg && msg == g_taskbarCreatedMsg) {
+    // Explorer was restarted (by us or the user) — notification icons are gone.
+    if (g_instance) AddTrayIcon(hwnd, g_instance, /*force=*/true);
+    return 0;
+  }
   switch (msg) {
     case WM_CREATE:
       AddTrayIcon(hwnd, reinterpret_cast<LPCREATESTRUCTW>(lParam)->hInstance);
@@ -292,6 +322,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
       }
       return 0;
     case WM_INJECT_DONE:
+      // Injection may have bounced Explorer — restore the tray icon first.
+      if (g_instance) AddTrayIcon(hwnd, g_instance, /*force=*/true);
       // Injection finished — push theme; poll bound so we can drop accent.
       ApplyTheme(true);
       SyncAnimTimer(hwnd);
@@ -388,6 +420,7 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR cmdLine, int) {
   }
 
   g_instance = hi;
+  g_taskbarCreatedMsg = RegisterWindowMessageW(L"TaskbarCreated");
 
   // Keep Start / taskbar / notification prefs tied to one identity across updates.
   SetCurrentProcessExplicitAppUserModelID(phostide::kAppUserModelId.data());

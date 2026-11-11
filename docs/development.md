@@ -9,7 +9,9 @@ Product SoT for architecture: [docs/architecture.md](architecture.md).
 Host `InjectExplorerTap` finds `Shell_TrayWnd`, loads `ExplorerTAP.dll` via `WH_CALLWNDPROC`, waits for `Local\Phostide.TAP.Ready`.
 **It does not kill or restart Explorer.**
 
-**Agent / iterative theme testing:** Explorer must often be restarted so the old DLL unloads and XAML Diagnostics (`ixde`) can rebind cleanly. That restart is a **dev ritual only**, not product behavior.
+**GPU theme iteration (preferred):** use `out\Release\ThemeLab.exe`. It compiles `src\ExplorerTAP\Themes.hlsl` directly (F5 or auto-reload on save). **Do not restart Explorer** just because ThemeLab was killed/relaunched — ThemeLab never loads into Explorer.
+
+**Live taskbar / TAP DLL iteration:** Explorer must often be restarted so the old DLL unloads and XAML Diagnostics (`ixde`) can rebind cleanly. That restart is a **dev ritual only**, not product behavior — and only needed when verifying the in-Explorer paint path, not ThemeLab.
 
 ## Theme indices (`ThemeId`)
 

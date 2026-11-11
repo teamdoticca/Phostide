@@ -39,17 +39,25 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>comctl32.lib;d3d11.lib;dxgi.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="LabGpu.cpp" />
     <ClCompile Include="..\ExplorerTAP\PixelThemes.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="LabGpu.h" />
     <ClInclude Include="..\ExplorerTAP\PixelThemes.h" />
     <ClInclude Include="..\ExplorerTAP\TaskbarGeometry.h" />
     <ClInclude Include="..\Common\PhostideCommon.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\ExplorerTAP\Themes.hlsl" />
+  </ItemGroup>
+  <Target Name="CopyThemesHlsl" AfterTargets="Build">
+    <Copy SourceFiles="..\ExplorerTAP\Themes.hlsl" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

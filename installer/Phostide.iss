@@ -63,6 +63,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 Source: "{#StageDir}\Phostide.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#StageDir}\ExplorerTAP.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#StageDir}\Themes.hlsl"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#StageDir}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#StageDir}\README.md"; DestDir: "{app}"; Flags: ignoreversion
 

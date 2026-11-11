@@ -1,5 +1,6 @@
 #include "TaskbarAppearanceService.h"
 
+#include "GpuThemeRenderer.h"
 #include "PixelThemes.h"
 #include "TaskbarGeometry.h"
 
@@ -201,10 +202,23 @@ void TaskbarAppearanceService::UnregisterHandle(uint64_t) {}
 void TaskbarAppearanceService::Apply(const ThemeCommand& cmd) {
   {
     std::lock_guard lock(mutex_);
+    const auto prevMode = static_cast<RenderMode>(command_.renderMode);
     command_ = cmd;
+    const auto mode = static_cast<RenderMode>(command_.renderMode);
+    // Forced GPU (or Auto after a mode change) may retry device init.
+    if (mode != prevMode && mode != RenderMode::Cpu) {
+      gpuFailedThisSession_ = false;
+    }
     if (cmd.enabled && !cmd.paused) {
       start_ = std::chrono::steady_clock::now();
     }
+  }
+  {
+    wchar_t line[192];
+    swprintf_s(line, L"Apply enabled=%u paused=%u theme=%u intensity=%u renderMode=%s",
+               cmd.enabled ? 1u : 0u, cmd.paused ? 1u : 0u, cmd.theme, cmd.intensity,
+               RenderModeName(static_cast<RenderMode>(cmd.renderMode)));
+    LogService(line);
   }
   if (!dispatcher_) return;
 
@@ -221,11 +235,13 @@ void TaskbarAppearanceService::Apply(const ThemeCommand& cmd) {
   dispatcher_.TryEnqueue([this] {
     std::lock_guard lock(mutex_);
     for (auto& tv : taskbars_) {
-      if (!tv.bound && tv.background && BindVisual(tv)) {
-        boundCount_.fetch_add(1);
+      if (!tv.background) continue;
+      // Rebind so Auto/GPU/CPU mode switches take effect on live fills.
+      const bool wasBound = tv.bound;
+      if (wasBound) UnbindVisual(tv);
+      if (BindVisual(tv)) {
+        if (!wasBound) boundCount_.fetch_add(1);
         SignalBound();
-      } else if (tv.bound) {
-        RefreshGeomAndBitmap(tv);
       }
     }
     EnsureUiTimer();
@@ -248,7 +264,33 @@ void TaskbarAppearanceService::RestoreAll() {
   for (auto& tv : taskbars_) {
     UnbindVisual(tv);
   }
+  gpu_.DetachAll();
   boundCount_.store(0);
+  LogService(L"RestoreAll done");
+}
+
+bool TaskbarAppearanceService::WantGpu() const {
+  if (gpuFailedThisSession_) return false;
+  const auto mode = static_cast<RenderMode>(command_.renderMode);
+  return mode == RenderMode::Auto || mode == RenderMode::Gpu;
+}
+
+bool TaskbarAppearanceService::TryEnableGpuFor(TaskbarVisual& tv) {
+  if (!WantGpu() || !tv.background || tv.pixelWidth < 1 || tv.pixelHeight < 1) {
+    return false;
+  }
+  if (!gpu_.EnsureDevice()) {
+    gpuFailedThisSession_ = true;
+    return false;
+  }
+  if (!gpu_.Attach(tv.background, tv.pixelWidth, tv.pixelHeight)) {
+    gpuFailedThisSession_ = true;
+    return false;
+  }
+  tv.gpuActive = true;
+  tv.imageBrush = nullptr;
+  tv.bitmap = nullptr;
+  return true;
 }
 
 void TaskbarAppearanceService::RefreshGeomAndBitmap(TaskbarVisual& tv) {
@@ -295,17 +337,29 @@ void TaskbarAppearanceService::RefreshGeomAndBitmap(TaskbarVisual& tv) {
 
   // Cap the long axis so CPU theme painters stay cheap; ImageBrush Stretch::Fill
   // upscales to the real BackgroundFill. Thickness keeps full detail.
-  constexpr int kMaxPaintAlongPx = 720;
-  if (h > w * 3 / 2) {
-    if (h > kMaxPaintAlongPx) h = kMaxPaintAlongPx;
-  } else if (w > kMaxPaintAlongPx) {
-    w = kMaxPaintAlongPx;
+  // GPU paints at native measured/DPI size (hard clamp 7680 above) — no 2560 cap.
+  if (!WantGpu()) {
+    constexpr int kMaxCpuPaintAlongPx = 720;
+    if (h > w * 3 / 2) {
+      if (h > kMaxCpuPaintAlongPx) h = kMaxCpuPaintAlongPx;
+    } else if (w > kMaxCpuPaintAlongPx) {
+      w = kMaxCpuPaintAlongPx;
+    }
   }
 
-  if (w != tv.pixelWidth || h != tv.pixelHeight || !tv.bitmap) {
+  const bool sizeChanged = (w != tv.pixelWidth || h != tv.pixelHeight);
+  tv.pixelWidth = w;
+  tv.pixelHeight = h;
+
+  if (tv.gpuActive) {
+    if (sizeChanged && tv.background) {
+      gpu_.Resize(tv.background, w, h);
+    }
+    return;
+  }
+
+  if (sizeChanged || !tv.bitmap) {
     try {
-      tv.pixelWidth = w;
-      tv.pixelHeight = h;
       tv.bitmap = wuxmi::WriteableBitmap(w, h);
       if (tv.imageBrush) {
         tv.imageBrush.ImageSource(tv.bitmap);
@@ -319,10 +373,17 @@ bool TaskbarAppearanceService::BindVisual(TaskbarVisual& tv) {
   if (!tv.background || tv.bound) return tv.bound;
   try {
     RefreshGeomAndBitmap(tv);
+    tv.bound = true;
+
+    if (TryEnableGpuFor(tv)) {
+      PaintVisual(tv, 0.f);
+      EnsureUiTimer();  // switch to GPU ~55 Hz tick
+      return true;
+    }
+
     if (!tv.bitmap) {
       tv.bitmap = wuxmi::WriteableBitmap(tv.pixelWidth, tv.pixelHeight);
     }
-
     wuxm::ImageBrush brush;
     brush.ImageSource(tv.bitmap);
     brush.Stretch(wuxm::Stretch::Fill);
@@ -330,7 +391,7 @@ bool TaskbarAppearanceService::BindVisual(TaskbarVisual& tv) {
     brush.AlignmentY(wuxm::AlignmentY::Center);
     tv.imageBrush = brush;
     tv.background.Fill(brush);
-    tv.bound = true;
+    tv.gpuActive = false;
     PaintVisual(tv, 0.f);
     return true;
   } catch (...) {
@@ -340,6 +401,10 @@ bool TaskbarAppearanceService::BindVisual(TaskbarVisual& tv) {
 }
 
 void TaskbarAppearanceService::UnbindVisual(TaskbarVisual& tv) {
+  if (tv.gpuActive && tv.background) {
+    gpu_.Detach(tv.background);
+    tv.gpuActive = false;
+  }
   if (tv.background && tv.originalFill) {
     try {
       tv.background.Fill(tv.originalFill);
@@ -353,16 +418,13 @@ void TaskbarAppearanceService::UnbindVisual(TaskbarVisual& tv) {
   tv.bound = false;
 }
 
-void TaskbarAppearanceService::PaintVisual(TaskbarVisual& tv, float timeSeconds) {
-  if (!tv.bound || !tv.bitmap || !command_.enabled || command_.paused) return;
+void TaskbarAppearanceService::PaintVisualCpu(TaskbarVisual& tv, float timeSeconds) {
+  if (!tv.bitmap) return;
   try {
-    // Geometry is refreshed on SizeChanged / Apply — not every frame.
     auto buffer = tv.bitmap.PixelBuffer();
     uint8_t* data = BufferData(buffer);
     if (!data) return;
 
-    // Orientation + paint metrics always follow the bitmap pixels so themes stay
-    // undistorted regardless of display resolution / stub XAML sizes.
     const bool vertical = tv.pixelHeight > tv.pixelWidth * 3 / 2;
     PaintContext ctx;
     ctx.theme = static_cast<ThemeId>(command_.theme);
@@ -383,6 +445,45 @@ void TaskbarAppearanceService::PaintVisual(TaskbarVisual& tv, float timeSeconds)
   }
 }
 
+void TaskbarAppearanceService::PaintVisual(TaskbarVisual& tv, float timeSeconds) {
+  if (!tv.bound || !command_.enabled || command_.paused) return;
+
+  const bool vertical = tv.pixelHeight > tv.pixelWidth * 3 / 2;
+  TaskbarEdge edge = TaskbarEdge::Bottom;
+  if (vertical) {
+    edge = (tv.geom.edge == TaskbarEdge::Right) ? TaskbarEdge::Right : TaskbarEdge::Left;
+  } else {
+    edge = (tv.geom.edge == TaskbarEdge::Top) ? TaskbarEdge::Top : TaskbarEdge::Bottom;
+  }
+
+  if (tv.gpuActive) {
+    const bool ok =
+        gpu_.Paint(tv.background, static_cast<ThemeId>(command_.theme),
+                   command_.intensity / 100.f, timeSeconds, edge, tv.pixelWidth, tv.pixelHeight);
+    if (ok) return;
+    // Fall back to CPU for this visual for the rest of the session.
+    tv.gpuActive = false;
+    gpuFailedThisSession_ = true;
+    gpu_.Detach(tv.background);
+    try {
+      if (!tv.bitmap) {
+        tv.bitmap = wuxmi::WriteableBitmap(tv.pixelWidth, tv.pixelHeight);
+      }
+      wuxm::ImageBrush brush;
+      brush.ImageSource(tv.bitmap);
+      brush.Stretch(wuxm::Stretch::Fill);
+      tv.imageBrush = brush;
+      tv.background.Fill(brush);
+    } catch (...) {
+      EnsureUiTimer();
+      return;
+    }
+    EnsureUiTimer();  // drop back to CPU interval
+  }
+
+  PaintVisualCpu(tv, timeSeconds);
+}
+
 void TaskbarAppearanceService::EnsureUiTimer() {
   if (!dispatcher_) return;
   if (!timer_) {
@@ -394,12 +495,22 @@ void TaskbarAppearanceService::EnsureUiTimer() {
     StopUiTimer();
     return;
   }
-  // Heavier themes (Aurora / Sea / Weather) run slower; calm ones can tick a bit faster.
-  const auto theme = static_cast<ThemeId>(command_.theme);
-  const int intervalMs = (theme == ThemeId::Aurora || theme == ThemeId::SeaWaves ||
-                          theme == ThemeId::Weather)
-                             ? 110
-                             : 90;
+  // GPU path is cheap — ~55 Hz. CPU keeps slower theme-tuned intervals.
+  bool anyGpu = false;
+  for (const auto& tv : taskbars_) {
+    if (tv.bound && tv.gpuActive) {
+      anyGpu = true;
+      break;
+    }
+  }
+  int intervalMs = 18;  // ~55 Hz
+  if (!anyGpu) {
+    const auto theme = static_cast<ThemeId>(command_.theme);
+    intervalMs = (theme == ThemeId::Aurora || theme == ThemeId::SeaWaves ||
+                  theme == ThemeId::Weather)
+                     ? 110
+                     : 90;
+  }
   try {
     timer_.Interval(std::chrono::milliseconds{intervalMs});
     timer_.Start();
@@ -439,15 +550,27 @@ void TaskbarAppearanceService::StopRenderLoop() {
 void TaskbarAppearanceService::WatchHostMutex() {
   if (watchThread_.joinable()) return;
   watchThread_ = std::thread([this] {
-    HANDLE mutex = nullptr;
-    for (int i = 0; i < 40 && !mutex; ++i) {
-      mutex = OpenMutexW(SYNCHRONIZE, FALSE, kMutexName.data());
-      if (!mutex) Sleep(250);
+    // Re-arm across host restarts while Explorer keeps this TAP loaded.
+    // After the host exits, wait until the named mutex disappears before
+    // watching again — an unowned leftover mutex would make Wait return
+    // immediately and spin RestoreAll.
+    for (;;) {
+      HANDLE mutex = nullptr;
+      while (!mutex) {
+        mutex = OpenMutexW(SYNCHRONIZE, FALSE, kMutexName.data());
+        if (!mutex) Sleep(250);
+      }
+      WaitForSingleObject(mutex, INFINITE);
+      CloseHandle(mutex);
+      LogService(L"Host mutex released - restoring");
+      StopRenderLoop();
+      for (;;) {
+        HANDLE probe = OpenMutexW(SYNCHRONIZE, FALSE, kMutexName.data());
+        if (!probe) break;
+        CloseHandle(probe);
+        Sleep(250);
+      }
     }
-    if (!mutex) return;
-    WaitForSingleObject(mutex, INFINITE);
-    CloseHandle(mutex);
-    StopRenderLoop();
   });
 }
 

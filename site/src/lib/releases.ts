@@ -5,11 +5,11 @@ export const FALLBACK_RELEASES =
 export const GITHUB_REPO = "https://github.com/teamdoticca/Phostide";
 
 /** Bump with each published GitHub Release (used when the API is unreachable). */
-export const FALLBACK_TAG = "v0.1.12";
+export const FALLBACK_TAG = "v0.1.13";
 const FALLBACK_SETUP =
-  "https://github.com/teamdoticca/Phostide/releases/download/v0.1.12/Phostide-Setup-0.1.12-win-x64.exe";
+  "https://github.com/teamdoticca/Phostide/releases/download/v0.1.13/Phostide-Setup-0.1.13-win-x64.exe";
 const FALLBACK_ZIP =
-  "https://github.com/teamdoticca/Phostide/releases/download/v0.1.12/Phostide-0.1.12-win-x64.zip";
+  "https://github.com/teamdoticca/Phostide/releases/download/v0.1.13/Phostide-0.1.13-win-x64.zip";
 
 export type ReleaseAssets = {
   tag: string | null;

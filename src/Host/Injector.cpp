@@ -161,6 +161,15 @@ bool CopyTapToTemp(fs::path& destOut, std::wstring* errorOut) {
   // locked ExplorerTAP.dll from a previous build still mapped in Explorer.
   destOut = destDir / (std::wstring(L"ExplorerTAP-") + std::wstring(kAppVersion) + L".dll");
   fs::copy_file(src, destOut, fs::copy_options::overwrite_existing, ec);
+  // GPU pixel shaders — required next to the loaded TAP module / TEMP fallback.
+  {
+    std::error_code hlslEc;
+    const fs::path hlslSrc = fs::path(src).parent_path() / L"Themes.hlsl";
+    const fs::path hlslDst = destDir / L"Themes.hlsl";
+    if (fs::exists(hlslSrc)) {
+      fs::copy_file(hlslSrc, hlslDst, fs::copy_options::overwrite_existing, hlslEc);
+    }
+  }
   if (!ec) {
     LogInject(L"copied versioned dll");
     return true;

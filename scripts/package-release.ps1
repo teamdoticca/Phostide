@@ -1,7 +1,7 @@
 ﻿param(
   [string]$Configuration = "Release",
   # Keep in sync with src/Common/PhostideCommon.h kAppVersion and Host VERSIONINFO.
-  [string]$Version = "0.1.12",
+  [string]$Version = "0.1.13",
   [switch]$SkipBuild,
   [switch]$SkipCodeSign,
   [switch]$SkipInno,
@@ -158,6 +158,7 @@ if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $stage | Out-Null
 Copy-Item (Join-Path $outDir "Phostide.exe") $stage -Force
 Copy-Item (Join-Path $outDir "ExplorerTAP.dll") $stage -Force
+Copy-Item (Join-Path $outDir "Themes.hlsl") $stage -Force
 Copy-Item (Join-Path $root "README.md") $stage -Force
 Copy-Item (Join-Path $root "LICENSE") $stage -Force
 

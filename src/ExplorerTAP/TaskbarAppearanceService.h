@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Common/PhostideCommon.h"
+#include "GpuThemeRenderer.h"
 #include "TaskbarGeometry.h"
 
 #include <atomic>
@@ -32,6 +33,7 @@ struct TaskbarVisual {
   int pixelWidth = 0;
   int pixelHeight = 0;
   bool bound = false;
+  bool gpuActive = false;
 };
 
 class TaskbarAppearanceService {
@@ -57,6 +59,9 @@ class TaskbarAppearanceService {
   void UnbindVisual(TaskbarVisual& tv);
   void RefreshGeomAndBitmap(TaskbarVisual& tv);
   void PaintVisual(TaskbarVisual& tv, float timeSeconds);
+  void PaintVisualCpu(TaskbarVisual& tv, float timeSeconds);
+  bool WantGpu() const;
+  bool TryEnableGpuFor(TaskbarVisual& tv);
   void SignalBound();
 
   std::mutex mutex_;
@@ -69,6 +74,8 @@ class TaskbarAppearanceService {
   std::chrono::steady_clock::time_point start_{std::chrono::steady_clock::now()};
   winrt::Windows::System::DispatcherQueue dispatcher_{nullptr};
   winrt::Windows::System::DispatcherQueueTimer timer_{nullptr};
+  GpuThemeRenderer gpu_;
+  bool gpuFailedThisSession_{false};
 };
 
 }  // namespace phostide

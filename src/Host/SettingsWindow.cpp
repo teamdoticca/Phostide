@@ -19,7 +19,7 @@ namespace {
 constexpr wchar_t kClassName[] = L"PhostideSettings";
 
 constexpr int kClientW = 560;
-constexpr int kClientH = 560;
+constexpr int kClientH = 700;
 constexpr int kPreviewH = 44;
 constexpr UINT_PTR ID_PREVIEW_TIMER = 77;
 constexpr UINT kPreviewIntervalMs = 50;
@@ -45,6 +45,8 @@ constexpr int IDC_PREVIEW_HINT = 1509;
 constexpr int IDC_TAB_TASKBAR = 1510;
 constexpr int IDC_TAB_SYSTEM = 1511;
 constexpr int IDC_GENERAL_CAPTION = 1512;
+constexpr int IDC_RENDER_CAPTION = 1513;
+constexpr int IDC_RENDER_BASE = 1520;  // +0 Auto, +1 GPU, +2 CPU
 
 constexpr COLORREF kVoid = RGB(0, 0, 0);
 constexpr COLORREF kScreen = RGB(17, 17, 17);
@@ -62,6 +64,7 @@ bool g_classRegistered = false;
 ThemeId g_draftTheme = ThemeId::Rainbow;
 int g_draftIntensity = 45;
 bool g_draftAutostart = false;
+RenderMode g_draftRenderMode = RenderMode::Auto;
 int g_activeTab = 0;  // 0 = Taskbar, 1 = System
 float g_previewTime = 3.2f;
 int g_previewW = 480;
@@ -128,7 +131,14 @@ void SyncDraftFromSettings() {
   g_draftTheme = g_host.settings->theme;
   g_draftIntensity = g_host.settings->intensity;
   g_draftAutostart = g_host.settings->startWithWindows;
+  g_draftRenderMode = g_host.settings->renderMode;
   g_previewTime = ThemeBaseTime(g_draftTheme);
+}
+
+void InvalidateRenderRows(HWND hwnd) {
+  for (int i = 0; i < 3; ++i) {
+    InvalidateRect(GetDlgItem(hwnd, IDC_RENDER_BASE + i), nullptr, TRUE);
+  }
 }
 
 void UpdateIntensityValue(HWND hwnd) {
@@ -248,6 +258,7 @@ void LoadControlsFromDraft(HWND hwnd) {
   UpdateIntensityValue(hwnd);
   CheckDlgButton(hwnd, IDC_AUTOSTART, g_draftAutostart ? BST_CHECKED : BST_UNCHECKED);
   InvalidateThemeRows(hwnd);
+  InvalidateRenderRows(hwnd);
   RefreshUpdateControls(hwnd);
   RefreshPreview(hwnd);
 }
@@ -265,6 +276,7 @@ void ApplyDraft(HWND hwnd) {
   if (!g_host.settings || !g_host.onApplyAppearance) return;
   ReadDraftFromControls(hwnd);
   g_host.settings->theme = g_draftTheme;
+  g_host.settings->renderMode = g_draftRenderMode;
   g_host.settings->intensity = g_draftIntensity;
   g_host.settings->startWithWindows = g_draftAutostart;
   g_host.onApplyAppearance();
@@ -369,6 +381,29 @@ void DrawThemeRow(DRAWITEMSTRUCT* dis, int themeIndex) {
   SelectObject(dis->hDC, old);
 }
 
+void DrawRenderRow(DRAWITEMSTRUCT* dis, int modeIndex) {
+  const RenderMode mode = RenderModeFromIndex(modeIndex);
+  const bool selected = g_draftRenderMode == mode;
+  const bool pressed = (dis->itemState & ODS_SELECTED) != 0;
+  const COLORREF fill = selected ? RGB(36, 28, 22) : (pressed ? RGB(34, 34, 36) : kPanel);
+  const COLORREF border = selected ? kEmber : kLine;
+  FillRoundRect(dis->hDC, dis->rcItem, fill, border, 10);
+  if (selected) {
+    RECT bar = dis->rcItem;
+    bar.right = bar.left + 4;
+    HBRUSH ember = CreateSolidBrush(kEmber);
+    FillRect(dis->hDC, &bar, ember);
+    DeleteObject(ember);
+  }
+  SetBkMode(dis->hDC, TRANSPARENT);
+  SetTextColor(dis->hDC, kInk);
+  HFONT old = static_cast<HFONT>(SelectObject(dis->hDC, g_fontUi));
+  RECT textRc = dis->rcItem;
+  textRc.left += 14;
+  DrawTextW(dis->hDC, RenderModeName(mode), -1, &textRc, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+  SelectObject(dis->hDC, old);
+}
+
 void DrawCheckRow(DRAWITEMSTRUCT* dis) {
   const bool checked = g_draftAutostart;
   const bool pressed = (dis->itemState & ODS_SELECTED) != 0;
@@ -452,7 +487,8 @@ void ShowTab(HWND hwnd, int tab) {
   }
 
   const int systemIds[] = {
-      IDC_GENERAL_CAPTION, IDC_AUTOSTART,      IDC_UPDATES_CAPTION, IDC_VERSION,
+      IDC_GENERAL_CAPTION, IDC_AUTOSTART,      IDC_RENDER_CAPTION,  IDC_RENDER_BASE,
+      IDC_RENDER_BASE + 1, IDC_RENDER_BASE + 2, IDC_UPDATES_CAPTION, IDC_VERSION,
       IDC_UPDATE_STATUS,  IDC_CHECK_UPDATES, IDC_UPDATE_BTN,
   };
   for (int id : systemIds) {
@@ -541,6 +577,14 @@ void BuildChildren(HWND hwnd) {
   int syy = sy + 22;
   MkButton(hwnd, IDC_AUTOSTART, L"Start with Windows", pad, syy, contentW, 36, BS_OWNERDRAW);
   syy += 52;
+  MkStatic(hwnd, IDC_RENDER_CAPTION, L"RENDERING", pad, syy, contentW, 16, g_fontSection);
+  syy += 22;
+  for (int i = 0; i < 3; ++i) {
+    MkButton(hwnd, IDC_RENDER_BASE + i, RenderModeName(RenderModeFromIndex(i)), pad, syy,
+             contentW, 32, BS_OWNERDRAW);
+    syy += 38;
+  }
+  syy += 10;
   MkStatic(hwnd, IDC_UPDATES_CAPTION, L"UPDATES", pad, syy, contentW, 16, g_fontSection);
   syy += 22;
   MkStatic(hwnd, IDC_VERSION, L"Installed version", pad, syy, contentW, 18, g_fontUi);
@@ -593,7 +637,7 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
       const int id = GetDlgCtrlID(reinterpret_cast<HWND>(lParam));
       if (id == IDC_SUBTITLE || id == IDC_APPEARANCE_CAPTION || id == IDC_UPDATES_CAPTION ||
           id == IDC_INTENSITY_CAPTION || id == IDC_VERSION || id == IDC_PREVIEW_CAPTION ||
-          id == IDC_PREVIEW_HINT || id == IDC_GENERAL_CAPTION) {
+          id == IDC_PREVIEW_HINT || id == IDC_GENERAL_CAPTION || id == IDC_RENDER_CAPTION) {
         SetTextColor(hdc, kSoft);
       } else if (id == IDC_UPDATE_STATUS && HasPendingUpdate()) {
         SetTextColor(hdc, kEmber);
@@ -623,6 +667,10 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
       }
       if (dis->CtlID == IDC_AUTOSTART) {
         DrawCheckRow(dis);
+        return TRUE;
+      }
+      if (dis->CtlID >= IDC_RENDER_BASE && dis->CtlID < IDC_RENDER_BASE + 3) {
+        DrawRenderRow(dis, dis->CtlID - IDC_RENDER_BASE);
         return TRUE;
       }
       if (dis->CtlID == IDC_APPLY || dis->CtlID == IDC_UPDATE_BTN) {
@@ -670,6 +718,11 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
         CheckDlgButton(hwnd, IDC_AUTOSTART,
                        g_draftAutostart ? BST_CHECKED : BST_UNCHECKED);
         InvalidateRect(GetDlgItem(hwnd, IDC_AUTOSTART), nullptr, TRUE);
+        return 0;
+      }
+      if (id >= IDC_RENDER_BASE && id < IDC_RENDER_BASE + 3) {
+        g_draftRenderMode = RenderModeFromIndex(id - IDC_RENDER_BASE);
+        InvalidateRenderRows(hwnd);
         return 0;
       }
       if (id == IDC_APPLY) {

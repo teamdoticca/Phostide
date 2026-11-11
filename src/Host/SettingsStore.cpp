@@ -161,6 +161,7 @@ Settings LoadSettings() {
   s.intensity = ParseInt(json, "intensity", 45);
   s.startWithWindows = ParseBool(json, "startWithWindows", IsStartWithWindowsEnabled());
   s.pauseWhenLocked = ParseBool(json, "pauseWhenLocked", true);
+  s.renderMode = RenderModeFromIndex(ParseInt(json, "renderMode", 0));
   s.lastUpdateCheckUtc = ParseInt64(json, "lastUpdateCheckUtc", 0);
   s.pendingUpdateTag = Utf8ToWide(ParseUtf8String(json, "pendingUpdateTag"));
   s.pendingSetupUrl = Utf8ToWide(ParseUtf8String(json, "pendingSetupUrl"));
@@ -179,6 +180,7 @@ void SaveSettings(const Settings& settings) {
       << ",\n"
       << "  \"pauseWhenLocked\": " << (settings.pauseWhenLocked ? "true" : "false")
       << ",\n"
+      << "  \"renderMode\": " << static_cast<int>(settings.renderMode) << ",\n"
       << "  \"lastUpdateCheckUtc\": " << settings.lastUpdateCheckUtc << ",\n"
       << "  \"pendingUpdateTag\": \""
       << EscapeJson(WideToUtf8(settings.pendingUpdateTag)) << "\",\n"

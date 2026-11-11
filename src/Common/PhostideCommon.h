@@ -10,7 +10,7 @@ namespace phostide {
 
 inline constexpr std::wstring_view kAppName = L"Phostide";
 // Keep in sync with scripts/package-release.ps1 -Version default and GitHub release tags (vX.Y.Z).
-inline constexpr std::wstring_view kAppVersion = L"0.1.12";
+inline constexpr std::wstring_view kAppVersion = L"0.1.13";
 // Stable across installs/updates so Windows taskbar / Start treat us as the same app.
 inline constexpr std::wstring_view kAppUserModelId = L"Doticca.Phostide";
 inline constexpr std::wstring_view kMutexName = L"Local\\Phostide.SingleInstance";
@@ -19,8 +19,28 @@ inline constexpr std::wstring_view kTapBoundEvent = L"Local\\Phostide.TAP.Bound"
 // Written by ExplorerTAP on bind; host compares to kAppVersion to detect stale in-Explorer DLLs.
 inline constexpr std::wstring_view kTapVersionStamp = L"tap.version";
 inline constexpr std::wstring_view kSettingsFileName = L"settings.json";
-// v2: ThemeCommand.paused — stop TAP paint loop without restoring stock brushes.
-inline constexpr int kTapApiVersion = 2;
+// v3: ThemeCommand.renderMode — Auto / GPU / CPU paint path.
+inline constexpr int kTapApiVersion = 3;
+
+enum class RenderMode : uint32_t {
+  Auto = 0,  // D3D11 hardware if available, else CPU
+  Gpu = 1,   // prefer GPU; fall back to CPU on failure
+  Cpu = 2,   // WriteableBitmap PixelThemes
+};
+
+inline constexpr const wchar_t* RenderModeName(RenderMode mode) {
+  switch (mode) {
+    case RenderMode::Gpu: return L"GPU";
+    case RenderMode::Cpu: return L"CPU";
+    case RenderMode::Auto:
+    default:              return L"Auto";
+  }
+}
+
+inline RenderMode RenderModeFromIndex(int index) {
+  if (index < 0 || index > 2) return RenderMode::Auto;
+  return static_cast<RenderMode>(index);
+}
 
 // {A7C3E91F-4B2D-4E8A-9F15-6D3C8B0A1E72}
 inline constexpr GUID kTapSiteClsid = {
@@ -64,6 +84,7 @@ struct Settings {
   int intensity = 45;          // 0-100
   bool startWithWindows = false;
   bool pauseWhenLocked = true;
+  RenderMode renderMode = RenderMode::Auto;
   // Update check (GitHub Releases)
   int64_t lastUpdateCheckUtc = 0;  // unix seconds; 0 = never
   std::wstring pendingUpdateTag;   // e.g. "v0.1.3" when newer than kAppVersion
@@ -78,6 +99,7 @@ struct ThemeCommand {
   uint32_t enabled = 1;
   // 1 = keep last frame / bound brushes, stop the UI timer (e.g. session lock).
   uint32_t paused = 0;
+  uint32_t renderMode = static_cast<uint32_t>(RenderMode::Auto);
 };
 #pragma pack(pop)
 
