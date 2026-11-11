@@ -115,6 +115,13 @@ var
   ResultCode: Integer;
   I: Integer;
 begin
+  if Assigned(WizardForm) then
+  begin
+    WizardForm.StatusLabel.Caption :=
+      'Restarting Windows Explorer so the taskbar theme can load…';
+    WizardForm.StatusLabel.Update;
+  end;
+
   if FindWindowByClassName('Shell_TrayWnd') <> 0 then
   begin
     Exec('taskkill.exe', '/IM explorer.exe /F', '', SW_HIDE,
@@ -135,6 +142,29 @@ begin
   Sleep(8000);
 end;
 
+procedure ExplainExplorerRestart(const ForUninstall: Boolean);
+var
+  Msg: String;
+begin
+  { Silent installs stay quiet; interactive Setup should not surprise people. }
+  if WizardSilent then
+    Exit;
+
+  if ForUninstall then
+    Msg :=
+      'Phostide will briefly restart Windows Explorer so the taskbar theme ' +
+      'engine can unload.'#13#10#13#10 +
+      'Your desktop may flicker for a few seconds. This is expected.'
+  else
+    Msg :=
+      'Phostide will briefly restart Windows Explorer so the taskbar theme ' +
+      'engine can load.'#13#10#13#10 +
+      'Your desktop may flicker for a few seconds. This is expected — ' +
+      'open windows stay open.';
+
+  MsgBox(Msg, mbInformation, MB_OK);
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   Result := '';
@@ -149,6 +179,7 @@ begin
   if CurStep = ssPostInstall then
   begin
     { Files are on disk; bounce Explorer before [Run] starts Phostide. }
+    ExplainExplorerRestart(False);
     RestartExplorerShell;
   end;
 end;
@@ -159,6 +190,7 @@ begin
   begin
     CloseRunningPhostide;
     { Drop the in-shell TAP so uninstall leaves a stock taskbar. }
+    ExplainExplorerRestart(True);
     RestartExplorerShell;
   end;
 end;

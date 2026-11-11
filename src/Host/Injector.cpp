@@ -82,7 +82,20 @@ bool WaitForTray(DWORD timeoutMs) {
   return FindWindowW(L"Shell_TrayWnd", nullptr) != nullptr;
 }
 
-bool RestartExplorerShell() {
+void ExplainExplorerRestartToUser() {
+  MessageBoxW(
+      nullptr,
+      L"Phostide needs to briefly restart Windows Explorer so the taskbar "
+      L"theme engine can update.\n\n"
+      L"Your desktop may flicker for a few seconds. This is expected — "
+      L"open windows stay open.",
+      L"Phostide", MB_OK | MB_ICONINFORMATION | MB_SETFOREGROUND | MB_TOPMOST);
+}
+
+bool RestartExplorerShell(bool explainToUser) {
+  if (explainToUser) {
+    ExplainExplorerRestartToUser();
+  }
   LogInject(L"restarting explorer shell");
   RequestTapRestore();
   ResetBoundEvent();
@@ -228,7 +241,7 @@ bool InjectExplorerTap(std::wstring* errorOut) {
   // bounce — XAML Diagnostics pins the module for Explorer's lifetime.
   if (NeedsExplorerBounceForFreshTap()) {
     LogInject(L"stale in-explorer TAP detected");
-    if (!RestartExplorerShell()) {
+    if (!RestartExplorerShell(/*explainToUser=*/true)) {
       if (errorOut) *errorOut = L"Failed to restart Explorer for TAP upgrade";
       return false;
     }
@@ -238,7 +251,7 @@ bool InjectExplorerTap(std::wstring* errorOut) {
   if (!CopyTapToTemp(dest, errorOut)) {
     // Last resort: bounce shell to unlock any leftover mapping, then retry once.
     LogInject(L"copy failed; retry after explorer restart");
-    if (!RestartExplorerShell() || !CopyTapToTemp(dest, errorOut)) {
+    if (!RestartExplorerShell(/*explainToUser=*/true) || !CopyTapToTemp(dest, errorOut)) {
       return false;
     }
   }
