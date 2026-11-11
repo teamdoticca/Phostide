@@ -54,6 +54,8 @@ phostide::ThemeCommand MakeCommand() {
   cmd.theme = static_cast<uint32_t>(g_settings.theme);
   cmd.intensity = static_cast<uint32_t>(g_settings.intensity);
   cmd.enabled = g_settings.enabled ? 1u : 0u;
+  cmd.paused =
+      (g_settings.pauseWhenLocked && g_sessionLocked && g_settings.enabled) ? 1u : 0u;
   return cmd;
 }
 
@@ -354,6 +356,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
           g_sessionLocked = true;
           SyncAnimTimer(hwnd);
           phostide::ClearTaskbarAccent();
+          // Stop TAP paint loop inside explorer.exe while the desktop is covered.
+          ApplyTheme(true);
         } else if (wParam == WTS_SESSION_UNLOCK) {
           g_sessionLocked = false;
           SyncAnimTimer(hwnd);

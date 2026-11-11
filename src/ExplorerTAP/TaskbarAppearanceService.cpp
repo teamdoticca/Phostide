@@ -179,12 +179,19 @@ void TaskbarAppearanceService::Apply(const ThemeCommand& cmd) {
   {
     std::lock_guard lock(mutex_);
     command_ = cmd;
-    start_ = std::chrono::steady_clock::now();
+    if (cmd.enabled && !cmd.paused) {
+      start_ = std::chrono::steady_clock::now();
+    }
   }
   if (!dispatcher_) return;
 
   if (!cmd.enabled) {
     dispatcher_.TryEnqueue([this] { RestoreAll(); });
+    return;
+  }
+
+  if (cmd.paused) {
+    dispatcher_.TryEnqueue([this] { StopUiTimer(); });
     return;
   }
 
@@ -202,14 +209,19 @@ void TaskbarAppearanceService::Apply(const ThemeCommand& cmd) {
   });
 }
 
-void TaskbarAppearanceService::RestoreAll() {
-  std::lock_guard lock(mutex_);
+void TaskbarAppearanceService::StopUiTimer() {
+  running_ = false;
   if (timer_) {
     try {
       timer_.Stop();
     } catch (...) {
     }
   }
+}
+
+void TaskbarAppearanceService::RestoreAll() {
+  std::lock_guard lock(mutex_);
+  StopUiTimer();
   for (auto& tv : taskbars_) {
     UnbindVisual(tv);
   }
@@ -257,6 +269,15 @@ void TaskbarAppearanceService::RefreshGeomAndBitmap(TaskbarVisual& tv) {
   }
   w = (std::max)(8, (std::min)(w, 7680));
   h = (std::max)(8, (std::min)(h, 7680));
+
+  // Cap the long axis so CPU theme painters stay cheap; ImageBrush Stretch::Fill
+  // upscales to the real BackgroundFill. Thickness keeps full detail.
+  constexpr int kMaxPaintAlongPx = 960;
+  if (h > w * 3 / 2) {
+    if (h > kMaxPaintAlongPx) h = kMaxPaintAlongPx;
+  } else if (w > kMaxPaintAlongPx) {
+    w = kMaxPaintAlongPx;
+  }
 
   if (w != tv.pixelWidth || h != tv.pixelHeight || !tv.bitmap) {
     try {
@@ -310,9 +331,9 @@ void TaskbarAppearanceService::UnbindVisual(TaskbarVisual& tv) {
 }
 
 void TaskbarAppearanceService::PaintVisual(TaskbarVisual& tv, float timeSeconds) {
-  if (!tv.bound || !tv.bitmap || !command_.enabled) return;
+  if (!tv.bound || !tv.bitmap || !command_.enabled || command_.paused) return;
   try {
-    RefreshGeomAndBitmap(tv);
+    // Geometry is refreshed on SizeChanged / Apply — not every frame.
     auto buffer = tv.bitmap.PixelBuffer();
     uint8_t* data = BufferData(buffer);
     if (!data) return;
@@ -343,16 +364,14 @@ void TaskbarAppearanceService::EnsureUiTimer() {
   if (!dispatcher_) return;
   if (!timer_) {
     timer_ = dispatcher_.CreateTimer();
-    // ~24 fps is enough for calm waves and cheaper on the shell thread.
-    timer_.Interval(std::chrono::milliseconds{42});
+    // ~12.5 fps: enough for calm OLED motion, much cheaper on the Explorer UI thread.
+    timer_.Interval(std::chrono::milliseconds{80});
     timer_.IsRepeating(true);
     timer_.Tick([this](auto&&, auto&&) { TickUi(); });
   }
-  if (!command_.enabled) {
-    command_.enabled = 1;
-    command_.theme = static_cast<uint32_t>(ThemeId::Rainbow);
-    command_.intensity = 55;
-    command_.apiVersion = kTapApiVersion;
+  if (!command_.enabled || command_.paused) {
+    StopUiTimer();
+    return;
   }
   try {
     timer_.Start();
@@ -363,7 +382,13 @@ void TaskbarAppearanceService::EnsureUiTimer() {
 
 void TaskbarAppearanceService::TickUi() {
   std::lock_guard lock(mutex_);
-  if (!command_.enabled) return;
+  if (!command_.enabled || command_.paused) return;
+  // Occasional remeasure catches DPI / monitor changes SizeChanged may miss.
+  if ((++paintFrame_ % 90u) == 0u) {
+    for (auto& tv : taskbars_) {
+      if (tv.bound) RefreshGeomAndBitmap(tv);
+    }
+  }
   const float t =
       std::chrono::duration<float>(std::chrono::steady_clock::now() - start_).count();
   for (auto& tv : taskbars_) {

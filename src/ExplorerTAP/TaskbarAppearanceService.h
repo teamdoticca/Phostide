@@ -51,6 +51,7 @@ class TaskbarAppearanceService {
   TaskbarAppearanceService() = default;
 
   void EnsureUiTimer();
+  void StopUiTimer();
   void TickUi();
   bool BindVisual(TaskbarVisual& tv);
   void UnbindVisual(TaskbarVisual& tv);
@@ -63,6 +64,7 @@ class TaskbarAppearanceService {
   ThemeCommand command_{};
   std::atomic<bool> running_{false};
   std::atomic<int> boundCount_{0};
+  unsigned paintFrame_{0};
   std::thread watchThread_;
   std::chrono::steady_clock::time_point start_{std::chrono::steady_clock::now()};
   winrt::Windows::System::DispatcherQueue dispatcher_{nullptr};
