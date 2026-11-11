@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <string>
 
 #include <wrl/client.h>
 #include <robuffer.h>
@@ -25,6 +26,28 @@ void SetBoundEvent() {
   if (HANDLE ev = CreateEventW(nullptr, TRUE, FALSE, kTapBoundEvent.data())) {
     SetEvent(ev);
     CloseHandle(ev);
+  }
+  // Stamp the running TAP build so the host can detect a stale in-Explorer DLL
+  // after an upgrade (XAML Diagnostics pins the module until Explorer restarts).
+  wchar_t temp[MAX_PATH]{};
+  GetTempPathW(MAX_PATH, temp);
+  wcscat_s(temp, L"Phostide");
+  CreateDirectoryW(temp, nullptr);
+  wchar_t path[MAX_PATH]{};
+  swprintf_s(path, L"%s\\%s", temp, kTapVersionStamp.data());
+  HANDLE f = CreateFileW(path, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS,
+                         FILE_ATTRIBUTE_NORMAL, nullptr);
+  if (f != INVALID_HANDLE_VALUE) {
+    char line[64]{};
+    const int n = WideCharToMultiByte(CP_UTF8, 0, kAppVersion.data(),
+                                      static_cast<int>(kAppVersion.size()), line,
+                                      static_cast<int>(sizeof(line) - 2), nullptr, nullptr);
+    if (n > 0) {
+      line[n] = '\n';
+      DWORD written = 0;
+      WriteFile(f, line, static_cast<DWORD>(n + 1), &written, nullptr);
+    }
+    CloseHandle(f);
   }
 }
 

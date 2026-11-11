@@ -10,12 +10,14 @@ namespace phostide {
 
 inline constexpr std::wstring_view kAppName = L"Phostide";
 // Keep in sync with scripts/package-release.ps1 -Version default and GitHub release tags (vX.Y.Z).
-inline constexpr std::wstring_view kAppVersion = L"0.1.9";
+inline constexpr std::wstring_view kAppVersion = L"0.1.10";
 // Stable across installs/updates so Windows taskbar / Start treat us as the same app.
 inline constexpr std::wstring_view kAppUserModelId = L"Doticca.Phostide";
 inline constexpr std::wstring_view kMutexName = L"Local\\Phostide.SingleInstance";
 inline constexpr std::wstring_view kTapReadyEvent = L"Local\\Phostide.TAP.Ready";
 inline constexpr std::wstring_view kTapBoundEvent = L"Local\\Phostide.TAP.Bound";
+// Written by ExplorerTAP on bind; host compares to kAppVersion to detect stale in-Explorer DLLs.
+inline constexpr std::wstring_view kTapVersionStamp = L"tap.version";
 inline constexpr std::wstring_view kSettingsFileName = L"settings.json";
 // v2: ThemeCommand.paused — stop TAP paint loop without restoring stock brushes.
 inline constexpr int kTapApiVersion = 2;

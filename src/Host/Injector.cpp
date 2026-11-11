@@ -3,7 +3,10 @@
 #include "../Common/PhostideCommon.h"
 
 #include <filesystem>
+#include <fstream>
 #include <string>
+
+#include <shellapi.h>
 
 namespace fs = std::filesystem;
 
@@ -19,12 +22,16 @@ std::wstring ModuleDir() {
   return fs::path(path).parent_path().wstring();
 }
 
+fs::path TapTempDir() {
+  wchar_t temp[MAX_PATH]{};
+  GetTempPathW(MAX_PATH, temp);
+  return fs::path(temp) / L"Phostide";
+}
+
 using HookProc = LRESULT(CALLBACK*)(int, WPARAM, LPARAM);
 
 void LogInject(const std::wstring& line) {
-  wchar_t temp[MAX_PATH]{};
-  GetTempPathW(MAX_PATH, temp);
-  const fs::path dir = fs::path(temp) / L"Phostide";
+  const fs::path dir = TapTempDir();
   std::error_code ec;
   fs::create_directories(dir, ec);
   const fs::path path = dir / L"inject.log";
@@ -41,13 +48,84 @@ void LogInject(const std::wstring& line) {
   CloseHandle(f);
 }
 
-}  // namespace
-
-std::wstring TapDllPath() {
-  return ModuleDir() + L"\\ExplorerTAP.dll";
+std::wstring ReadTapVersionStamp() {
+  const fs::path path = TapTempDir() / kTapVersionStamp;
+  std::ifstream in(path, std::ios::binary);
+  if (!in) return {};
+  std::string utf8;
+  std::getline(in, utf8);
+  if (utf8.empty()) return {};
+  return std::wstring(utf8.begin(), utf8.end());
 }
 
-bool InjectExplorerTap(std::wstring* errorOut) {
+bool BoundEventIsSet() {
+  HANDLE bound = OpenEventW(SYNCHRONIZE, FALSE, kTapBoundEvent.data());
+  if (!bound) return false;
+  const bool set = WaitForSingleObject(bound, 0) == WAIT_OBJECT_0;
+  CloseHandle(bound);
+  return set;
+}
+
+void ResetBoundEvent() {
+  HANDLE bound = OpenEventW(EVENT_MODIFY_STATE, FALSE, kTapBoundEvent.data());
+  if (!bound) return;
+  ResetEvent(bound);
+  CloseHandle(bound);
+}
+
+bool WaitForTray(DWORD timeoutMs) {
+  const DWORD start = GetTickCount();
+  while (GetTickCount() - start < timeoutMs) {
+    if (FindWindowW(L"Shell_TrayWnd", nullptr)) return true;
+    Sleep(200);
+  }
+  return FindWindowW(L"Shell_TrayWnd", nullptr) != nullptr;
+}
+
+bool RestartExplorerShell() {
+  LogInject(L"restarting explorer shell");
+  RequestTapRestore();
+  ResetBoundEvent();
+
+  STARTUPINFOW si{sizeof(si)};
+  PROCESS_INFORMATION pi{};
+  wchar_t cmd[] = L"taskkill.exe /IM explorer.exe /F";
+  if (CreateProcessW(nullptr, cmd, nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, nullptr,
+                     &si, &pi)) {
+    WaitForSingleObject(pi.hProcess, 15000);
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+  }
+  Sleep(1500);
+
+  const std::wstring explorer = [] {
+    wchar_t win[MAX_PATH]{};
+    GetWindowsDirectoryW(win, MAX_PATH);
+    return std::wstring(win) + L"\\explorer.exe";
+  }();
+  ShellExecuteW(nullptr, L"open", explorer.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+
+  if (!WaitForTray(30000)) {
+    LogInject(L"explorer restart: tray not found");
+    return false;
+  }
+  // Let the XAML taskbar island settle before ixde (same ritual as docs/development.md).
+  Sleep(8000);
+  LogInject(L"explorer restart: tray ready");
+  return true;
+}
+
+bool NeedsExplorerBounceForFreshTap() {
+  if (!BoundEventIsSet()) return false;
+  const std::wstring stamped = ReadTapVersionStamp();
+  if (stamped.empty()) {
+    // Bound but no stamp (pre-0.1.10 TAP) — treat as stale.
+    return true;
+  }
+  return stamped != kAppVersion;
+}
+
+bool CopyTapToTemp(fs::path& destOut, std::wstring* errorOut) {
   const auto src = TapDllPath();
   if (!fs::exists(src)) {
     if (errorOut) *errorOut = L"ExplorerTAP.dll not found next to Phostide.exe";
@@ -55,53 +133,33 @@ bool InjectExplorerTap(std::wstring* errorOut) {
     return false;
   }
 
-  wchar_t temp[MAX_PATH]{};
-  GetTempPathW(MAX_PATH, temp);
-  const fs::path destDir = fs::path(temp) / L"Phostide";
+  const fs::path destDir = TapTempDir();
   std::error_code ec;
   fs::create_directories(destDir, ec);
-  // Explorer keeps the previous TAP mapped after host exit, which locks this
-  // path. Prefer overwrite; if locked, reuse when size matches. Never LoadLibrary
-  // a second side-by-side TAP (would double-paint). If a different build is locked
-  // but Bound is already set, skip re-hook and drive the live TAP over the pipe.
-  fs::path dest = destDir / L"ExplorerTAP.dll";
-  fs::copy_file(src, dest, fs::copy_options::overwrite_existing, ec);
-  if (ec) {
-    std::error_code se;
-    const auto srcSize = fs::file_size(src, se);
-    const auto dstSize = fs::exists(dest) ? fs::file_size(dest, se) : static_cast<uintmax_t>(-1);
-    if (fs::exists(dest) && srcSize == dstSize) {
-      LogInject(L"copy locked; reusing temp dll (same size)");
-    } else {
-      HANDLE bound = OpenEventW(SYNCHRONIZE, FALSE, kTapBoundEvent.data());
-      const bool alreadyBound =
-          bound && WaitForSingleObject(bound, 0) == WAIT_OBJECT_0;
-      if (bound) CloseHandle(bound);
-      if (alreadyBound) {
-        LogInject(L"copy locked; TAP already bound — skip rehook");
-        return true;
-      }
-      dest = destDir / (std::wstring(L"ExplorerTAP-") + std::wstring(kAppVersion) + L".dll");
-      std::error_code ec2;
-      fs::copy_file(src, dest, fs::copy_options::overwrite_existing, ec2);
-      if (ec2) {
-        const auto altSize =
-            fs::exists(dest) ? fs::file_size(dest, se) : static_cast<uintmax_t>(-1);
-        if (fs::exists(dest) && srcSize == altSize) {
-          LogInject(L"copy locked; reusing versioned temp dll");
-        } else {
-          if (errorOut) *errorOut = L"Failed to copy ExplorerTAP.dll to temp";
-          LogInject(L"copy failed");
-          return false;
-        }
-      } else {
-        LogInject(L"copied versioned dll");
-      }
-    }
-  } else {
-    LogInject(L"copied dll");
+
+  // Always version the TEMP filename so an upgrade never needs to overwrite a
+  // locked ExplorerTAP.dll from a previous build still mapped in Explorer.
+  destOut = destDir / (std::wstring(L"ExplorerTAP-") + std::wstring(kAppVersion) + L".dll");
+  fs::copy_file(src, destOut, fs::copy_options::overwrite_existing, ec);
+  if (!ec) {
+    LogInject(L"copied versioned dll");
+    return true;
   }
 
+  std::error_code se;
+  const auto srcSize = fs::file_size(src, se);
+  const auto dstSize = fs::exists(destOut) ? fs::file_size(destOut, se) : static_cast<uintmax_t>(-1);
+  if (fs::exists(destOut) && srcSize == dstSize) {
+    LogInject(L"copy locked; reusing versioned temp dll (same size)");
+    return true;
+  }
+
+  if (errorOut) *errorOut = L"Failed to copy ExplorerTAP.dll to temp";
+  LogInject(L"copy failed");
+  return false;
+}
+
+bool HookTapIntoTray(const fs::path& dest, std::wstring* errorOut) {
   HWND tray = nullptr;
   for (int i = 0; i < 40 && !tray; ++i) {
     tray = FindWindowW(L"Shell_TrayWnd", nullptr);
@@ -120,6 +178,9 @@ bool InjectExplorerTap(std::wstring* errorOut) {
     return false;
   }
   LogInject(L"tid=" + std::to_wstring(tid) + L" pid=" + std::to_wstring(pid));
+
+  // Drop any previous host-side hook/module before loading a new build.
+  DetachExplorerTap();
 
   g_tapModule = LoadLibraryW(dest.c_str());
   if (!g_tapModule) {
@@ -154,6 +215,35 @@ bool InjectExplorerTap(std::wstring* errorOut) {
   if (ready) CloseHandle(ready);
   LogInject(L"ready wait=" + std::to_wstring(wait));
   return true;
+}
+
+}  // namespace
+
+std::wstring TapDllPath() {
+  return ModuleDir() + L"\\ExplorerTAP.dll";
+}
+
+bool InjectExplorerTap(std::wstring* errorOut) {
+  // Stale in-Explorer TAP (previous version) cannot be unloaded without a shell
+  // bounce — XAML Diagnostics pins the module for Explorer's lifetime.
+  if (NeedsExplorerBounceForFreshTap()) {
+    LogInject(L"stale in-explorer TAP detected");
+    if (!RestartExplorerShell()) {
+      if (errorOut) *errorOut = L"Failed to restart Explorer for TAP upgrade";
+      return false;
+    }
+  }
+
+  fs::path dest;
+  if (!CopyTapToTemp(dest, errorOut)) {
+    // Last resort: bounce shell to unlock any leftover mapping, then retry once.
+    LogInject(L"copy failed; retry after explorer restart");
+    if (!RestartExplorerShell() || !CopyTapToTemp(dest, errorOut)) {
+      return false;
+    }
+  }
+
+  return HookTapIntoTray(dest, errorOut);
 }
 
 bool SendThemeCommand(const ThemeCommand& cmd) {

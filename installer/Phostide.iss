@@ -108,6 +108,33 @@ begin
          ewWaitUntilTerminated, ResultCode);
 end;
 
+{ Explorer keeps ExplorerTAP.dll mapped after Phostide exits (XAML Diagnostics
+  pins it). Updates must bounce the shell so the new TEMP copy can load. }
+procedure RestartExplorerShell;
+var
+  ResultCode: Integer;
+  I: Integer;
+begin
+  if FindWindowByClassName('Shell_TrayWnd') <> 0 then
+  begin
+    Exec('taskkill.exe', '/IM explorer.exe /F', '', SW_HIDE,
+         ewWaitUntilTerminated, ResultCode);
+    Sleep(1500);
+  end;
+
+  Exec(ExpandConstant('{win}\explorer.exe'), '', '', SW_SHOWNORMAL, ewNoWait,
+       ResultCode);
+
+  { Wait until the tray exists, then settle so ixde can bind on first launch. }
+  for I := 1 to 80 do
+  begin
+    if FindWindowByClassName('Shell_TrayWnd') <> 0 then
+      Break;
+    Sleep(250);
+  end;
+  Sleep(8000);
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   Result := '';
@@ -117,8 +144,21 @@ begin
     WizardForm.BringToFront;
 end;
 
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+  begin
+    { Files are on disk; bounce Explorer before [Run] starts Phostide. }
+    RestartExplorerShell;
+  end;
+end;
+
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if CurUninstallStep = usUninstall then
+  begin
     CloseRunningPhostide;
+    { Drop the in-shell TAP so uninstall leaves a stock taskbar. }
+    RestartExplorerShell;
+  end;
 end;
