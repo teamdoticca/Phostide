@@ -12,8 +12,8 @@ IDI_APPICON ICON "phostide.ico"
 #endif
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION    0,1,11,0
-PRODUCTVERSION 0,1,11,0
+FILEVERSION    0,1,12,0
+PRODUCTVERSION 0,1,12,0
 FILEFLAGSMASK  0x3fL
 FILEFLAGS      0x0L
 FILEOS         VOS_NT_WINDOWS32
@@ -26,12 +26,12 @@ BEGIN
     BEGIN
       VALUE "CompanyName",      "Doticca"
       VALUE "FileDescription",  "Phostide"
-      VALUE "FileVersion",      "0.1.11"
+      VALUE "FileVersion",      "0.1.12"
       VALUE "InternalName",     "Phostide"
       VALUE "LegalCopyright",   "Copyright (C) 2026 Doticca"
       VALUE "OriginalFilename", "Phostide.exe"
       VALUE "ProductName",      "Phostide"
-      VALUE "ProductVersion",   "0.1.11"
+      VALUE "ProductVersion",   "0.1.12"
     END
   END
   BLOCK "VarFileInfo"

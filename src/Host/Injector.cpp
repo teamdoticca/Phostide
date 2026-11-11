@@ -83,6 +83,13 @@ bool WaitForTray(DWORD timeoutMs) {
 }
 
 void ExplainExplorerRestartToUser() {
+  // Inno Setup's wizard can cover a MessageBox and look "stuck". If Setup is
+  // still open, it already shows status text — skip the dialog.
+  if (FindWindowW(L"TWizardForm", nullptr) ||
+      FindWindowW(L"TUninstallProgressForm", nullptr)) {
+    LogInject(L"skip restart dialog; Setup UI is active");
+    return;
+  }
   MessageBoxW(
       nullptr,
       L"Phostide needs to briefly restart Windows Explorer so the taskbar "

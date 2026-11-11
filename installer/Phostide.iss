@@ -108,25 +108,57 @@ begin
          ewWaitUntilTerminated, ResultCode);
 end;
 
+{ Never MsgBox here — it can sit behind the wizard and look like a hang.
+  Use the wizard/uninstall status line only (always visible in-window). }
+procedure SetShellRestartStatus(const Msg: String);
+begin
+  if Assigned(WizardForm) then
+  begin
+    WizardForm.StatusLabel.Caption := Msg;
+    WizardForm.StatusLabel.Update;
+    WizardForm.BringToFront;
+  end;
+  if Assigned(UninstallProgressForm) then
+  begin
+    UninstallProgressForm.StatusLabel.Caption := Msg;
+    UninstallProgressForm.StatusLabel.Update;
+    UninstallProgressForm.BringToFront;
+  end;
+end;
+
+procedure SleepWithStatus(TotalMs: Integer; const Msg: String);
+var
+  Waited: Integer;
+begin
+  Waited := 0;
+  while Waited < TotalMs do
+  begin
+    SetShellRestartStatus(Msg);
+    Sleep(250);
+    Waited := Waited + 250;
+  end;
+end;
+
 { Explorer keeps ExplorerTAP.dll mapped after Phostide exits (XAML Diagnostics
   pins it). Updates must bounce the shell so the new TEMP copy can load. }
-procedure RestartExplorerShell;
+procedure RestartExplorerShell(const ForUninstall: Boolean);
 var
   ResultCode: Integer;
   I: Integer;
 begin
-  if Assigned(WizardForm) then
-  begin
-    WizardForm.StatusLabel.Caption :=
-      'Restarting Windows Explorer so the taskbar theme can load…';
-    WizardForm.StatusLabel.Update;
-  end;
+  if ForUninstall then
+    SetShellRestartStatus(
+      'Restarting Windows Explorer to unload the taskbar theme (desktop may flicker)…')
+  else
+    SetShellRestartStatus(
+      'Restarting Windows Explorer so the taskbar theme can load (desktop may flicker)…');
 
   if FindWindowByClassName('Shell_TrayWnd') <> 0 then
   begin
     Exec('taskkill.exe', '/IM explorer.exe /F', '', SW_HIDE,
          ewWaitUntilTerminated, ResultCode);
-    Sleep(1500);
+    SleepWithStatus(1500,
+      'Windows Explorer closed — starting it again…');
   end;
 
   Exec(ExpandConstant('{win}\explorer.exe'), '', '', SW_SHOWNORMAL, ewNoWait,
@@ -137,32 +169,13 @@ begin
   begin
     if FindWindowByClassName('Shell_TrayWnd') <> 0 then
       Break;
+    SetShellRestartStatus(
+      'Waiting for the taskbar to come back…');
     Sleep(250);
   end;
-  Sleep(8000);
-end;
-
-procedure ExplainExplorerRestart(const ForUninstall: Boolean);
-var
-  Msg: String;
-begin
-  { Silent installs stay quiet; interactive Setup should not surprise people. }
-  if WizardSilent then
-    Exit;
-
-  if ForUninstall then
-    Msg :=
-      'Phostide will briefly restart Windows Explorer so the taskbar theme ' +
-      'engine can unload.'#13#10#13#10 +
-      'Your desktop may flicker for a few seconds. This is expected.'
-  else
-    Msg :=
-      'Phostide will briefly restart Windows Explorer so the taskbar theme ' +
-      'engine can load.'#13#10#13#10 +
-      'Your desktop may flicker for a few seconds. This is expected — ' +
-      'open windows stay open.';
-
-  MsgBox(Msg, mbInformation, MB_OK);
+  SleepWithStatus(8000,
+    'Waiting for the taskbar to finish loading (this is normal)…');
+  SetShellRestartStatus('Taskbar ready.');
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
@@ -179,8 +192,7 @@ begin
   if CurStep = ssPostInstall then
   begin
     { Files are on disk; bounce Explorer before [Run] starts Phostide. }
-    ExplainExplorerRestart(False);
-    RestartExplorerShell;
+    RestartExplorerShell(False);
   end;
 end;
 
@@ -190,7 +202,6 @@ begin
   begin
     CloseRunningPhostide;
     { Drop the in-shell TAP so uninstall leaves a stock taskbar. }
-    ExplainExplorerRestart(True);
-    RestartExplorerShell;
+    RestartExplorerShell(True);
   end;
 end;
