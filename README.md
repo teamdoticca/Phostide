@@ -57,14 +57,17 @@ Phostide restores the original taskbar brushes when it exits or crashes. It does
 ```
 src/     Native C++/WinRT host (Phostide.exe) + ExplorerTAP.dll
 site/    Marketing / download mini-site (Next.js → Vercel)
-docs/    Design notes
+docs/    Architecture overview + development runbook
 ```
 
 ## Development
 
 Native build requires Visual Studio 2022 with C++ desktop + Windows SDK (10.0.22621+).
 
+See [docs/architecture.md](docs/architecture.md) and the [development runbook](docs/development.md) for build, ThemeLab, and live TAP verify steps. Contribution guidelines: [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ```powershell
+# Native (from repo root) — see docs/development.md
 # Site
 cd site
 npm install

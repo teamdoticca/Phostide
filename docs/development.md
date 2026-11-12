@@ -1,9 +1,9 @@
 # Phostide development runbook
 
-How agents rebuild ExplorerTAP themes and verify them on a live Win11 taskbar.
-Product SoT for architecture: [docs/architecture.md](architecture.md).
+How to rebuild ExplorerTAP themes and verify them on a live Win11 taskbar.
+Product architecture: [docs/architecture.md](architecture.md).
 
-## Product vs agent inject
+## Product vs developer inject
 
 **Normal product start (what users get):** launch `out\Release\Phostide.exe`.
 Host `InjectExplorerTap` finds `Shell_TrayWnd`, loads `ExplorerTAP.dll` via `WH_CALLWNDPROC`, waits for `Local\Phostide.TAP.Ready`.
@@ -29,14 +29,16 @@ Paint entry points live in `src/ExplorerTAP/PixelThemes.cpp` (`PaintRainbow`, `P
 
 ## Build
 
+From the repo root:
+
 ```powershell
 $msbuild = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
   -latest -requires Microsoft.Component.MSBuild -find "MSBuild\**\Bin\MSBuild.exe" |
   Select-Object -First 1
-& $msbuild "Z:\Doticca\Phostide\src\Phostide.sln" /p:Configuration=Release /p:Platform=x64 /m:1 /v:minimal
+& $msbuild "src\Phostide.sln" /p:Configuration=Release /p:Platform=x64 /m:1 /v:minimal
 ```
 
-Outputs: `out\Release\ExplorerTAP.dll`, `out\Release\Phostide.exe`.
+Outputs: `out\Release\ExplorerTAP.dll`, `out\Release\Phostide.exe`, `out\Release\ThemeLab.exe`.
 
 ## Dev reinject ritual (fresh DLL)
 
@@ -79,7 +81,7 @@ A later `Bound fill 8x8` can appear after a good `2560x48` bind; if `Local\Phost
 
 ## Theme paint note
 
-Sea Waves and Space were unlocked to match marketing preview JPGs (`site/public/themes/*.jpg`). Prefer retuning toward those targets over inventing a new look; keep Gerstner + forward cinematic loop constraints.
+Sea Waves and Space were unlocked to match marketing preview assets (`site/public/themes/*.png` / `*.webm`). Prefer retuning toward those targets over inventing a new look; keep Gerstner + forward cinematic loop constraints.
 
 ## Quick “theme=N live?” check
 

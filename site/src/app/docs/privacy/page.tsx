@@ -15,7 +15,7 @@ export const metadata: Metadata = pageMetadata({
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-void text-zinc-100">
-      <SiteHeader active="/docs/troubleshooting" />
+      <SiteHeader active="/docs" />
 
       <section className="mx-auto max-w-site px-6 py-16 sm:px-10 sm:py-20">
         <Link
