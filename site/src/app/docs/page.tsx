@@ -5,6 +5,7 @@ import {
   IconDisplay,
   IconDownload,
   IconGithub,
+  IconLayers,
   IconLock,
   IconPalette,
   IconWrench,
@@ -40,6 +41,12 @@ const cards = [
     icon: IconDisplay,
     title: "OLED notes",
     body: "Why a static taskbar matters on OLED, and what Phostide does about it.",
+  },
+  {
+    href: "/docs/compare",
+    icon: IconLayers,
+    title: "Compare approaches",
+    body: "Auto-hide, overlays, idle fade mods, and real BackgroundFill.",
   },
   {
     href: "/docs/troubleshooting",

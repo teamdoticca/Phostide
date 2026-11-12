@@ -111,6 +111,21 @@ export default function OledPage() {
           </ul>
         </div>
 
+        <div className="rounded-xl border border-line bg-panel p-8 md:col-span-2">
+          <h2 className="text-xl font-semibold">Other approaches</h2>
+          <p className="mt-3 text-soft">
+            Auto‑hide, dimmer overlays, and idle‑fade mods solve the same OLED
+            worry differently. See how they compare to painting the real
+            Explorer fill.
+          </p>
+          <Link
+            href="/docs/compare"
+            className="mt-4 inline-flex items-center gap-2 text-sm text-ember"
+          >
+            Compare approaches <IconArrowRight />
+          </Link>
+        </div>
+
         <div className="flex justify-between pt-4 text-sm md:col-span-2">
           <Link
             href="/docs/themes"
@@ -120,10 +135,10 @@ export default function OledPage() {
             Themes
           </Link>
           <Link
-            href="/docs/troubleshooting"
+            href="/docs/compare"
             className="inline-flex items-center gap-2 text-ember"
           >
-            Next: Troubleshooting <IconArrowRight />
+            Next: Compare <IconArrowRight />
           </Link>
         </div>
       </section>

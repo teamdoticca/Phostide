@@ -10,6 +10,9 @@ export function SiteFooter() {
           <Link href="/docs" className="hover:text-white">
             Docs
           </Link>
+          <Link href="/docs/compare" className="hover:text-white">
+            Compare
+          </Link>
           <Link href="/docs/privacy" className="hover:text-white">
             Privacy
           </Link>
