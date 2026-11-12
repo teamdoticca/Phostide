@@ -4,7 +4,9 @@
 
 Phostide paints motion into Explorer’s own taskbar `BackgroundFill` — not a floating overlay, not auto-hide. Icons stay on top. Quit, and the normal bar comes back.
 
-**[Download](https://phostide.doticca.com)** · [GitHub Releases](https://github.com/teamdoticca/Phostide/releases) · [Docs](https://phostide.doticca.com/docs)
+**[Download](https://phostide.doticca.com)** · [GitHub Releases](https://github.com/teamdoticca/Phostide/releases) · [Docs](https://phostide.doticca.com/docs) · [FAQ](https://phostide.doticca.com/docs/faq)
+
+Agent briefs: [llms.txt](https://phostide.doticca.com/llms.txt) · [llms-full.txt](https://phostide.doticca.com/llms-full.txt)
 
 <p align="center">
   <img src="assets/readme/rainbow.gif" alt="Rainbow theme on the Windows taskbar" width="100%" />
@@ -12,7 +14,7 @@ Phostide paints motion into Explorer’s own taskbar `BackgroundFill` — not a 
 
 ## Themes
 
-Five built-in looks. Switch from the tray.
+Five built-in looks. Switch from the tray. There is **no theme editor** and no custom theme import in the shipped app.
 
 | | |
 | --- | --- |
@@ -22,7 +24,7 @@ Five built-in looks. Switch from the tray.
 | **Space** — mostly black with slow scattered stars | ![Space](assets/readme/space.gif) |
 | **Aurora** — magenta curtains over black | ![Aurora](assets/readme/aurora.gif) |
 
-Live captures (and longer loops) are on the [site](https://phostide.doticca.com/#themes).
+Live captures (and longer loops) are on the [site](https://phostide.doticca.com/#themes). Space and Aurora are the darkest everyday OLED choices.
 
 ## Why this exists
 
@@ -33,6 +35,31 @@ Most OLED taskbar tools **hide** the bar. Phostide keeps it usable and moves the
 - Signed Setup.exe (per-user, no admin) and portable zip
 - Local only — no account, no telemetry
 - MIT open source
+- Standalone — **no Windhawk** or separate taskbar overlay required
+
+## What it is not
+
+- Not a floating overlay window on top of the taskbar
+- Not Windows auto-hide
+- Not a Windhawk mod and not dependent on Windhawk
+- Not an end-user theme editor
+- Not a cloud service; does not need admin rights
+
+## Settings
+
+Tray icon › **Settings…** — three tabs with different jobs:
+
+| Tab | Controls |
+| --- | --- |
+| **Taskbar** | Apply to **All** or monitor *N*: theme + intensity (preview, then **Apply**) |
+| **Monitors** | Per-display **on/off** (default all on). Off → stock Windows bar |
+| **System** | App-global only: Auto / GPU / CPU rendering, Start with Windows, updates |
+
+Rendering is shared by every active bar — it is not per-monitor. Defaults after reset: Rainbow, 45% intensity, Auto rendering, all monitors on. Settings file: `%APPDATA%\Phostide\settings.json`.
+
+### Multi-monitor OLED
+
+On an OLED + LCD setup you can theme only the OLED: **Monitors** → uncheck the LCD; **Taskbar** → Apply to the OLED monitor → **Space** or **Aurora** at modest intensity → **Apply**. Phostide only animates the background fill — static icons, Start, tray, and clock can still contribute to burn-in.
 
 ## Requirements
 
@@ -47,7 +74,7 @@ Most OLED taskbar tools **hide** the bar. Phostide keeps it usable and moves the
 
 Portable zip: unzip anywhere and run `Phostide.exe`.
 
-More detail: [Install & run](https://phostide.doticca.com/docs/install).
+More detail: [Install & run](https://phostide.doticca.com/docs/install) · [FAQ](https://phostide.doticca.com/docs/faq) · [Compare approaches](https://phostide.doticca.com/docs/compare).
 
 ## Safety
 
@@ -65,7 +92,7 @@ docs/    Architecture overview + development runbook
 
 Native build requires Visual Studio 2022 with C++ desktop + Windows SDK (10.0.22621+).
 
-See [docs/architecture.md](docs/architecture.md) and the [development runbook](docs/development.md) for build, ThemeLab, and live TAP verify steps. Contribution guidelines: [CONTRIBUTING.md](CONTRIBUTING.md).
+See [docs/architecture.md](docs/architecture.md) and the [development runbook](docs/development.md) for build, ThemeLab, and live TAP verify steps. Contribution guidelines: [CONTRIBUTING.md](CONTRIBUTING.md). Agent orientation: [AGENTS.md](AGENTS.md).
 
 ```powershell
 # Native (from repo root) — see docs/development.md

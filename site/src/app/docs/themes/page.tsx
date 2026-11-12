@@ -34,7 +34,9 @@ export default function ThemesPage() {
           </h1>
           <p className="mt-5 max-w-xl text-lg text-soft">
             Each strip is a real Native‑48px capture of the taskbar painter.
-            Hover a strip on desktop to play the loop.
+            Hover a strip on desktop to play the loop. These five are the only
+            themes — there is no theme editor, and Phostide does not need
+            Windhawk or any overlay tool.
           </p>
         </div>
         <div className="rounded-xl border border-line bg-panel p-6 text-sm lg:col-span-5">

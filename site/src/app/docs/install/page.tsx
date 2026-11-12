@@ -5,7 +5,7 @@ import { LatestDownload } from "@/components/LatestDownload";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { FALLBACK_TAG, resolveReleaseAssets } from "@/lib/releases";
-import { pageMetadata } from "@/lib/seo";
+import { absoluteUrl, pageMetadata, SITE_NAME } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Install & run",
@@ -19,10 +19,61 @@ const toc = [
   { href: "#files", label: "2 · Where it goes" },
   { href: "#run", label: "3 · Tray & Settings" },
   { href: "#monitors", label: "Multi-monitor" },
+  { href: "#oled-dual", label: "Dual-monitor OLED" },
   { href: "#portable", label: "Portable zip" },
   { href: "#settings-file", label: "Settings file" },
   { href: "#uninstall", label: "Uninstall" },
 ];
+
+function InstallHowToJsonLd() {
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    name: `Install ${SITE_NAME} on Windows 11`,
+    description:
+      "Install the signed Setup.exe, open Settings from the tray, and Apply a theme to all monitors or one.",
+    url: absoluteUrl("/docs/install"),
+    totalTime: "PT5M",
+    tool: [
+      {
+        "@type": "HowToTool",
+        name: "Phostide Setup.exe (signed, per-user, no admin)",
+      },
+    ],
+    step: [
+      {
+        "@type": "HowToStep",
+        name: "Download Setup.exe",
+        text: "Get the latest signed Setup.exe from phostide.doticca.com or GitHub Releases for teamdoticca/Phostide.",
+        url: absoluteUrl("/docs/install#setup"),
+      },
+      {
+        "@type": "HowToStep",
+        name: "Run the installer",
+        text: "Run Setup.exe. It installs for your user account only (no admin) and can launch Phostide when it finishes. A tray icon appears.",
+      },
+      {
+        "@type": "HowToStep",
+        name: "Open Settings and Apply a theme",
+        text: "Right-click the tray icon › Settings… › Taskbar. Choose Apply to All or a monitor number, pick a theme and intensity, then click Apply.",
+        url: absoluteUrl("/docs/install#run"),
+      },
+      {
+        "@type": "HowToStep",
+        name: "Optional multi-monitor OLED",
+        text: "On Monitors, uncheck displays you want stock. On Taskbar, Apply Space or Aurora to the OLED monitor only. On System, leave RENDERING on Auto.",
+        url: absoluteUrl("/docs/install#oled-dual"),
+      },
+    ],
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}
 
 export default async function InstallPage() {
   const { tag } = await resolveReleaseAssets();
@@ -30,6 +81,7 @@ export default async function InstallPage() {
 
   return (
     <div className="min-h-screen bg-void text-zinc-100">
+      <InstallHowToJsonLd />
       <SiteHeader active="/docs/install" />
 
       <main className="mx-auto grid max-w-site gap-14 px-6 py-16 sm:px-10 sm:py-20 lg:grid-cols-12">
@@ -60,6 +112,8 @@ export default async function InstallPage() {
           </h1>
           <p className="mt-5 text-lg text-soft">
             Windows 11 22H2 or newer, x64. Per‑user install — no admin rights.
+            Standalone: no Windhawk or extra overlay software. Five built‑in
+            themes only — no theme editor.
           </p>
 
           <section
@@ -188,6 +242,44 @@ export default async function InstallPage() {
             </ul>
           </section>
 
+          <section id="oled-dual" className="mt-14">
+            <h2 className="text-2xl font-semibold">Dual-monitor OLED</h2>
+            <p className="mt-3 text-soft">
+              Example: OLED primary + a second LCD. Theme only the OLED and leave
+              the LCD stock.
+            </p>
+            <ol className="mt-4 list-decimal space-y-3 pl-5 text-sm text-soft">
+              <li>
+                <span className="text-zinc-100">Monitors</span> — keep the OLED
+                checked; uncheck the LCD (or any display you want stock).
+              </li>
+              <li>
+                <span className="text-zinc-100">Taskbar</span> — Apply to the OLED
+                monitor number › pick <span className="text-zinc-100">Space</span>{" "}
+                or <span className="text-zinc-100">Aurora</span> › modest intensity
+                › <span className="text-zinc-100">Apply</span>.
+              </li>
+              <li>
+                <span className="text-zinc-100">System</span> — leave{" "}
+                <span className="text-zinc-100">RENDERING</span> on{" "}
+                <span className="text-zinc-100">Auto</span>; optionally enable Start
+                with Windows › Apply.
+              </li>
+            </ol>
+            <p className="mt-4 text-sm text-soft">
+              Honest limit: only the background fill moves. Static icons, Start,
+              tray, and clock can still contribute to OLED burn‑in. See{" "}
+              <Link href="/docs/oled" className="text-ember hover:underline">
+                OLED notes
+              </Link>{" "}
+              and the{" "}
+              <Link href="/docs/faq" className="text-ember hover:underline">
+                FAQ
+              </Link>
+              .
+            </p>
+          </section>
+
           <section id="portable" className="mt-14">
             <h2 className="text-2xl font-semibold">
               Prefer not to install? Use the portable zip.
@@ -238,12 +330,20 @@ export default async function InstallPage() {
                 Optional: delete %APPDATA%\Phostide to remove your settings.
               </li>
             </ol>
-            <Link
-              href="/docs/themes"
-              className="mt-12 inline-flex items-center gap-2 text-sm text-ember"
-            >
-              Next: Themes <IconArrowRight />
-            </Link>
+            <div className="mt-12 flex flex-wrap justify-between gap-4 text-sm">
+              <Link
+                href="/docs/faq"
+                className="inline-flex items-center gap-2 text-soft hover:text-white"
+              >
+                FAQ
+              </Link>
+              <Link
+                href="/docs/themes"
+                className="inline-flex items-center gap-2 text-ember"
+              >
+                Next: Themes <IconArrowRight />
+              </Link>
+            </div>
           </section>
         </div>
       </main>

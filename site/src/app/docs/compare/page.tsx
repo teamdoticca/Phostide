@@ -44,10 +44,10 @@ const approaches = [
   },
   {
     name: "Phostide",
-    how: "Paints motion into Explorer’s real taskbar BackgroundFill — not a floating window.",
+    how: "Standalone app that paints motion into Explorer’s real taskbar BackgroundFill — not a floating window, not a Windhawk mod.",
     burnIn: "Moves the fill so the background isn’t one fixed bright block. Icons/tray stay Windows-drawn.",
     usability:
-      "Bar stays visible; themes switch from the tray; per-monitor on/off and appearance; Exit restores stock brushes.",
+      "Bar stays visible; five built-in themes (no editor) from the tray; per-monitor on/off and appearance; Exit restores stock brushes.",
     fit: "When you want the bar usable and themed, not hidden or covered.",
   },
 ];
@@ -106,6 +106,8 @@ export default function ComparePage() {
           People search for ways to protect an OLED from a static taskbar —
           auto‑hide, dimmer overlays, idle‑fade mods, or painting the real fill.
           Here is an honest map of those approaches and where Phostide sits.
+          Phostide is standalone — it does not need Windhawk — and ships five
+          built‑in themes with no theme editor.
         </p>
 
         <section className="mt-14">

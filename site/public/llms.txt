@@ -5,25 +5,54 @@
 Site: https://phostide.doticca.com
 Source: https://github.com/teamdoticca/Phostide
 Publisher: Doticca (https://doticca.com)
+Full agent brief: https://phostide.doticca.com/llms-full.txt
 
 ## Product
 
-- Platform: Windows 11 22H2+ (x64)
-- Mechanism: TAP helper paints the taskbar's own background fill; icons stay on top; quitting restores the normal bar
-- Themes: Rainbow, Sea Waves, Weather, Space, Aurora
-- Privacy: local by default — no account, no telemetry; themes work offline; optional GitHub update check
-- Settings: tray › Settings… › theme + intensity › Apply; System tab for Start with Windows / updates
-- Distribution: signed Setup.exe (per-user, no admin) and portable zip via GitHub Releases
+- Platform: Windows 11 22H2+ (x64). Signed Setup.exe is per-user — no administrator rights.
+- Standalone: does **not** require Windhawk, TranslucentTB, RainbowTaskbar, or any separate taskbar overlay.
+- Mechanism: tray host injects ExplorerTAP into Explorer; paints each taskbar's own `BackgroundFill`. Icons, Start, tray, and clock stay on top. Quitting restores the normal Windows brushes. Does not modify system files.
+- Themes: exactly five built-in — Rainbow, Sea Waves, Weather, Space, Aurora. There is **no theme editor** and no custom theme upload.
+- Privacy: local by default — no account, no telemetry; themes work offline; optional GitHub update check only.
+- Distribution: signed Setup.exe and portable zip via GitHub Releases (also linked from the site).
+
+## Settings (tray › Settings…)
+
+Three tabs — do not confuse them:
+
+| Tab | What it controls |
+|-----|------------------|
+| **Taskbar** | Scope **All** or monitor *N*, then theme + intensity (0–100%). Live preview; **Apply** commits. |
+| **Monitors** | Per-display **on/off** only. Off = stock Windows taskbar. Default: all on. |
+| **System** | App-global only: **RENDERING** Auto / GPU / CPU (shared by every bar — not per-monitor), Start with Windows, check for updates. |
+
+Defaults after reset: Rainbow, 45% intensity, Auto rendering, all monitors active. Settings file: `%APPDATA%\Phostide\settings.json`.
+
+## Dual-monitor OLED recipe
+
+1. Install Setup.exe (or run portable `Phostide.exe`).
+2. Tray › Settings… › **Monitors** — leave the OLED on; uncheck the LCD (or other) display if you want it stock.
+3. **Taskbar** › Apply to the OLED monitor number › pick **Space** or **Aurora** › modest intensity › **Apply**.
+4. **System** › RENDERING **Auto** (recommended start); optionally enable Start with Windows › Apply.
+
+Honest limit: Phostide only animates the background fill. Static icons, Start, tray, and clock still age OLED pixels; motion is not a burn-in warranty.
+
+## Not Phostide
+
+- Not an overlay window on top of the taskbar
+- Not Windows auto-hide
+- Not a Windhawk mod and not dependent on Windhawk
+- Not a theme editor / custom shader UI for end users
+- Not a cloud service
 
 ## Docs
 
-- [Docs hub](https://phostide.doticca.com/docs): overview and download
-- [Install & run](https://phostide.doticca.com/docs/install): Setup.exe, tray menu, Settings, uninstall
-- [Themes](https://phostide.doticca.com/docs/themes): five looks, intensity, Apply flow
-- [OLED notes](https://phostide.doticca.com/docs/oled): why motion helps OLED taskbars
-- [Troubleshooting](https://phostide.doticca.com/docs/troubleshooting): common fixes
-- [Privacy](https://phostide.doticca.com/docs/privacy): what is stored and optional network use
-
-## Optional
-
-- [GitHub Releases](https://github.com/teamdoticca/Phostide/releases): latest installer and zip
+- [Docs hub](https://phostide.doticca.com/docs)
+- [Install & run](https://phostide.doticca.com/docs/install) — Setup.exe, portable zip, Settings, dual-monitor OLED, uninstall
+- [FAQ](https://phostide.doticca.com/docs/faq) — short answers for agents and humans
+- [Themes](https://phostide.doticca.com/docs/themes) — five looks, intensity, Apply flow
+- [OLED notes](https://phostide.doticca.com/docs/oled) — why motion helps OLED taskbars
+- [Compare approaches](https://phostide.doticca.com/docs/compare) — auto-hide vs overlay vs idle fade vs BackgroundFill
+- [Troubleshooting](https://phostide.doticca.com/docs/troubleshooting)
+- [Privacy](https://phostide.doticca.com/docs/privacy)
+- [GitHub Releases](https://github.com/teamdoticca/Phostide/releases)

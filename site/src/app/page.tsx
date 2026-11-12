@@ -64,8 +64,9 @@ export default async function Home() {
             <div className="divide-y divide-line rounded-2xl border border-line bg-panel text-sm">
               {[
                 ["What it is", "Taskbar background fill"],
-                ["What it isn't", "An overlay window"],
-                ["Themes", "5, per monitor or all"],
+                ["What it isn't", "Overlay · auto-hide · Windhawk"],
+                ["Themes", "5 built-in (no editor)"],
+                ["Monitors", "Theme/intensity + on/off"],
                 ["Data", "Stays on your PC"],
                 ["Made by", "Doticca"],
               ].map(([k, v]) => (

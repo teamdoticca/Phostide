@@ -62,10 +62,11 @@ export function JsonLd({ softwareVersion }: JsonLdProps) {
     sameAs: [GITHUB_REPO],
     featureList: [
       "OLED-safe animated taskbar themes",
-      "Paints Explorer BackgroundFill (not an overlay)",
+      "Paints Explorer BackgroundFill (not an overlay, not auto-hide)",
+      "Standalone — no Windhawk or overlay tool required",
       "Per-monitor theme and intensity; enable or disable each display",
       "Shared Auto / GPU / CPU rendering (D3D11 with CPU fallback)",
-      "Five built-in themes: Rainbow, Sea Waves, Weather, Space, Aurora",
+      "Five built-in themes: Rainbow, Sea Waves, Weather, Space, Aurora (no theme editor)",
       "Signed per-user installer, no admin required",
       "Local-only — no account, no telemetry",
       "MIT open source",

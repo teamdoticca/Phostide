@@ -1,5 +1,13 @@
 # Phostide architecture
 
+## Product facts for readers and agents
+
+- Standalone Windows 11 utility (MIT). **No Windhawk**, no separate overlay tool, no admin for Setup.exe.
+- Exactly five built-in themes (Rainbow, Sea Waves, Weather, Space, Aurora). **No** end-user theme editor in the shipped app.
+- Paints Explorer `BackgroundFill` — not an overlay, not auto-hide. Quit restores stock brushes.
+- Settings: **Taskbar** (theme/intensity per All or monitor *N*), **Monitors** (on/off), **System** (shared Auto/GPU/CPU rendering).
+- Public briefs: [llms.txt](https://phostide.doticca.com/llms.txt), [FAQ](https://phostide.doticca.com/docs/faq).
+
 ## Goal
 
 Paint the real Windows 11 taskbar background (`Rectangle#BackgroundFill`) with OLED-safe animated themes so static taskbar pixels do not burn in.
@@ -27,7 +35,7 @@ Host builds ThemeCommand **v4** slots (`deviceHash`, theme, intensity, enabled) 
 
 Settings → **System** exposes **Auto / GPU / CPU** for every bar. Auto prefers D3D11 GPU paint (`Themes.hlsl`) and falls back to CPU. GPU is smoother; CPU is the safe fallback when D3D11 cannot start.
 
-**ThemeLab** (`ThemeLab.exe`) compiles and previews `Themes.hlsl` without injecting into Explorer — use it for GPU theme iteration. Live taskbar verification still goes through `Phostide.exe` + TAP.
+**ThemeLab** (`ThemeLab.exe`) compiles and previews `Themes.hlsl` without injecting into Explorer — use it for GPU theme iteration. Live taskbar verification still goes through `Phostide.exe` + TAP. ThemeLab is a developer tool; it is not an end-user theme editor in the product UI.
 
 ## Themes
 

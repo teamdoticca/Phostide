@@ -44,7 +44,9 @@ export default function OledPage() {
           OLED pixels light themselves. When the same bright shape sits in the
           same spot for hours, those pixels age faster than the rest. The
           Windows taskbar is one of the most static bright strips on the
-          desktop — which is why many OLED tools simply hide it.
+          desktop — which is why many OLED tools simply hide it. Phostide is
+          standalone (no Windhawk) and paints the real fill instead of covering
+          or hiding the bar — five built‑in themes, no theme editor.
         </p>
       </section>
 

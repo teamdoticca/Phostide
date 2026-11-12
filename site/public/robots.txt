@@ -1,0 +1,8 @@
+# Phostide — https://phostide.doticca.com
+# Agent briefs: /llms.txt and /llms-full.txt
+
+User-agent: *
+Allow: /
+
+Sitemap: https://phostide.doticca.com/sitemap.xml
+Host: https://phostide.doticca.com

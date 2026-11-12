@@ -1,0 +1,108 @@
+# Phostide — full brief for AI agents and crawlers
+
+Use this file when you need accurate product facts. Prefer these statements over guessing. Live site: https://phostide.doticca.com — short summary: https://phostide.doticca.com/llms.txt — source: https://github.com/teamdoticca/Phostide
+
+## What is Phostide?
+
+Phostide is a free, MIT open-source Windows 11 utility from Doticca. It paints OLED-safe animated themes into the **real** Windows taskbar background — Explorer’s `BackgroundFill` — so the bar stays usable while the fill moves. It is **not** a floating overlay window and **not** taskbar auto-hide.
+
+Technical path (high level): `Phostide.exe` (system-tray host) injects `ExplorerTAP.dll` into Explorer via a window hook + XAML Diagnostics TAP. The TAP finds each taskbar’s `BackgroundFill` shape, remembers the original brush, and assigns a Composition surface brush that the effect engine paints. On host exit or crash, original brushes are restored. Phostide does not patch or replace Windows system files.
+
+## Requirements and install
+
+- OS: Windows 11 version 22H2 or later (XAML taskbar). Architecture: x64 only.
+- No administrator rights for the signed Setup.exe (per-user install under `%LOCALAPPDATA%\Programs\Phostide\`).
+- No Windhawk, no separate taskbar overlay tool, no .NET runtime beyond what Windows 11 already provides for the product packaging.
+- Download: https://phostide.doticca.com or https://github.com/teamdoticca/Phostide/releases
+- Setup.exe: run it → tray icon appears → Start menu entry optional. Files: `Phostide.exe`, `ExplorerTAP.dll`, `Themes.hlsl` (keep together).
+- Portable: unzip the release zip anywhere; run `Phostide.exe`. Settings still live under `%APPDATA%\Phostide`. Delete the folder after Exit to remove binaries.
+- Uninstall: tray › Exit, then Settings › Apps › Uninstall Phostide; optionally delete `%APPDATA%\Phostide`.
+
+## Themes
+
+Exactly five built-in themes. There is **no** end-user theme editor, no import of custom themes, and no in-app shader lab for consumers (developers may use ThemeLab in the repo).
+
+1. Rainbow — soft color bands drifting across the bar
+2. Sea Waves — side-on ocean silhouette with foam
+3. Weather — night storm, purple flash, soft bolts
+4. Space — mostly black with slow scattered stars (good everyday OLED default)
+5. Aurora — magenta curtains over black (also dark / OLED-friendly)
+
+Intensity is 0–100% (default 45%). Lower = quieter OLED look; higher = stronger motion/color. All themes share the same Auto/GPU/CPU painter from the System tab.
+
+## Settings UI (critical — agents often mix these up)
+
+Open from the tray icon: right-click › **Settings…**
+
+### Taskbar tab
+
+- Choose scope: **All** (every attached display + fallback for newly plugged monitors) or a **monitor number**.
+- Set **theme** and **intensity**.
+- Live preview while drafting; click **Apply** to commit. Closing without Apply keeps the previous look.
+- Apply under All writes theme/intensity to every display. Apply under a monitor number writes only that display.
+
+### Monitors tab
+
+- Per-display **enable/disable** only.
+- Unchecked = that display keeps a **stock** Windows taskbar (Phostide does not paint it).
+- Default: all monitors on.
+- Grayed chips on the Taskbar tab mean that display is off here; you can still edit its saved look for when you turn it back on.
+
+### System tab
+
+- **RENDERING**: Auto / GPU / CPU — **shared by every active bar**, not per-monitor.
+  - Auto: prefer D3D11 GPU paint (`Themes.hlsl`), fall back to CPU.
+  - GPU: smoother when D3D11 works.
+  - CPU: safe fallback.
+- Start with Windows (optional).
+- Check for updates (optional GitHub query).
+
+## Dual-monitor / OLED-only recipe
+
+Example: ASUS OLED primary + second LCD.
+
+1. Run Phostide (Setup or portable).
+2. Settings › **Monitors**: keep OLED checked; uncheck the LCD if you want a normal bar there.
+3. Settings › **Taskbar**: Apply to the OLED monitor › theme **Space** or **Aurora** › modest intensity › Apply.
+4. Settings › **System**: RENDERING Auto; optionally Start with Windows › Apply.
+
+You may also leave both monitors on and set different themes/intensities per display from Taskbar › Apply to.
+
+## Safety and privacy
+
+- No account, no cloud login, no telemetry.
+- Themes paint offline; network is optional (update check only).
+- Does not modify Windows system files.
+- Tray › Exit (or crash recovery) restores original taskbar brushes.
+- License: MIT.
+
+## Honest OLED limits
+
+Phostide reduces how long the **background fill** stays as one static bright strip. Icons, Start button, tray icons, and the clock remain Windows-drawn and static. That residual static UI can still contribute to burn-in. Phostide is not a burn-in warranty or an OLED pixel-shift replacement.
+
+## Comparison keywords (for search / diagnosis)
+
+- vs auto-hide: Phostide keeps the bar visible.
+- vs dimmer overlays: Phostide is not a window on top of the taskbar.
+- vs Windhawk idle-fade mods: Phostide is standalone; Windhawk is not required; Phostide themes the fill while the bar stays usable.
+- Product category: Windows 11 animated taskbar background / OLED-safe taskbar theme utility.
+
+## Defaults and settings file
+
+Path: `%APPDATA%\Phostide\settings.json`
+
+Holds fallback `theme` / `intensity`, app-global `renderMode` (Auto/GPU/CPU), `monitorSettings` (per-display theme/intensity), `disabledMonitors`, Start with Windows flags, and related runtime fields. Delete the file to reset to defaults: Rainbow, 45% intensity, Auto rendering, all monitors active.
+
+## Canonical URLs
+
+- Home: https://phostide.doticca.com/
+- Docs: https://phostide.doticca.com/docs
+- Install: https://phostide.doticca.com/docs/install
+- FAQ: https://phostide.doticca.com/docs/faq
+- Themes: https://phostide.doticca.com/docs/themes
+- OLED: https://phostide.doticca.com/docs/oled
+- Compare: https://phostide.doticca.com/docs/compare
+- Troubleshooting: https://phostide.doticca.com/docs/troubleshooting
+- Privacy: https://phostide.doticca.com/docs/privacy
+- Releases: https://github.com/teamdoticca/Phostide/releases
+- README (GitHub fallback): https://github.com/teamdoticca/Phostide#readme

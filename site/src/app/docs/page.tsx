@@ -8,6 +8,7 @@ import {
   IconLayers,
   IconLock,
   IconPalette,
+  IconSliders,
   IconWrench,
 } from "@/components/Icons";
 import { LatestDownload } from "@/components/LatestDownload";
@@ -29,6 +30,12 @@ const cards = [
     icon: IconDownload,
     title: "Install & run",
     body: "Setup.exe, portable zip, tray menu, multi-monitor Settings, uninstall.",
+  },
+  {
+    href: "/docs/faq",
+    icon: IconSliders,
+    title: "FAQ",
+    body: "Mechanism, Windhawk, Settings tabs, OLED-only recipe, burn-in limits.",
   },
   {
     href: "/docs/themes",
@@ -86,7 +93,15 @@ export default async function DocsPage() {
             </h1>
             <p className="mt-5 max-w-xl text-lg text-soft">
               Short pages. Install it, open Settings from the tray, Apply a
-              theme (all displays or one), fix the odd hiccup.
+              theme (all displays or one), fix the odd hiccup. Agent briefs:{" "}
+              <a href="/llms.txt" className="text-ember hover:underline">
+                llms.txt
+              </a>{" "}
+              ·{" "}
+              <a href="/llms-full.txt" className="text-ember hover:underline">
+                llms-full.txt
+              </a>
+              .
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <LatestDownload className="btn-ember">

@@ -69,6 +69,7 @@ export const SITE_ROUTES = [
   { path: "/", priority: 1, changeFrequency: "weekly" as const },
   { path: "/docs", priority: 0.9, changeFrequency: "monthly" as const },
   { path: "/docs/install", priority: 0.8, changeFrequency: "monthly" as const },
+  { path: "/docs/faq", priority: 0.85, changeFrequency: "monthly" as const },
   { path: "/docs/themes", priority: 0.8, changeFrequency: "monthly" as const },
   { path: "/docs/oled", priority: 0.7, changeFrequency: "monthly" as const },
   { path: "/docs/compare", priority: 0.85, changeFrequency: "monthly" as const },
