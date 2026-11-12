@@ -3,9 +3,7 @@
   Creates Cloudflare DNS records for phostide.doticca.com (Vercel).
 
 .DESCRIPTION
-  Requires the Cloudflare account that owns the doticca.com zone.
-  The current intale.net-only cf session cannot manage doticca.com —
-  re-authenticate that account, then run this script.
+  Requires Cloudflare CLI auth for the account that owns the doticca.com zone.
 #>
 param(
   [string]$ZoneName = "doticca.com",

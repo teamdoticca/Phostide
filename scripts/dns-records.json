@@ -1,6 +1,6 @@
 {
   "zone": "doticca.com",
-  "note": "Apply with the Cloudflare account that owns doticca.com (not the intale.net-only session). Run scripts/setup-dns.ps1 after cf auth.",
+  "note": "Apply with the Cloudflare account that owns doticca.com. Run scripts/setup-dns.ps1 after cf auth.",
   "records": [
     {
       "type": "TXT",
