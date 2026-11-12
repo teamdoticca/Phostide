@@ -28,13 +28,13 @@ const cards = [
     href: "/docs/install",
     icon: IconDownload,
     title: "Install & run",
-    body: "Setup.exe, portable zip, tray menu, Settings, uninstall.",
+    body: "Setup.exe, portable zip, tray menu, multi-monitor Settings, uninstall.",
   },
   {
     href: "/docs/themes",
     icon: IconPalette,
     title: "Themes",
-    body: "Five looks, intensity, and how to Apply from Settings.",
+    body: "Five looks, per-monitor intensity, and how to Apply from Settings.",
   },
   {
     href: "/docs/oled",

@@ -11,9 +11,13 @@ Paint the real Windows 11 taskbar background (`Rectangle#BackgroundFill`) with O
 3. Effect engine renders into a `CompositionDrawingSurface` and assigns a `CompositionSurfaceBrush` as the Fill.
 4. On host exit/crash, TAP restores original brushes.
 
+## Multi-monitor
+
+Settings → **Monitors** toggles each display on/off. **Taskbar** scopes theme/intensity to **All** or a single monitor. Host builds ThemeCommand **v4** slots (device hash + theme/intensity + enabled); TAP maps each `BackgroundFill` to its monitor and paints or unbinds per slot. Rendering stays app-global on the System tab.
+
 ## Rendering
 
-Settings expose **Auto / GPU / CPU**. Auto prefers D3D11 GPU paint (`Themes.hlsl`) and falls back to CPU. GPU is smoother; CPU is the safe fallback when D3D11 cannot start.
+Settings → **System** exposes **Auto / GPU / CPU** for every bar. Auto prefers D3D11 GPU paint (`Themes.hlsl`) and falls back to CPU. GPU is smoother; CPU is the safe fallback when D3D11 cannot start.
 
 **ThemeLab** (`ThemeLab.exe`) compiles and previews `Themes.hlsl` without injecting into Explorer — use it for GPU theme iteration. Live taskbar verification still goes through `Phostide.exe` + TAP.
 

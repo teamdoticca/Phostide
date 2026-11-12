@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include <windows.h>
 
 namespace phostide {
@@ -19,10 +21,24 @@ struct TaskbarGeom {
   bool vertical = false;
 };
 
+struct TaskbarTray {
+  HWND hwnd = nullptr;
+  TaskbarGeom geom{};
+};
+
 // Primary taskbar via SHAppBarMessage.
 TaskbarGeom QueryPrimaryTaskbarGeom();
 
+TaskbarGeom GeomFromTrayHwnd(HWND hwnd);
+
+// Shell_TrayWnd + all Shell_SecondaryTrayWnd.
+std::vector<TaskbarTray> EnumerateTaskbarTrays();
+
 // Best-effort match for a BackgroundFill sized w×h (XAML DIPs ≈ px).
-TaskbarGeom ResolveTaskbarGeomForSize(int width, int height);
+// skippedHwnds: trays already claimed by another visual (same-size monitors).
+TaskbarGeom ResolveTaskbarGeomForSize(int width, int height,
+                                      const HWND* skippedHwnds = nullptr,
+                                      size_t skippedCount = 0,
+                                      HWND* outHwnd = nullptr);
 
 }  // namespace phostide

@@ -1,5 +1,6 @@
 #include "TaskbarAppearanceService.h"
 
+#include "../Common/MonitorEnum.h"
 #include "GpuThemeRenderer.h"
 #include "PixelThemes.h"
 #include "TaskbarGeometry.h"
@@ -151,26 +152,50 @@ TaskbarAppearanceService& TaskbarAppearanceService::Instance() {
 
 void TaskbarAppearanceService::SignalBound() { SetBoundEvent(); }
 
-void TaskbarAppearanceService::RegisterBackground(wuxs::Shape const& shape) {
+void TaskbarAppearanceService::RegisterBackground(wuxs::Shape const& shape, HWND trayHwnd) {
   if (!shape) return;
   if (!dispatcher_) {
     dispatcher_ = wsys::DispatcherQueue::GetForCurrentThread();
   }
 
   TaskbarVisual* target = nullptr;
+  bool trayCorrected = false;
   {
     std::lock_guard lock(mutex_);
     for (auto& tv : taskbars_) {
-      if (tv.background == shape) return;
+      if (tv.background == shape) {
+        // Hit-test registration knows the real tray HWND; prefer it over size guess.
+        if (trayHwnd && tv.trayHwnd != trayHwnd) {
+          tv.trayHwnd = trayHwnd;
+          trayCorrected = true;
+          target = &tv;
+        }
+        if (!trayCorrected) return;
+        break;
+      }
     }
-    TaskbarVisual tv;
-    tv.background = shape;
-    try {
-      tv.originalFill = shape.Fill();
-    } catch (...) {
+    if (!trayCorrected) {
+      TaskbarVisual tv;
+      tv.background = shape;
+      tv.trayHwnd = trayHwnd;
+      try {
+        tv.originalFill = shape.Fill();
+      } catch (...) {
+      }
+      taskbars_.push_back(std::move(tv));
+      target = &taskbars_.back();
     }
-    taskbars_.push_back(std::move(tv));
-    target = &taskbars_.back();
+  }
+
+  if (trayCorrected && target) {
+    std::lock_guard lock(mutex_);
+    RefreshGeomAndBitmap(*target);
+    wchar_t line[192];
+    swprintf_s(line, L"tray hwnd corrected hash=%llu hwnd=%p",
+               static_cast<unsigned long long>(target->deviceHash),
+               static_cast<void*>(target->trayHwnd));
+    LogService(line);
+    return;
   }
 
   if (target && BindVisual(*target)) {
@@ -188,16 +213,54 @@ void TaskbarAppearanceService::RegisterBackground(wuxs::Shape const& shape) {
     boundCount_.fetch_add(1);
     SignalBound();
     EnsureUiTimer();
-    wchar_t geomLine[256];
+    wchar_t geomLine[320];
     swprintf_s(geomLine,
-               L"Bound fill paint=%dx%d edge=%s appbar=%dx%d vertical=%d",
+               L"Bound fill paint=%dx%d edge=%s appbar=%dx%d vertical=%d hash=%llu hwnd=%p",
                target->pixelWidth, target->pixelHeight, EdgeName(target->geom.edge),
-               target->geom.length, target->geom.thickness, target->geom.vertical ? 1 : 0);
+               target->geom.length, target->geom.thickness, target->geom.vertical ? 1 : 0,
+               static_cast<unsigned long long>(target->deviceHash),
+               static_cast<void*>(target->trayHwnd));
     LogService(geomLine);
   }
 }
 
 void TaskbarAppearanceService::UnregisterHandle(uint64_t) {}
+
+void TaskbarAppearanceService::RefreshDeviceHash(TaskbarVisual& tv) {
+  std::wstring name;
+  if (MonitorDeviceNameFromRect(tv.geom.rc, name)) {
+    tv.deviceHash = HashMonitorDeviceName(name);
+  } else {
+    tv.deviceHash = 0;
+  }
+}
+
+const MonitorPaintSlot* TaskbarAppearanceService::SlotFor(const TaskbarVisual& tv) const {
+  if (command_.apiVersion < 4 || command_.slotCount == 0 || tv.deviceHash == 0) {
+    return nullptr;
+  }
+  const uint32_t n = (std::min)(command_.slotCount, kMaxMonitorSlots);
+  for (uint32_t i = 0; i < n; ++i) {
+    if (command_.slots[i].deviceHash == tv.deviceHash) return &command_.slots[i];
+  }
+  return nullptr;
+}
+
+bool TaskbarAppearanceService::SlotEnabled(const TaskbarVisual& tv) const {
+  if (const auto* slot = SlotFor(tv)) return slot->enabled != 0;
+  return true;
+}
+
+void TaskbarAppearanceService::AppearanceFor(const TaskbarVisual& tv, ThemeId& theme,
+                                             uint32_t& intensity) const {
+  if (const auto* slot = SlotFor(tv)) {
+    theme = static_cast<ThemeId>(slot->theme);
+    intensity = slot->intensity;
+    return;
+  }
+  theme = static_cast<ThemeId>(command_.theme);
+  intensity = command_.intensity;
+}
 
 void TaskbarAppearanceService::Apply(const ThemeCommand& cmd) {
   {
@@ -205,7 +268,6 @@ void TaskbarAppearanceService::Apply(const ThemeCommand& cmd) {
     const auto prevMode = static_cast<RenderMode>(command_.renderMode);
     command_ = cmd;
     const auto mode = static_cast<RenderMode>(command_.renderMode);
-    // Forced GPU (or Auto after a mode change) may retry device init.
     if (mode != prevMode && mode != RenderMode::Cpu) {
       gpuFailedThisSession_ = false;
     }
@@ -215,10 +277,18 @@ void TaskbarAppearanceService::Apply(const ThemeCommand& cmd) {
   }
   {
     wchar_t line[192];
-    swprintf_s(line, L"Apply enabled=%u paused=%u theme=%u intensity=%u renderMode=%s",
-               cmd.enabled ? 1u : 0u, cmd.paused ? 1u : 0u, cmd.theme, cmd.intensity,
-               RenderModeName(static_cast<RenderMode>(cmd.renderMode)));
+    swprintf_s(line, L"Apply enabled=%u paused=%u slots=%u theme=%u intensity=%u",
+               cmd.enabled ? 1u : 0u, cmd.paused ? 1u : 0u, cmd.slotCount, cmd.theme,
+               cmd.intensity);
     LogService(line);
+    const uint32_t n = (std::min)(cmd.slotCount, kMaxMonitorSlots);
+    for (uint32_t i = 0; i < n; ++i) {
+      wchar_t slotLine[160];
+      swprintf_s(slotLine, L"  slot[%u] hash=%llu theme=%u intensity=%u enabled=%u", i,
+                 static_cast<unsigned long long>(cmd.slots[i].deviceHash), cmd.slots[i].theme,
+                 cmd.slots[i].intensity, cmd.slots[i].enabled);
+      LogService(slotLine);
+    }
   }
   if (!dispatcher_) return;
 
@@ -236,8 +306,15 @@ void TaskbarAppearanceService::Apply(const ThemeCommand& cmd) {
     std::lock_guard lock(mutex_);
     for (auto& tv : taskbars_) {
       if (!tv.background) continue;
-      // Rebind so Auto/GPU/CPU mode switches take effect on live fills.
+      RefreshGeomAndBitmap(tv);
       const bool wasBound = tv.bound;
+      if (!SlotEnabled(tv)) {
+        if (wasBound) {
+          UnbindVisual(tv);
+          boundCount_.fetch_sub(1);
+        }
+        continue;
+      }
       if (wasBound) UnbindVisual(tv);
       if (BindVisual(tv)) {
         if (!wasBound) boundCount_.fetch_add(1);
@@ -269,14 +346,14 @@ void TaskbarAppearanceService::RestoreAll() {
   LogService(L"RestoreAll done");
 }
 
-bool TaskbarAppearanceService::WantGpu() const {
+bool TaskbarAppearanceService::WantGpu(const TaskbarVisual& /*tv*/) const {
   if (gpuFailedThisSession_) return false;
   const auto mode = static_cast<RenderMode>(command_.renderMode);
   return mode == RenderMode::Auto || mode == RenderMode::Gpu;
 }
 
 bool TaskbarAppearanceService::TryEnableGpuFor(TaskbarVisual& tv) {
-  if (!WantGpu() || !tv.background || tv.pixelWidth < 1 || tv.pixelHeight < 1) {
+  if (!WantGpu(tv) || !tv.background || tv.pixelWidth < 1 || tv.pixelHeight < 1) {
     return false;
   }
   if (!gpu_.EnsureDevice()) {
@@ -297,7 +374,22 @@ void TaskbarAppearanceService::RefreshGeomAndBitmap(TaskbarVisual& tv) {
   if (!tv.background) return;
   int measuredW = 0, measuredH = 0;
   MeasureShape(tv.background, measuredW, measuredH);
-  tv.geom = ResolveTaskbarGeomForSize(measuredW, measuredH);
+
+  if (tv.trayHwnd && IsWindow(tv.trayHwnd)) {
+    tv.geom = GeomFromTrayHwnd(tv.trayHwnd);
+  } else {
+    HWND skipped[kMaxMonitorSlots]{};
+    size_t skippedCount = 0;
+    for (const auto& other : taskbars_) {
+      if (&other == &tv || !other.trayHwnd) continue;
+      if (skippedCount < kMaxMonitorSlots) skipped[skippedCount++] = other.trayHwnd;
+    }
+    HWND matched = nullptr;
+    tv.geom =
+        ResolveTaskbarGeomForSize(measuredW, measuredH, skipped, skippedCount, &matched);
+    if (matched) tv.trayHwnd = matched;
+  }
+  RefreshDeviceHash(tv);
 
   // Win11 often reports BackgroundFill as a tiny stub (e.g. 8×8) that the shell
   // then non-uniformly scales across the bar. Painting into that stub + Stretch::Fill
@@ -338,7 +430,7 @@ void TaskbarAppearanceService::RefreshGeomAndBitmap(TaskbarVisual& tv) {
   // Cap the long axis so CPU theme painters stay cheap; ImageBrush Stretch::Fill
   // upscales to the real BackgroundFill. Thickness keeps full detail.
   // GPU paints at native measured/DPI size (hard clamp 7680 above) — no 2560 cap.
-  if (!WantGpu()) {
+  if (!WantGpu(tv)) {
     constexpr int kMaxCpuPaintAlongPx = 720;
     if (h > w * 3 / 2) {
       if (h > kMaxCpuPaintAlongPx) h = kMaxCpuPaintAlongPx;
@@ -373,6 +465,7 @@ bool TaskbarAppearanceService::BindVisual(TaskbarVisual& tv) {
   if (!tv.background || tv.bound) return tv.bound;
   try {
     RefreshGeomAndBitmap(tv);
+    if (!SlotEnabled(tv)) return false;
     tv.bound = true;
 
     if (TryEnableGpuFor(tv)) {
@@ -425,10 +518,14 @@ void TaskbarAppearanceService::PaintVisualCpu(TaskbarVisual& tv, float timeSecon
     uint8_t* data = BufferData(buffer);
     if (!data) return;
 
+    ThemeId theme{};
+    uint32_t intensity = 45;
+    AppearanceFor(tv, theme, intensity);
+
     const bool vertical = tv.pixelHeight > tv.pixelWidth * 3 / 2;
     PaintContext ctx;
-    ctx.theme = static_cast<ThemeId>(command_.theme);
-    ctx.intensity = command_.intensity / 100.f;
+    ctx.theme = theme;
+    ctx.intensity = intensity / 100.f;
     ctx.timeSeconds = timeSeconds;
     ctx.vertical = vertical;
     ctx.length = vertical ? tv.pixelHeight : tv.pixelWidth;
@@ -446,7 +543,11 @@ void TaskbarAppearanceService::PaintVisualCpu(TaskbarVisual& tv, float timeSecon
 }
 
 void TaskbarAppearanceService::PaintVisual(TaskbarVisual& tv, float timeSeconds) {
-  if (!tv.bound || !command_.enabled || command_.paused) return;
+  if (!tv.bound || !command_.enabled || command_.paused || !SlotEnabled(tv)) return;
+
+  ThemeId theme{};
+  uint32_t intensity = 45;
+  AppearanceFor(tv, theme, intensity);
 
   const bool vertical = tv.pixelHeight > tv.pixelWidth * 3 / 2;
   TaskbarEdge edge = TaskbarEdge::Bottom;
@@ -458,8 +559,8 @@ void TaskbarAppearanceService::PaintVisual(TaskbarVisual& tv, float timeSeconds)
 
   if (tv.gpuActive) {
     const bool ok =
-        gpu_.Paint(tv.background, static_cast<ThemeId>(command_.theme),
-                   command_.intensity / 100.f, timeSeconds, edge, tv.pixelWidth, tv.pixelHeight);
+        gpu_.Paint(tv.background, theme, intensity / 100.f, timeSeconds, edge, tv.pixelWidth,
+                   tv.pixelHeight);
     if (ok) return;
     // Fall back to CPU for this visual for the rest of the session.
     tv.gpuActive = false;
@@ -505,11 +606,18 @@ void TaskbarAppearanceService::EnsureUiTimer() {
   }
   int intervalMs = 18;  // ~55 Hz
   if (!anyGpu) {
-    const auto theme = static_cast<ThemeId>(command_.theme);
-    intervalMs = (theme == ThemeId::Aurora || theme == ThemeId::SeaWaves ||
-                  theme == ThemeId::Weather)
-                     ? 110
-                     : 90;
+    intervalMs = 90;
+    for (const auto& tv : taskbars_) {
+      if (!tv.bound) continue;
+      ThemeId theme{};
+      uint32_t intensity = 45;
+      AppearanceFor(tv, theme, intensity);
+      if (theme == ThemeId::Aurora || theme == ThemeId::SeaWaves ||
+          theme == ThemeId::Weather) {
+        intervalMs = 110;
+        break;
+      }
+    }
   }
   try {
     timer_.Interval(std::chrono::milliseconds{intervalMs});
@@ -531,6 +639,14 @@ void TaskbarAppearanceService::TickUi() {
   const float t =
       std::chrono::duration<float>(std::chrono::steady_clock::now() - start_).count();
   for (auto& tv : taskbars_) {
+    if (!tv.background) continue;
+    if (!SlotEnabled(tv)) {
+      if (tv.bound) {
+        UnbindVisual(tv);
+        boundCount_.fetch_sub(1);
+      }
+      continue;
+    }
     if (tv.bound) PaintVisual(tv, t);
   }
 }

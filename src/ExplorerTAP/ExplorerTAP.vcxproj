@@ -45,6 +45,7 @@
     <ClInclude Include="TaskbarGeometry.h" />
     <ClInclude Include="TapSite.h" />
     <ClInclude Include="VisualTreeWatcher.h" />
+    <ClInclude Include="..\Common\MonitorEnum.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
@@ -56,6 +57,7 @@
     <ClCompile Include="TaskbarGeometry.cpp" />
     <ClCompile Include="XamlDiagnostics.cpp" />
     <ClCompile Include="CompositionFallback.cpp" />
+    <ClCompile Include="..\Common\MonitorEnum.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ExplorerTAP.def" />

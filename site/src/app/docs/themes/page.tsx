@@ -44,8 +44,11 @@ export default function ThemesPage() {
           </p>
           <ol className="mt-3 list-decimal space-y-2 pl-5 text-soft">
             <li>Right‑click the tray icon › Settings…</li>
-            <li>On the Taskbar tab, pick a theme and set intensity.</li>
-            <li>Click Apply — the live bar updates immediately.</li>
+            <li>
+              On the Taskbar tab, choose Apply to All or a monitor number, then
+              pick theme and intensity.
+            </li>
+            <li>Click Apply — the live bar(s) update immediately.</li>
           </ol>
           <p className="mt-4 text-soft">
             Default intensity is 45%. Lower keeps OLED quieter; higher makes
@@ -91,6 +94,10 @@ export default function ThemesPage() {
             <li>
               Tray › Enable Phostide unchecks to pause painting without losing
               your settings.
+            </li>
+            <li>
+              Use the Monitors tab to leave one display stock while theming the
+              others — or set a different theme per bar from Taskbar › Apply to.
             </li>
           </ul>
         </div>

@@ -108,6 +108,11 @@ export default function OledPage() {
               For the darkest everyday look, start with Space or Aurora and keep
               intensity modest.
             </li>
+            <li>
+              On multi‑monitor setups you can theme only the OLED panel (Monitors
+              tab) or use a quieter theme/intensity on that display alone (Taskbar
+              › Apply to that monitor).
+            </li>
           </ul>
         </div>
 

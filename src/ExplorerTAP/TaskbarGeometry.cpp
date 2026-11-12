@@ -1,6 +1,7 @@
 #include "TaskbarGeometry.h"
 
 #include <algorithm>
+#include <climits>
 #include <cmath>
 
 #include <shellapi.h>
@@ -30,7 +31,6 @@ TaskbarGeom FromRect(RECT rc, TaskbarEdge edgeHint) {
     if (edgeHint == TaskbarEdge::Left || edgeHint == TaskbarEdge::Right) {
       g.edge = edgeHint;
     } else {
-      // Infer from screen position.
       g.edge = (rc.left <= 8) ? TaskbarEdge::Left : TaskbarEdge::Right;
     }
   } else {
@@ -51,6 +51,14 @@ int SizeScore(const TaskbarGeom& g, int width, int height) {
   return dw + dh;
 }
 
+bool IsSkipped(HWND hwnd, const HWND* skippedHwnds, size_t skippedCount) {
+  if (!hwnd || !skippedHwnds || skippedCount == 0) return false;
+  for (size_t i = 0; i < skippedCount; ++i) {
+    if (skippedHwnds[i] == hwnd) return true;
+  }
+  return false;
+}
+
 }  // namespace
 
 TaskbarGeom QueryPrimaryTaskbarGeom() {
@@ -60,43 +68,75 @@ TaskbarGeom QueryPrimaryTaskbarGeom() {
     return FromRect(abd.rc, EdgeFromAppBar(abd.uEdge));
   }
   if (HWND tray = FindWindowW(L"Shell_TrayWnd", nullptr)) {
-    RECT rc{};
-    if (GetWindowRect(tray, &rc)) {
-      return FromRect(rc, TaskbarEdge::Bottom);
-    }
+    return GeomFromTrayHwnd(tray);
   }
   TaskbarGeom fallback;
   fallback.length = GetSystemMetrics(SM_CXSCREEN);
   fallback.thickness = 48;
   fallback.edge = TaskbarEdge::Bottom;
-  fallback.rc = {0, GetSystemMetrics(SM_CYSCREEN) - 48, fallback.length, GetSystemMetrics(SM_CYSCREEN)};
+  fallback.rc = {0, GetSystemMetrics(SM_CYSCREEN) - 48, fallback.length,
+                 GetSystemMetrics(SM_CYSCREEN)};
   return fallback;
 }
 
-TaskbarGeom ResolveTaskbarGeomForSize(int width, int height) {
-  TaskbarGeom best = QueryPrimaryTaskbarGeom();
-  int bestScore = SizeScore(best, width, height);
-
-  auto consider = [&](HWND hwnd, TaskbarEdge hint) {
-    if (!hwnd) return;
-    RECT rc{};
-    if (!GetWindowRect(hwnd, &rc)) return;
-    TaskbarGeom g = FromRect(rc, hint);
-    const int score = SizeScore(g, width, height);
-    if (score < bestScore) {
-      bestScore = score;
-      best = g;
+TaskbarGeom GeomFromTrayHwnd(HWND hwnd) {
+  RECT rc{};
+  if (!hwnd || !GetWindowRect(hwnd, &rc)) {
+    return QueryPrimaryTaskbarGeom();
+  }
+  TaskbarEdge hint = TaskbarEdge::Bottom;
+  wchar_t cls[64]{};
+  if (GetClassNameW(hwnd, cls, 64) && _wcsicmp(cls, L"Shell_TrayWnd") == 0) {
+    APPBARDATA abd{};
+    abd.cbSize = sizeof(abd);
+    if (SHAppBarMessage(ABM_GETTASKBARPOS, &abd)) {
+      hint = EdgeFromAppBar(abd.uEdge);
+      // Prefer AppBar rect for primary — more accurate than the outer HWND.
+      return FromRect(abd.rc, hint);
     }
-  };
+  }
+  return FromRect(rc, hint);
+}
 
-  consider(FindWindowW(L"Shell_TrayWnd", nullptr), best.edge);
+std::vector<TaskbarTray> EnumerateTaskbarTrays() {
+  std::vector<TaskbarTray> out;
+  if (HWND primary = FindWindowW(L"Shell_TrayWnd", nullptr)) {
+    out.push_back(TaskbarTray{primary, GeomFromTrayHwnd(primary)});
+  }
   HWND secondary = nullptr;
   while ((secondary = FindWindowExW(nullptr, secondary, L"Shell_SecondaryTrayWnd", nullptr))) {
-    // Infer edge from rect vs monitor work area later; size match is enough for now.
-    consider(secondary, TaskbarEdge::Bottom);
+    out.push_back(TaskbarTray{secondary, GeomFromTrayHwnd(secondary)});
+  }
+  return out;
+}
+
+TaskbarGeom ResolveTaskbarGeomForSize(int width, int height, const HWND* skippedHwnds,
+                                      size_t skippedCount, HWND* outHwnd) {
+  if (outHwnd) *outHwnd = nullptr;
+
+  const auto trays = EnumerateTaskbarTrays();
+  TaskbarGeom best{};
+  HWND bestHwnd = nullptr;
+  int bestScore = INT_MAX;
+  bool found = false;
+
+  for (const auto& tray : trays) {
+    if (!tray.hwnd || IsSkipped(tray.hwnd, skippedHwnds, skippedCount)) continue;
+    const int score = SizeScore(tray.geom, width, height);
+    // Prefer unused trays even on a score tie (identical monitor widths).
+    if (!found || score < bestScore) {
+      found = true;
+      bestScore = score;
+      best = tray.geom;
+      bestHwnd = tray.hwnd;
+    }
   }
 
-  // If XAML size strongly disagrees with matched window, trust aspect ratio.
+  if (!found) {
+    best = QueryPrimaryTaskbarGeom();
+    bestHwnd = FindWindowW(L"Shell_TrayWnd", nullptr);
+  }
+
   if (height > width * 3 / 2) {
     best.vertical = true;
     best.length = (std::max)(height, best.length);
@@ -113,6 +153,7 @@ TaskbarGeom ResolveTaskbarGeomForSize(int width, int height) {
     }
   }
 
+  if (outHwnd) *outHwnd = bestHwnd;
   return best;
 }
 

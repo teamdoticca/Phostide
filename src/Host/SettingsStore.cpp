@@ -132,6 +132,86 @@ std::string EscapeJson(const std::string& s) {
   return out;
 }
 
+std::string ReadJsonStringValue(const std::string& s, size_t& i) {
+  while (i < s.size() &&
+         (s[i] == ' ' || s[i] == '\t' || s[i] == '\r' || s[i] == '\n')) {
+    ++i;
+  }
+  if (i >= s.size() || s[i] != '"') return {};
+  ++i;
+  std::string out;
+  while (i < s.size()) {
+    const char c = s[i++];
+    if (c == '\\' && i < s.size()) {
+      out.push_back(s[i++]);
+    } else if (c == '"') {
+      return out;
+    } else {
+      out.push_back(c);
+    }
+  }
+  return {};
+}
+
+void ParseDisabledMonitors(const std::string& json, Settings& s) {
+  const auto pos = json.find("\"disabledMonitors\"");
+  if (pos == std::string::npos) return;
+  const auto bracket = json.find('[', pos);
+  if (bracket == std::string::npos) return;
+  const auto end = json.find(']', bracket);
+  if (end == std::string::npos) return;
+  size_t i = bracket + 1;
+  while (i < end) {
+    const std::string name = ReadJsonStringValue(json, i);
+    if (!name.empty()) s.disabledMonitors.push_back(Utf8ToWide(name));
+    while (i < end && (json[i] == ',' || json[i] == ' ' || json[i] == '\n' ||
+                       json[i] == '\r' || json[i] == '\t')) {
+      ++i;
+    }
+  }
+}
+
+void ParseMonitorSettings(const std::string& json, Settings& s) {
+  const auto pos = json.find("\"monitorSettings\"");
+  if (pos == std::string::npos) return;
+  const auto brace = json.find('{', pos);
+  if (brace == std::string::npos) return;
+  int depth = 0;
+  size_t end = brace;
+  for (; end < json.size(); ++end) {
+    if (json[end] == '{') ++depth;
+    else if (json[end] == '}') {
+      --depth;
+      if (depth == 0) break;
+    }
+  }
+  if (depth != 0) return;
+  size_t i = brace + 1;
+  while (i < end) {
+    while (i < end && (json[i] == ' ' || json[i] == '\n' || json[i] == '\r' ||
+                       json[i] == '\t' || json[i] == ',')) {
+      ++i;
+    }
+    if (i >= end) break;
+    const std::string key = ReadJsonStringValue(json, i);
+    if (key.empty()) break;
+    const auto colon = json.find(':', i);
+    if (colon == std::string::npos || colon >= end) break;
+    const auto objStart = json.find('{', colon);
+    if (objStart == std::string::npos || objStart >= end) break;
+    const auto objEnd = json.find('}', objStart);
+    if (objEnd == std::string::npos || objEnd > end) break;
+    const std::string obj = json.substr(objStart, objEnd - objStart + 1);
+    MonitorAppearanceEntry entry;
+    entry.deviceName = Utf8ToWide(key);
+    entry.appearance.theme = ThemeFromIndex(ParseInt(obj, "theme", static_cast<int>(s.theme)));
+    entry.appearance.intensity = ParseInt(obj, "intensity", s.intensity);
+    // Legacy per-monitor renderMode keys are ignored — rendering is app-global.
+    s.monitorSettings.push_back(std::move(entry));
+    i = objEnd + 1;
+  }
+}
+
 }  // namespace
 
 std::wstring SettingsDirectory() {
@@ -165,6 +245,8 @@ Settings LoadSettings() {
   s.lastUpdateCheckUtc = ParseInt64(json, "lastUpdateCheckUtc", 0);
   s.pendingUpdateTag = Utf8ToWide(ParseUtf8String(json, "pendingUpdateTag"));
   s.pendingSetupUrl = Utf8ToWide(ParseUtf8String(json, "pendingSetupUrl"));
+  ParseDisabledMonitors(json, s);
+  ParseMonitorSettings(json, s);
   return s;
 }
 
@@ -185,7 +267,23 @@ void SaveSettings(const Settings& settings) {
       << "  \"pendingUpdateTag\": \""
       << EscapeJson(WideToUtf8(settings.pendingUpdateTag)) << "\",\n"
       << "  \"pendingSetupUrl\": \""
-      << EscapeJson(WideToUtf8(settings.pendingSetupUrl)) << "\"\n"
+      << EscapeJson(WideToUtf8(settings.pendingSetupUrl)) << "\",\n"
+      << "  \"disabledMonitors\": [";
+  for (size_t i = 0; i < settings.disabledMonitors.size(); ++i) {
+    if (i) out << ", ";
+    out << "\"" << EscapeJson(WideToUtf8(settings.disabledMonitors[i])) << "\"";
+  }
+  out << "],\n"
+      << "  \"monitorSettings\": {\n";
+  for (size_t i = 0; i < settings.monitorSettings.size(); ++i) {
+    const auto& e = settings.monitorSettings[i];
+    if (i) out << ",\n";
+    out << "    \"" << EscapeJson(WideToUtf8(e.deviceName)) << "\": {"
+        << "\"theme\": " << static_cast<int>(e.appearance.theme) << ", "
+        << "\"intensity\": " << e.appearance.intensity << "}";
+  }
+  if (!settings.monitorSettings.empty()) out << "\n";
+  out << "  }\n"
       << "}\n";
   SetStartWithWindows(settings.startWithWindows);
 }

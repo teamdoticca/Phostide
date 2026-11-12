@@ -46,7 +46,8 @@ const approaches = [
     name: "Phostide",
     how: "Paints motion into Explorer’s real taskbar BackgroundFill — not a floating window.",
     burnIn: "Moves the fill so the background isn’t one fixed bright block. Icons/tray stay Windows-drawn.",
-    usability: "Bar stays visible; themes switch from the tray; Exit restores stock brushes.",
+    usability:
+      "Bar stays visible; themes switch from the tray; per-monitor on/off and appearance; Exit restores stock brushes.",
     fit: "When you want the bar usable and themed, not hidden or covered.",
   },
 ];
@@ -231,8 +232,9 @@ export default function ComparePage() {
           </h2>
           <p className="mt-3 max-w-xl text-soft">
             Install the signed Setup.exe (per‑user, no admin), open Settings from
-            the tray, pick a theme, Apply. Start with Space or Aurora at modest
-            intensity if you want the quietest OLED look.
+            the tray, pick a theme (All monitors or one display), Apply. Use the
+            Monitors tab to leave a panel stock. Start with Space or Aurora at
+            modest intensity if you want the quietest OLED look.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <LatestDownload className="btn-ember">

@@ -29,7 +29,9 @@ struct TaskbarVisual {
   winrt::Windows::UI::Xaml::Media::Brush originalFill{nullptr};
   winrt::Windows::UI::Xaml::Media::Imaging::WriteableBitmap bitmap{nullptr};
   winrt::Windows::UI::Xaml::Media::ImageBrush imageBrush{nullptr};
+  HWND trayHwnd = nullptr;  // Shell_TrayWnd / Shell_SecondaryTrayWnd
   TaskbarGeom geom{};
+  uint64_t deviceHash = 0;
   int pixelWidth = 0;
   int pixelHeight = 0;
   bool bound = false;
@@ -40,7 +42,8 @@ class TaskbarAppearanceService {
  public:
   static TaskbarAppearanceService& Instance();
 
-  void RegisterBackground(winrt::Windows::UI::Xaml::Shapes::Shape const& shape);
+  void RegisterBackground(winrt::Windows::UI::Xaml::Shapes::Shape const& shape,
+                          HWND trayHwnd = nullptr);
   void UnregisterHandle(uint64_t unusedHandle);
   void Apply(const ThemeCommand& cmd);
   void RestoreAll();
@@ -60,8 +63,12 @@ class TaskbarAppearanceService {
   void RefreshGeomAndBitmap(TaskbarVisual& tv);
   void PaintVisual(TaskbarVisual& tv, float timeSeconds);
   void PaintVisualCpu(TaskbarVisual& tv, float timeSeconds);
-  bool WantGpu() const;
+  bool WantGpu(const TaskbarVisual& tv) const;
   bool TryEnableGpuFor(TaskbarVisual& tv);
+  const MonitorPaintSlot* SlotFor(const TaskbarVisual& tv) const;
+  bool SlotEnabled(const TaskbarVisual& tv) const;
+  void AppearanceFor(const TaskbarVisual& tv, ThemeId& theme, uint32_t& intensity) const;
+  void RefreshDeviceHash(TaskbarVisual& tv);
   void SignalBound();
 
   std::mutex mutex_;

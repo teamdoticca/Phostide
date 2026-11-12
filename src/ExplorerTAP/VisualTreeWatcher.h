@@ -38,7 +38,8 @@ struct VisualTreeWatcher : winrt::implements<VisualTreeWatcher, IVisualTreeServi
     return obj.as<T>();
   }
 
-  void TryRegisterShape(winrt::Windows::UI::Xaml::Shapes::Shape const& shape);
+  void TryRegisterShape(winrt::Windows::UI::Xaml::Shapes::Shape const& shape,
+                        HWND trayHwnd = nullptr);
   void ScanExistingViaHitTest();
   void Log(const wchar_t* msg);
 

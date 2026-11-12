@@ -121,9 +121,9 @@ export default async function InstallPage() {
                 themes on or off without quitting
               </li>
               <li>
-                <span className="text-zinc-100">Settings…</span> — themes,
-                intensity, rendering (Auto / GPU / CPU), Start with Windows,
-                updates
+                <span className="text-zinc-100">Settings…</span> — per‑monitor
+                themes, intensity, rendering, which displays are active, Start
+                with Windows, updates
               </li>
               <li>
                 <span className="text-zinc-100">Exit</span> — quit and restore
@@ -134,20 +134,29 @@ export default async function InstallPage() {
               <p className="font-medium text-zinc-100">In Settings</p>
               <ul className="mt-3 list-disc space-y-2 pl-5">
                 <li>
-                  <span className="text-zinc-100">Taskbar</span> tab — live
-                  preview, pick a theme, set intensity (0–100%), then{" "}
-                  <span className="text-zinc-100">Apply</span>
+                  <span className="text-zinc-100">Taskbar</span> tab — scope{" "}
+                  <span className="text-zinc-100">All</span> or a specific
+                  monitor, then set theme and intensity (0–100%). Live preview;
+                  click <span className="text-zinc-100">Apply</span> to commit
+                </li>
+                <li>
+                  <span className="text-zinc-100">Monitors</span> tab — turn
+                  individual displays on or off (default: all on). Off displays
+                  keep a stock Windows taskbar
                 </li>
                 <li>
                   <span className="text-zinc-100">System</span> tab —{" "}
-                  <span className="text-zinc-100">RENDERING</span> (Auto
-                  default, GPU, or CPU), Start with Windows, check for updates
+                  <span className="text-zinc-100">RENDERING</span> (Auto / GPU /
+                  CPU, shared by all bars), Start with Windows, check for updates
                 </li>
               </ul>
               <p className="mt-3">
-                Auto uses D3D11 GPU paint when it can and falls back to CPU.
-                Preview changes are draft until you click Apply. Closing without
-                Apply keeps your previous look.
+                Apply under All writes the draft theme/intensity to every
+                attached display (and the fallback for newly plugged monitors).
+                Apply under a monitor number writes only that display. Rendering
+                is always app‑wide. Auto uses D3D11 GPU paint when it can and
+                falls back to CPU. Closing without Apply keeps your previous
+                look.
               </p>
             </div>
           </section>
@@ -170,10 +179,13 @@ export default async function InstallPage() {
           <section id="settings-file" className="mt-14">
             <h2 className="text-2xl font-semibold">Settings file</h2>
             <p className="mt-3 text-soft">
-              Theme, intensity, <code className="text-zinc-100">renderMode</code>{" "}
-              (Auto / GPU / CPU), Start with Windows, and a few runtime flags are
-              saved here. Delete the file to reset to defaults (Rainbow, 45%
-              intensity, Auto rendering).
+              Fallback theme, intensity, and{" "}
+              <code className="text-zinc-100">renderMode</code> (Auto / GPU /
+              CPU), plus <code className="text-zinc-100">monitorSettings</code>,{" "}
+              <code className="text-zinc-100">disabledMonitors</code>, Start with
+              Windows, and a few runtime flags are saved here. Delete the file to
+              reset to defaults (Rainbow, 45% intensity, Auto rendering, all
+              monitors active).
             </p>
             <div className="mt-4 rounded-lg border border-line bg-panel px-5 py-4 font-mono text-sm">
               %APPDATA%\Phostide\settings.json

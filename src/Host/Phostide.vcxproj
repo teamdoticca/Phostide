@@ -48,6 +48,7 @@
     <ClInclude Include="UpdateCheck.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="..\Common\PhostideCommon.h" />
+    <ClInclude Include="..\Common\MonitorEnum.h" />
     <ClInclude Include="..\ExplorerTAP\PixelThemes.h" />
   </ItemGroup>
   <ItemGroup>
@@ -57,6 +58,7 @@
     <ClCompile Include="SettingsWindow.cpp" />
     <ClCompile Include="UpdateCheck.cpp" />
     <ClCompile Include="..\Common\TaskbarAccent.cpp" />
+    <ClCompile Include="..\Common\MonitorEnum.cpp" />
     <ClCompile Include="..\ExplorerTAP\PixelThemes.cpp" />
   </ItemGroup>
   <ItemGroup>

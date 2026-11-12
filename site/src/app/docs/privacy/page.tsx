@@ -61,9 +61,10 @@ export default function PrivacyPage() {
               <code className="rounded bg-panel px-1.5 py-0.5 font-mono text-sm text-zinc-100">
                 %APPDATA%\Phostide\settings.json
               </code>
-              . That file holds your theme, intensity, Start with Windows
-              preference, enable flag, and (if any) pending update tag/URL from
-              a check you already ran. Delete it anytime to reset.
+              . That file holds fallback theme/intensity/render mode, optional
+              per‑monitor appearance and disabled‑monitor lists, Start with
+              Windows preference, enable flag, and (if any) pending update
+              tag/URL from a check you already ran. Delete it anytime to reset.
             </p>
             <p className="mt-3">
               Start with Windows also writes a value under the current‑user Run

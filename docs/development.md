@@ -23,7 +23,7 @@ Host `InjectExplorerTap` finds `Shell_TrayWnd`, loads `ExplorerTAP.dll` via `WH_
 | 3 | Space | Forward cinematic nebula → stars (no rewind / no start fade-in) |
 | 4 | Aurora | Green→teal→violet curtains, standing undulation |
 
-Settings file: `%APPDATA%\Phostide\settings.json` (`theme`, `intensity`, `enabled`, …).
+Settings file: `%APPDATA%\Phostide\settings.json` (`theme` / `intensity` fallbacks, app-global `renderMode`, `monitorSettings`, `disabledMonitors`, `enabled`, …). ThemeCommand v4 sends per-monitor paint slots (theme, intensity, enabled) plus a shared `renderMode` to ExplorerTAP.
 
 Paint entry points live in `src/ExplorerTAP/PixelThemes.cpp` (`PaintRainbow`, `PaintSeaWavesGerstner`, `PaintWeather`, `PaintSpace`, `PaintAurora`). Dispatch: `PaintThemePixels`.
 

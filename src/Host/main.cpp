@@ -4,6 +4,7 @@
 #include "UpdateCheck.h"
 #include "resource.h"
 #include "../Common/PhostideCommon.h"
+#include "../Common/MonitorEnum.h"
 #include "../Common/TaskbarAccent.h"
 
 #include <shellapi.h>
@@ -58,6 +59,20 @@ phostide::ThemeCommand MakeCommand() {
   cmd.paused =
       (g_settings.pauseWhenLocked && g_sessionLocked && g_settings.enabled) ? 1u : 0u;
   cmd.renderMode = static_cast<uint32_t>(g_settings.renderMode);
+
+  const auto monitors = phostide::EnumerateAttachedMonitors();
+  cmd.slotCount = 0;
+  for (const auto& mon : monitors) {
+    if (cmd.slotCount >= phostide::kMaxMonitorSlots) break;
+    const auto appearance =
+        phostide::ResolveMonitorAppearance(g_settings, mon.deviceName);
+    auto& slot = cmd.slots[cmd.slotCount++];
+    slot.deviceHash = mon.deviceHash;
+    slot.theme = static_cast<uint32_t>(appearance.theme);
+    slot.intensity = static_cast<uint32_t>(appearance.intensity);
+    slot.enabled =
+        phostide::IsMonitorDisabled(g_settings, mon.deviceName) ? 0u : 1u;
+  }
   return cmd;
 }
 

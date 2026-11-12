@@ -1,5 +1,6 @@
 #include "SettingsWindow.h"
 #include "resource.h"
+#include "../Common/MonitorEnum.h"
 #include "../ExplorerTAP/PixelThemes.h"
 
 #include <commctrl.h>
@@ -8,6 +9,7 @@
 
 #include <algorithm>
 #include <string>
+#include <vector>
 
 #pragma comment(lib, "comctl32.lib")
 #pragma comment(lib, "dwmapi.lib")
@@ -19,7 +21,7 @@ namespace {
 constexpr wchar_t kClassName[] = L"PhostideSettings";
 
 constexpr int kClientW = 560;
-constexpr int kClientH = 700;
+constexpr int kClientH = 740;
 constexpr int kPreviewH = 44;
 constexpr UINT_PTR ID_PREVIEW_TIMER = 77;
 constexpr UINT kPreviewIntervalMs = 50;
@@ -43,10 +45,18 @@ constexpr int IDC_PREVIEW_CAPTION = 1507;
 constexpr int IDC_PREVIEW = 1508;
 constexpr int IDC_PREVIEW_HINT = 1509;
 constexpr int IDC_TAB_TASKBAR = 1510;
-constexpr int IDC_TAB_SYSTEM = 1511;
-constexpr int IDC_GENERAL_CAPTION = 1512;
-constexpr int IDC_RENDER_CAPTION = 1513;
+constexpr int IDC_TAB_MONITORS = 1511;
+constexpr int IDC_TAB_SYSTEM = 1512;
+constexpr int IDC_GENERAL_CAPTION = 1513;
+constexpr int IDC_RENDER_CAPTION = 1514;
 constexpr int IDC_RENDER_BASE = 1520;  // +0 Auto, +1 GPU, +2 CPU
+constexpr int IDC_SCOPE_CAPTION = 1530;
+constexpr int IDC_SCOPE_BASE = 1540;  // +0 All, +1..N monitors
+constexpr int IDC_MONITORS_CAPTION = 1560;
+constexpr int IDC_MONITORS_HINT = 1561;
+constexpr int IDC_MONITOR_BASE = 1570;  // +0..N-1 toggle rows
+
+constexpr int kMaxScopeChips = 1 + static_cast<int>(kMaxMonitorSlots);  // All + 8
 
 constexpr COLORREF kVoid = RGB(0, 0, 0);
 constexpr COLORREF kScreen = RGB(17, 17, 17);
@@ -65,13 +75,18 @@ ThemeId g_draftTheme = ThemeId::Rainbow;
 int g_draftIntensity = 45;
 bool g_draftAutostart = false;
 RenderMode g_draftRenderMode = RenderMode::Auto;
-int g_activeTab = 0;  // 0 = Taskbar, 1 = System
+// -1 = All monitors; 0..n-1 = attached monitor index.
+int g_scopeIndex = -1;
+int g_activeTab = 0;  // 0 Taskbar, 1 Monitors, 2 System
 float g_previewTime = 3.2f;
 int g_previewW = 480;
 HBITMAP g_previewBmp = nullptr;
 void* g_previewBits = nullptr;
 int g_previewBmpW = 0;
 int g_previewBmpH = 0;
+
+std::vector<AttachedMonitor> g_monitors;
+std::vector<bool> g_draftMonitorActive;  // parallel to g_monitors
 
 HFONT g_fontUi = nullptr;
 HFONT g_fontSection = nullptr;
@@ -126,18 +141,62 @@ bool HasPendingUpdate() {
          IsVersionNewer(g_host.settings->pendingUpdateTag, kAppVersion);
 }
 
-void SyncDraftFromSettings() {
+void LoadAppearanceDraft(const MonitorAppearance& a) {
+  g_draftTheme = a.theme;
+  g_draftIntensity = a.intensity;
+  g_previewTime = ThemeBaseTime(g_draftTheme);
+}
+
+void SyncDraftFromScope() {
   if (!g_host.settings) return;
-  g_draftTheme = g_host.settings->theme;
-  g_draftIntensity = g_host.settings->intensity;
   g_draftAutostart = g_host.settings->startWithWindows;
   g_draftRenderMode = g_host.settings->renderMode;
-  g_previewTime = ThemeBaseTime(g_draftTheme);
+  if (g_scopeIndex >= 0 && g_scopeIndex < static_cast<int>(g_monitors.size())) {
+    LoadAppearanceDraft(
+        ResolveMonitorAppearance(*g_host.settings, g_monitors[g_scopeIndex].deviceName));
+  } else {
+    MonitorAppearance a;
+    a.theme = g_host.settings->theme;
+    a.intensity = g_host.settings->intensity;
+    LoadAppearanceDraft(a);
+  }
+}
+
+void RefreshMonitorList() {
+  g_monitors = EnumerateAttachedMonitors();
+  if (g_monitors.size() > kMaxMonitorSlots) g_monitors.resize(kMaxMonitorSlots);
+  g_draftMonitorActive.resize(g_monitors.size());
+  for (size_t i = 0; i < g_monitors.size(); ++i) {
+    const bool disabled =
+        g_host.settings && IsMonitorDisabled(*g_host.settings, g_monitors[i].deviceName);
+    g_draftMonitorActive[i] = !disabled;
+  }
+  if (g_scopeIndex >= static_cast<int>(g_monitors.size())) g_scopeIndex = -1;
+}
+
+void SyncDraftFromSettings() {
+  if (!g_host.settings) return;
+  RefreshMonitorList();
+  SyncDraftFromScope();
 }
 
 void InvalidateRenderRows(HWND hwnd) {
   for (int i = 0; i < 3; ++i) {
     InvalidateRect(GetDlgItem(hwnd, IDC_RENDER_BASE + i), nullptr, TRUE);
+  }
+}
+
+void InvalidateScopeChips(HWND hwnd) {
+  for (int i = 0; i < kMaxScopeChips; ++i) {
+    HWND c = GetDlgItem(hwnd, IDC_SCOPE_BASE + i);
+    if (c) InvalidateRect(c, nullptr, TRUE);
+  }
+}
+
+void InvalidateMonitorRows(HWND hwnd) {
+  for (int i = 0; i < static_cast<int>(kMaxMonitorSlots); ++i) {
+    HWND c = GetDlgItem(hwnd, IDC_MONITOR_BASE + i);
+    if (c) InvalidateRect(c, nullptr, TRUE);
   }
 }
 
@@ -199,7 +258,6 @@ void RenderPreviewBitmap() {
   ctx.length = w;
   PaintThemePixels(ctx, pixels, w, h, stride);
 
-  // Soft fake tray icons so it reads as a taskbar, not a bare strip.
   for (int i = 0; i < 5; ++i) {
     const int cx = 18 + i * 22;
     const int cy = h / 2;
@@ -220,7 +278,6 @@ void RenderPreviewBitmap() {
 
 void RefreshPreview(HWND hwnd) {
   RenderPreviewBitmap();
-  // No erase - avoids black flash between frames.
   InvalidateRect(GetDlgItem(hwnd, IDC_PREVIEW), nullptr, FALSE);
 }
 
@@ -252,6 +309,75 @@ void RefreshUpdateControls(HWND hwnd) {
   InvalidateRect(GetDlgItem(hwnd, IDC_UPDATE_STATUS), nullptr, TRUE);
 }
 
+void UpdateMonitorsHint(HWND hwnd) {
+  HWND hint = GetDlgItem(hwnd, IDC_MONITORS_HINT);
+  if (!hint) return;
+  bool anyOn = false;
+  for (bool on : g_draftMonitorActive) {
+    if (on) {
+      anyOn = true;
+      break;
+    }
+  }
+  SetWindowTextW(hint, anyOn ? L"Turn a display off to leave its taskbar alone."
+                             : L"All displays are off — Phostide will not paint any taskbar.");
+}
+
+void RelayoutScopeAndMonitors(HWND hwnd) {
+  const int pad = 24;
+  const int contentW = kClientW - pad * 2;
+  const int chipH = 32;
+  const int chipGap = 8;
+  const int allW = 56;
+  const int numW = 44;
+
+  // Scope chips: All + one per attached monitor.
+  int sx = pad;
+  const int scopeY = [&]() {
+    RECT rc{};
+    GetWindowRect(GetDlgItem(hwnd, IDC_SCOPE_CAPTION), &rc);
+    POINT pt{rc.left, rc.bottom};
+    ScreenToClient(hwnd, &pt);
+    return pt.y + 8;
+  }();
+
+  for (int i = 0; i < kMaxScopeChips; ++i) {
+    HWND c = GetDlgItem(hwnd, IDC_SCOPE_BASE + i);
+    if (!c) continue;
+    const bool show = (i == 0) || (i - 1 < static_cast<int>(g_monitors.size()));
+    ShowWindow(c, (g_activeTab == 0 && show) ? SW_SHOW : SW_HIDE);
+    if (!show) continue;
+    const int w = (i == 0) ? allW : numW;
+    SetWindowPos(c, nullptr, sx, scopeY, w, chipH, SWP_NOZORDER | SWP_NOACTIVATE);
+    if (i == 0) {
+      SetWindowTextW(c, L"All");
+    } else {
+      wchar_t label[16];
+      swprintf_s(label, L"%d", i);
+      SetWindowTextW(c, label);
+    }
+    sx += w + chipGap;
+  }
+
+  // Monitor activation rows.
+  RECT captionRc{};
+  GetWindowRect(GetDlgItem(hwnd, IDC_MONITORS_CAPTION), &captionRc);
+  POINT capt{captionRc.left, captionRc.bottom};
+  ScreenToClient(hwnd, &capt);
+  int my = capt.y + 10;
+  const int rowH = 44;
+  for (int i = 0; i < static_cast<int>(kMaxMonitorSlots); ++i) {
+    HWND c = GetDlgItem(hwnd, IDC_MONITOR_BASE + i);
+    if (!c) continue;
+    const bool show = i < static_cast<int>(g_monitors.size());
+    ShowWindow(c, (g_activeTab == 1 && show) ? SW_SHOW : SW_HIDE);
+    if (!show) continue;
+    SetWindowPos(c, nullptr, pad, my, contentW, rowH, SWP_NOZORDER | SWP_NOACTIVATE);
+    my += rowH + 8;
+  }
+  UpdateMonitorsHint(hwnd);
+}
+
 void LoadControlsFromDraft(HWND hwnd) {
   SendDlgItemMessageW(hwnd, IDC_INTENSITY, TBM_SETPOS, TRUE,
                       static_cast<LPARAM>(g_draftIntensity));
@@ -259,7 +385,10 @@ void LoadControlsFromDraft(HWND hwnd) {
   CheckDlgButton(hwnd, IDC_AUTOSTART, g_draftAutostart ? BST_CHECKED : BST_UNCHECKED);
   InvalidateThemeRows(hwnd);
   InvalidateRenderRows(hwnd);
+  InvalidateScopeChips(hwnd);
+  InvalidateMonitorRows(hwnd);
   RefreshUpdateControls(hwnd);
+  RelayoutScopeAndMonitors(hwnd);
   RefreshPreview(hwnd);
 }
 
@@ -267,18 +396,29 @@ void ReadDraftFromControls(HWND hwnd) {
   g_draftIntensity =
       static_cast<int>(SendDlgItemMessageW(hwnd, IDC_INTENSITY, TBM_GETPOS, 0, 0));
   g_draftIntensity = (std::max)(0, (std::min)(100, g_draftIntensity));
-  // Autostart is BS_OWNERDRAW — g_draftAutostart is the source of truth (toggled on
-  // click). Do not overwrite from IsDlgButtonChecked; that stays stale.
   (void)hwnd;
 }
 
 void ApplyDraft(HWND hwnd) {
   if (!g_host.settings || !g_host.onApplyAppearance) return;
   ReadDraftFromControls(hwnd);
-  g_host.settings->theme = g_draftTheme;
-  g_host.settings->renderMode = g_draftRenderMode;
-  g_host.settings->intensity = g_draftIntensity;
   g_host.settings->startWithWindows = g_draftAutostart;
+  g_host.settings->renderMode = g_draftRenderMode;
+
+  MonitorAppearance appearance;
+  appearance.theme = g_draftTheme;
+  appearance.intensity = g_draftIntensity;
+
+  if (g_scopeIndex < 0) {
+    ApplyAppearanceToAllAttached(*g_host.settings, appearance);
+  } else if (g_scopeIndex < static_cast<int>(g_monitors.size())) {
+    UpsertMonitorAppearance(*g_host.settings, g_monitors[g_scopeIndex].deviceName, appearance);
+  }
+
+  for (size_t i = 0; i < g_monitors.size(); ++i) {
+    SetMonitorDisabled(*g_host.settings, g_monitors[i].deviceName, !g_draftMonitorActive[i]);
+  }
+
   g_host.onApplyAppearance();
 }
 
@@ -352,6 +492,19 @@ void DrawTabButton(DRAWITEMSTRUCT* dis, const wchar_t* label, bool active) {
   FillRoundRect(dis->hDC, dis->rcItem, fill, border, 10);
   SetBkMode(dis->hDC, TRANSPARENT);
   SetTextColor(dis->hDC, active ? kInk : kSoft);
+  HFONT old = static_cast<HFONT>(SelectObject(dis->hDC, g_fontSection));
+  DrawTextW(dis->hDC, label, -1, const_cast<RECT*>(&dis->rcItem),
+            DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+  SelectObject(dis->hDC, old);
+}
+
+void DrawChip(DRAWITEMSTRUCT* dis, const wchar_t* label, bool selected, bool dimmed) {
+  const bool pressed = (dis->itemState & ODS_SELECTED) != 0;
+  const COLORREF fill = selected ? RGB(36, 28, 22) : (pressed ? RGB(34, 34, 36) : kPanel);
+  const COLORREF border = selected ? kEmber : kLine;
+  FillRoundRect(dis->hDC, dis->rcItem, fill, border, 10);
+  SetBkMode(dis->hDC, TRANSPARENT);
+  SetTextColor(dis->hDC, dimmed ? RGB(90, 90, 94) : (selected ? kInk : kSoft));
   HFONT old = static_cast<HFONT>(SelectObject(dis->hDC, g_fontSection));
   DrawTextW(dis->hDC, label, -1, const_cast<RECT*>(&dis->rcItem),
             DT_CENTER | DT_VCENTER | DT_SINGLELINE);
@@ -437,8 +590,49 @@ void DrawCheckRow(DRAWITEMSTRUCT* dis) {
   SelectObject(dis->hDC, old);
 }
 
+void DrawMonitorRow(DRAWITEMSTRUCT* dis, int index) {
+  if (index < 0 || index >= static_cast<int>(g_monitors.size())) return;
+  const auto& mon = g_monitors[index];
+  const bool on = index < static_cast<int>(g_draftMonitorActive.size()) &&
+                  g_draftMonitorActive[index];
+  const bool pressed = (dis->itemState & ODS_SELECTED) != 0;
+  FillRoundRect(dis->hDC, dis->rcItem, pressed ? RGB(34, 34, 36) : kPanel, kLine, 10);
+
+  RECT box = dis->rcItem;
+  box.left += 14;
+  box.top += (box.bottom - box.top - 18) / 2;
+  box.right = box.left + 18;
+  box.bottom = box.top + 18;
+  FillRoundRect(dis->hDC, box, on ? kEmber : kScreen, on ? kEmber : kLine, 4);
+  if (on) {
+    HPEN pen = CreatePen(PS_SOLID, 2, kVoid);
+    HGDIOBJ oldPen = SelectObject(dis->hDC, pen);
+    const int cx = (box.left + box.right) / 2;
+    const int cy = (box.top + box.bottom) / 2;
+    MoveToEx(dis->hDC, cx - 4, cy, nullptr);
+    LineTo(dis->hDC, cx - 1, cy + 3);
+    LineTo(dis->hDC, cx + 5, cy - 4);
+    SelectObject(dis->hDC, oldPen);
+    DeleteObject(pen);
+  }
+
+  wchar_t line[128];
+  if (mon.primary) {
+    swprintf_s(line, L"Monitor %d  ·  %d×%d  ·  Primary", index + 1, mon.width, mon.height);
+  } else {
+    swprintf_s(line, L"Monitor %d  ·  %d×%d", index + 1, mon.width, mon.height);
+  }
+
+  SetBkMode(dis->hDC, TRANSPARENT);
+  SetTextColor(dis->hDC, on ? kInk : kSoft);
+  HFONT old = static_cast<HFONT>(SelectObject(dis->hDC, g_fontUi));
+  RECT textRc = dis->rcItem;
+  textRc.left += 44;
+  DrawTextW(dis->hDC, line, -1, &textRc, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+  SelectObject(dis->hDC, old);
+}
+
 void DrawPreview(DRAWITEMSTRUCT* dis) {
-  // Double-buffer the whole control so we never flash the void fill alone.
   const int cw = dis->rcItem.right - dis->rcItem.left;
   const int ch = dis->rcItem.bottom - dis->rcItem.top;
   HDC mem = CreateCompatibleDC(dis->hDC);
@@ -471,11 +665,13 @@ void DrawPreview(DRAWITEMSTRUCT* dis) {
 void ShowTab(HWND hwnd, int tab) {
   g_activeTab = tab;
   const BOOL taskbar = (tab == 0) ? TRUE : FALSE;
-  const BOOL system = (tab == 1) ? TRUE : FALSE;
+  const BOOL monitors = (tab == 1) ? TRUE : FALSE;
+  const BOOL system = (tab == 2) ? TRUE : FALSE;
 
   const int taskbarIds[] = {
-      IDC_SUBTITLE,       IDC_PREVIEW_CAPTION, IDC_PREVIEW,         IDC_PREVIEW_HINT,
-      IDC_APPEARANCE_CAPTION, IDC_INTENSITY_CAPTION, IDC_INTENSITY_VALUE, IDC_INTENSITY,
+      IDC_SUBTITLE,          IDC_SCOPE_CAPTION,      IDC_PREVIEW_CAPTION,    IDC_PREVIEW,
+      IDC_PREVIEW_HINT,      IDC_APPEARANCE_CAPTION,  IDC_INTENSITY_CAPTION,  IDC_INTENSITY_VALUE,
+      IDC_INTENSITY,
   };
   for (int id : taskbarIds) {
     HWND c = GetDlgItem(hwnd, id);
@@ -484,6 +680,12 @@ void ShowTab(HWND hwnd, int tab) {
   for (int i = 0; i < static_cast<int>(ThemeId::Count); ++i) {
     HWND c = GetDlgItem(hwnd, IDC_THEME_BASE + i);
     if (c) ShowWindow(c, taskbar ? SW_SHOW : SW_HIDE);
+  }
+
+  const int monitorIds[] = {IDC_MONITORS_CAPTION, IDC_MONITORS_HINT};
+  for (int id : monitorIds) {
+    HWND c = GetDlgItem(hwnd, id);
+    if (c) ShowWindow(c, monitors ? SW_SHOW : SW_HIDE);
   }
 
   const int systemIds[] = {
@@ -496,7 +698,10 @@ void ShowTab(HWND hwnd, int tab) {
     if (c) ShowWindow(c, system ? SW_SHOW : SW_HIDE);
   }
 
+  RelayoutScopeAndMonitors(hwnd);
+
   InvalidateRect(GetDlgItem(hwnd, IDC_TAB_TASKBAR), nullptr, FALSE);
+  InvalidateRect(GetDlgItem(hwnd, IDC_TAB_MONITORS), nullptr, FALSE);
   InvalidateRect(GetDlgItem(hwnd, IDC_TAB_SYSTEM), nullptr, FALSE);
 
   if (tab == 0) {
@@ -517,15 +722,26 @@ void BuildChildren(HWND hwnd) {
   MkStatic(hwnd, IDC_TITLE, L"Settings", pad, y, contentW, 30, g_fontTitle);
   y += 36;
 
-  const int tabW = (contentW - 10) / 2;
+  const int tabGap = 8;
+  const int tabW = (contentW - tabGap * 2) / 3;
   MkButton(hwnd, IDC_TAB_TASKBAR, L"Taskbar", pad, y, tabW, 34, BS_OWNERDRAW);
-  MkButton(hwnd, IDC_TAB_SYSTEM, L"System", pad + tabW + 10, y, tabW, 34, BS_OWNERDRAW);
+  MkButton(hwnd, IDC_TAB_MONITORS, L"Monitors", pad + tabW + tabGap, y, tabW, 34,
+           BS_OWNERDRAW);
+  MkButton(hwnd, IDC_TAB_SYSTEM, L"System", pad + (tabW + tabGap) * 2, y, tabW, 34,
+           BS_OWNERDRAW);
   y += 48;
 
   // --- Taskbar tab ---
   MkStatic(hwnd, IDC_SUBTITLE, L"Preview the taskbar, then Apply when it looks right.", pad,
            y, contentW, 18, g_fontUi);
   int ty = y + 26;
+
+  MkStatic(hwnd, IDC_SCOPE_CAPTION, L"APPLY TO", pad, ty, contentW, 16, g_fontSection);
+  ty += 24;
+  for (int i = 0; i < kMaxScopeChips; ++i) {
+    MkButton(hwnd, IDC_SCOPE_BASE + i, L"", pad, ty, 44, 32, BS_OWNERDRAW);
+  }
+  ty += 40;
 
   MkStatic(hwnd, IDC_PREVIEW_CAPTION, L"TASKBAR PREVIEW", pad, ty, contentW, 16,
            g_fontSection);
@@ -538,7 +754,7 @@ void BuildChildren(HWND hwnd) {
   MkStatic(hwnd, IDC_PREVIEW_HINT,
            L"Live preview - changes apply only when you click Apply.", pad, ty, contentW, 22,
            g_fontUi);
-  ty += 32;
+  ty += 28;
 
   const int colGap = 18;
   const int leftW = (contentW - colGap) * 55 / 100;
@@ -548,8 +764,8 @@ void BuildChildren(HWND hwnd) {
 
   MkStatic(hwnd, IDC_APPEARANCE_CAPTION, L"THEME", leftX, ty, leftW, 16, g_fontSection);
   int ly = ty + 22;
-  const int themeH = 34;
-  const int themeGap = 6;
+  const int themeH = 32;
+  const int themeGap = 5;
   for (int i = 0; i < static_cast<int>(ThemeId::Count); ++i) {
     MkButton(hwnd, IDC_THEME_BASE + i, ThemeName(ThemeFromIndex(i)), leftX, ly, leftW,
              themeH, BS_OWNERDRAW);
@@ -570,8 +786,18 @@ void BuildChildren(HWND hwnd) {
   SendMessageW(track, TBM_SETRANGEMAX, FALSE, 100);
   SendMessageW(track, TBM_SETPAGESIZE, 0, 5);
   SetWindowTheme(track, L"", L"");
+  (void)ry;
 
-  // --- System tab (same page Y as taskbar body start) ---
+  // --- Monitors tab ---
+  const int my = y;
+  MkStatic(hwnd, IDC_MONITORS_CAPTION, L"ACTIVE DISPLAYS", pad, my, contentW, 16,
+           g_fontSection);
+  for (int i = 0; i < static_cast<int>(kMaxMonitorSlots); ++i) {
+    MkButton(hwnd, IDC_MONITOR_BASE + i, L"", pad, my + 28, contentW, 44, BS_OWNERDRAW);
+  }
+  MkStatic(hwnd, IDC_MONITORS_HINT, L"", pad, kClientH - 100, contentW, 36, g_fontUi);
+
+  // --- System tab ---
   const int sy = y;
   MkStatic(hwnd, IDC_GENERAL_CAPTION, L"GENERAL", pad, sy, contentW, 16, g_fontSection);
   int syy = sy + 22;
@@ -604,7 +830,7 @@ void BuildChildren(HWND hwnd) {
 }
 
 void FocusUpdatesSection(HWND hwnd) {
-  ShowTab(hwnd, 1);
+  ShowTab(hwnd, 2);
   HWND updateBtn = GetDlgItem(hwnd, IDC_UPDATE_BTN);
   if (IsWindowEnabled(updateBtn)) {
     SetFocus(updateBtn);
@@ -618,6 +844,12 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
     case WM_CREATE:
       EnableDarkTitleBar(hwnd);
       BuildChildren(hwnd);
+      return 0;
+    case WM_DISPLAYCHANGE:
+      RefreshMonitorList();
+      SyncDraftFromScope();
+      LoadControlsFromDraft(hwnd);
+      ShowTab(hwnd, g_activeTab);
       return 0;
     case WM_TIMER:
       if (wParam == ID_PREVIEW_TIMER && g_activeTab == 0) {
@@ -637,7 +869,8 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
       const int id = GetDlgCtrlID(reinterpret_cast<HWND>(lParam));
       if (id == IDC_SUBTITLE || id == IDC_APPEARANCE_CAPTION || id == IDC_UPDATES_CAPTION ||
           id == IDC_INTENSITY_CAPTION || id == IDC_VERSION || id == IDC_PREVIEW_CAPTION ||
-          id == IDC_PREVIEW_HINT || id == IDC_GENERAL_CAPTION || id == IDC_RENDER_CAPTION) {
+          id == IDC_PREVIEW_HINT || id == IDC_GENERAL_CAPTION || id == IDC_RENDER_CAPTION ||
+          id == IDC_SCOPE_CAPTION || id == IDC_MONITORS_CAPTION || id == IDC_MONITORS_HINT) {
         SetTextColor(hdc, kSoft);
       } else if (id == IDC_UPDATE_STATUS && HasPendingUpdate()) {
         SetTextColor(hdc, kEmber);
@@ -652,12 +885,39 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
         DrawTabButton(dis, L"Taskbar", g_activeTab == 0);
         return TRUE;
       }
+      if (dis->CtlID == IDC_TAB_MONITORS) {
+        DrawTabButton(dis, L"Monitors", g_activeTab == 1);
+        return TRUE;
+      }
       if (dis->CtlID == IDC_TAB_SYSTEM) {
-        DrawTabButton(dis, L"System", g_activeTab == 1);
+        DrawTabButton(dis, L"System", g_activeTab == 2);
         return TRUE;
       }
       if (dis->CtlID == IDC_PREVIEW) {
         DrawPreview(dis);
+        return TRUE;
+      }
+      if (dis->CtlID >= IDC_SCOPE_BASE && dis->CtlID < IDC_SCOPE_BASE + kMaxScopeChips) {
+        const int chip = dis->CtlID - IDC_SCOPE_BASE;
+        const bool selected =
+            (chip == 0 && g_scopeIndex < 0) || (chip > 0 && g_scopeIndex == chip - 1);
+        bool dimmed = false;
+        wchar_t label[16]{};
+        if (chip == 0) {
+          wcsncpy_s(label, L"All", _TRUNCATE);
+        } else {
+          swprintf_s(label, L"%d", chip);
+          const int mi = chip - 1;
+          if (mi < static_cast<int>(g_draftMonitorActive.size())) {
+            dimmed = !g_draftMonitorActive[mi];
+          }
+        }
+        DrawChip(dis, label, selected, dimmed);
+        return TRUE;
+      }
+      if (dis->CtlID >= IDC_MONITOR_BASE &&
+          dis->CtlID < IDC_MONITOR_BASE + static_cast<int>(kMaxMonitorSlots)) {
+        DrawMonitorRow(dis, dis->CtlID - IDC_MONITOR_BASE);
         return TRUE;
       }
       if (dis->CtlID >= IDC_THEME_BASE &&
@@ -701,8 +961,30 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
         ShowTab(hwnd, 0);
         return 0;
       }
-      if (id == IDC_TAB_SYSTEM) {
+      if (id == IDC_TAB_MONITORS) {
         ShowTab(hwnd, 1);
+        return 0;
+      }
+      if (id == IDC_TAB_SYSTEM) {
+        ShowTab(hwnd, 2);
+        return 0;
+      }
+      if (id >= IDC_SCOPE_BASE && id < IDC_SCOPE_BASE + kMaxScopeChips) {
+        const int chip = id - IDC_SCOPE_BASE;
+        g_scopeIndex = (chip == 0) ? -1 : chip - 1;
+        SyncDraftFromScope();
+        LoadControlsFromDraft(hwnd);
+        return 0;
+      }
+      if (id >= IDC_MONITOR_BASE &&
+          id < IDC_MONITOR_BASE + static_cast<int>(kMaxMonitorSlots)) {
+        const int mi = id - IDC_MONITOR_BASE;
+        if (mi >= 0 && mi < static_cast<int>(g_draftMonitorActive.size())) {
+          g_draftMonitorActive[mi] = !g_draftMonitorActive[mi];
+          InvalidateRect(GetDlgItem(hwnd, id), nullptr, TRUE);
+          InvalidateScopeChips(hwnd);
+          UpdateMonitorsHint(hwnd);
+        }
         return 0;
       }
       if (id >= IDC_THEME_BASE &&

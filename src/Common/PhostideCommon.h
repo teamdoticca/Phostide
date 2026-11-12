@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <guiddef.h>
 
@@ -19,8 +20,9 @@ inline constexpr std::wstring_view kTapBoundEvent = L"Local\\Phostide.TAP.Bound"
 // Written by ExplorerTAP on bind; host compares to kAppVersion to detect stale in-Explorer DLLs.
 inline constexpr std::wstring_view kTapVersionStamp = L"tap.version";
 inline constexpr std::wstring_view kSettingsFileName = L"settings.json";
-// v3: ThemeCommand.renderMode — Auto / GPU / CPU paint path.
-inline constexpr int kTapApiVersion = 3;
+// v4: ThemeCommand monitor slots — per-display theme/intensity/enabled (renderMode is global).
+inline constexpr int kTapApiVersion = 4;
+inline constexpr uint32_t kMaxMonitorSlots = 8;
 
 enum class RenderMode : uint32_t {
   Auto = 0,  // D3D11 hardware if available, else CPU
@@ -78,13 +80,29 @@ inline ThemeId ThemeFromIndex(int index) {
   return static_cast<ThemeId>(index);
 }
 
+struct MonitorAppearance {
+  ThemeId theme = ThemeId::Rainbow;
+  int intensity = 45;  // 0-100
+};
+
+struct MonitorAppearanceEntry {
+  std::wstring deviceName;
+  MonitorAppearance appearance;
+};
+
 struct Settings {
   bool enabled = true;
+  // Fallbacks for brand-new monitors / migration from single-theme settings.
   ThemeId theme = ThemeId::Rainbow;
-  int intensity = 45;          // 0-100
+  int intensity = 45;  // 0-100
   bool startWithWindows = false;
   bool pauseWhenLocked = true;
+  // App-global (System tab) — not per-monitor.
   RenderMode renderMode = RenderMode::Auto;
+  // Device names that are off; empty = all monitors active.
+  std::vector<std::wstring> disabledMonitors;
+  // Per-monitor theme/intensity; missing key → theme/intensity fallbacks.
+  std::vector<MonitorAppearanceEntry> monitorSettings;
   // Update check (GitHub Releases)
   int64_t lastUpdateCheckUtc = 0;  // unix seconds; 0 = never
   std::wstring pendingUpdateTag;   // e.g. "v0.1.3" when newer than kAppVersion
@@ -92,14 +110,24 @@ struct Settings {
 };
 
 #pragma pack(push, 1)
+struct MonitorPaintSlot {
+  uint64_t deviceHash = 0;
+  uint32_t theme = 0;
+  uint32_t intensity = 45;
+  uint32_t enabled = 1;
+};
+
 struct ThemeCommand {
   uint32_t apiVersion = kTapApiVersion;
+  // Fallbacks / legacy TAP (< v4) + accent path.
   uint32_t theme = 0;
   uint32_t intensity = 45;
   uint32_t enabled = 1;
   // 1 = keep last frame / bound brushes, stop the UI timer (e.g. session lock).
   uint32_t paused = 0;
   uint32_t renderMode = static_cast<uint32_t>(RenderMode::Auto);
+  uint32_t slotCount = 0;
+  MonitorPaintSlot slots[kMaxMonitorSlots]{};
 };
 #pragma pack(pop)
 
