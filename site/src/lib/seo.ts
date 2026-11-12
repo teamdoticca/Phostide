@@ -79,4 +79,10 @@ export const SITE_ROUTES = [
     changeFrequency: "monthly" as const,
   },
   { path: "/docs/privacy", priority: 0.5, changeFrequency: "yearly" as const },
+  { path: "/llms.txt", priority: 0.6, changeFrequency: "monthly" as const },
+  {
+    path: "/llms-full.txt",
+    priority: 0.55,
+    changeFrequency: "monthly" as const,
+  },
 ] as const;
