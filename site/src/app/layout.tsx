@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, IBM_Plex_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import {
   OG_IMAGE,
   ORG_NAME,
@@ -107,6 +108,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${sans.variable} ${mono.variable} font-sans antialiased`}>
         {children}
+        <Analytics />
       </body>
     </html>
   );
