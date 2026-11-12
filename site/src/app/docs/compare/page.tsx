@@ -75,6 +75,10 @@ const rows: { label: string; values: string[] }[] = [
     values: ["No", "Rare", "Usually no", "Five built-in"],
   },
   {
+    label: "Per-monitor control",
+    values: ["OS only", "Often fragile", "Depends on mod", "On/off + theme/intensity"],
+  },
+  {
     label: "Restores on quit",
     values: ["N/A", "Close overlay", "Disable mod", "Tray › Exit"],
   },

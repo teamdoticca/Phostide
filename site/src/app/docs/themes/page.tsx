@@ -10,7 +10,7 @@ import { themes } from "@/lib/themes";
 export const metadata: Metadata = pageMetadata({
   title: "Themes",
   description:
-    "Five built-in Phostide themes — real taskbar captures, switch from Settings.",
+    "Five built-in Phostide themes — real taskbar captures, Apply to all monitors or one.",
   path: "/docs/themes",
 });
 

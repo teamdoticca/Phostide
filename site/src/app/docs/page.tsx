@@ -19,7 +19,7 @@ import { pageMetadata } from "@/lib/seo";
 export const metadata: Metadata = pageMetadata({
   title: "Docs",
   description:
-    "Install Phostide, pick a theme in Settings, and fix the odd hiccup.",
+    "Install Phostide, set themes per monitor, and fix the odd hiccup.",
   path: "/docs",
 });
 
@@ -86,7 +86,7 @@ export default async function DocsPage() {
             </h1>
             <p className="mt-5 max-w-xl text-lg text-soft">
               Short pages. Install it, open Settings from the tray, Apply a
-              theme, fix the odd hiccup.
+              theme (all displays or one), fix the odd hiccup.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <LatestDownload className="btn-ember">

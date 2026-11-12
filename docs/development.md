@@ -25,6 +25,8 @@ Host `InjectExplorerTap` finds `Shell_TrayWnd`, loads `ExplorerTAP.dll` via `WH_
 
 Settings file: `%APPDATA%\Phostide\settings.json` (`theme` / `intensity` fallbacks, app-global `renderMode`, `monitorSettings`, `disabledMonitors`, `enabled`, …). ThemeCommand v4 sends per-monitor paint slots (theme, intensity, enabled) plus a shared `renderMode` to ExplorerTAP.
 
+Multi-monitor verify: after reinject, `%TEMP%\Phostide\tap.log` should show two `Bound fill … hash=… hwnd=…` lines with **different** hashes, then `slot[0]` / `slot[1]` with matching hashes and distinct theme/intensity when Settings differ per display.
+
 Paint entry points live in `src/ExplorerTAP/PixelThemes.cpp` (`PaintRainbow`, `PaintSeaWavesGerstner`, `PaintWeather`, `PaintSpace`, `PaintAurora`). Dispatch: `PaintThemePixels`.
 
 ## Build

@@ -29,6 +29,7 @@ Live captures (and longer loops) are on the [site](https://phostide.doticca.com/
 Most OLED taskbar tools **hide** the bar. Phostide keeps it usable and moves the fill so a static strip is less likely to burn in — while looking like a theme, not a workaround.
 
 - Real Explorer background fill (TAP helper + Composition surfaces)
+- Multi-monitor: theme/intensity per display, on/off per display, shared Auto/GPU/CPU rendering
 - Signed Setup.exe (per-user, no admin) and portable zip
 - Local only — no account, no telemetry
 - MIT open source
@@ -41,8 +42,8 @@ Most OLED taskbar tools **hide** the bar. Phostide keeps it usable and moves the
 ## Install
 
 1. Get the latest **Setup.exe** from [phostide.doticca.com](https://phostide.doticca.com) or [Releases](https://github.com/teamdoticca/Phostide/releases).
-2. Run it — tray icon appears. Right‑click › **Settings…** › pick a theme › **Apply**.
-3. Optional: System tab › **Start with Windows** › Apply.
+2. Run it — tray icon appears. Right‑click › **Settings…** › **Taskbar** › pick a theme (All or one monitor) › **Apply**.
+3. Optional: **Monitors** tab to leave a display stock; **System** tab for rendering / Start with Windows › Apply.
 
 Portable zip: unzip anywhere and run `Phostide.exe`.
 

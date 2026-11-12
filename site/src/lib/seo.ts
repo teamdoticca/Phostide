@@ -4,9 +4,9 @@ export const SITE_URL = "https://phostide.doticca.com";
 export const SITE_NAME = "Phostide";
 export const SITE_TAGLINE = "Animated themes for the Windows taskbar";
 export const SITE_DESCRIPTION =
-  "Phostide paints OLED-safe motion directly into the Windows taskbar background — GPU when available, CPU otherwise. Free, MIT, signed installer for Windows 11.";
+  "Phostide paints OLED-safe motion into the real Windows taskbar background — per-monitor themes, shared GPU/CPU rendering. Free, MIT, signed installer for Windows 11.";
 export const SITE_OG_DESCRIPTION =
-  "Animated themes, painted into your real Windows taskbar (GPU or CPU). Free · MIT · Windows 11.";
+  "Animated themes on your real Windows taskbar, including per-monitor control. Free · MIT · Windows 11.";
 
 export const OG_IMAGE = {
   url: "/og.png",

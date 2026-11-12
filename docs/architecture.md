@@ -13,7 +13,15 @@ Paint the real Windows 11 taskbar background (`Rectangle#BackgroundFill`) with O
 
 ## Multi-monitor
 
-Settings → **Monitors** toggles each display on/off. **Taskbar** scopes theme/intensity to **All** or a single monitor. Host builds ThemeCommand **v4** slots (device hash + theme/intensity + enabled); TAP maps each `BackgroundFill` to its monitor and paints or unbinds per slot. Rendering stays app-global on the System tab.
+Settings has three tabs:
+
+| Tab | Scope |
+|-----|--------|
+| **Taskbar** | Apply to **All** or monitor *N*: theme + intensity (preview, then Apply) |
+| **Monitors** | Per-display on/off (default all on). Off → stock Windows bar |
+| **System** | App-global only: Auto/GPU/CPU rendering, Start with Windows, updates |
+
+Host builds ThemeCommand **v4** slots (`deviceHash`, theme, intensity, enabled) plus a shared `renderMode`. TAP binds each `BackgroundFill` to its tray HWND (`Shell_TrayWnd` / `Shell_SecondaryTrayWnd`), hashes the monitor device name, and paints or unbinds from the matching slot — so identical resolutions still get distinct looks.
 
 ## Rendering
 

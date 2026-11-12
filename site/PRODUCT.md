@@ -25,10 +25,11 @@ Themes live inside Explorer’s own fill via a TAP helper — icons stay on top;
 ## Capabilities
 
 - Themes: Rainbow, Sea Waves, Weather, Space, Aurora
+- Multi-monitor: per-display theme/intensity, per-display on/off; rendering shared (System tab)
 - Rendering: Auto / GPU / CPU (D3D11 Composition paint when available; CPU pixel fallback). `Themes.hlsl` ships with the app for the GPU path
 - Tray host + ExplorerTAP injection
 - Local settings; no account / no telemetry (as documented)
-- Docs: install, themes, OLED, troubleshooting, privacy
+- Docs: install, themes, OLED, compare, troubleshooting, privacy
 
 ## Constraints
 

@@ -65,7 +65,7 @@ export default async function Home() {
               {[
                 ["What it is", "Taskbar background fill"],
                 ["What it isn't", "An overlay window"],
-                ["Themes", "5, switch from tray"],
+                ["Themes", "5, per monitor or all"],
                 ["Data", "Stays on your PC"],
                 ["Made by", "Doticca"],
               ].map(([k, v]) => (
@@ -128,8 +128,8 @@ export default async function Home() {
             },
             {
               icon: IconGrid,
-              title: "Icons stay on top",
-              body: "Start, pinned apps, tray and clock keep working exactly as before — the motion lives behind them.",
+              title: "Per monitor, if you want",
+              body: "Theme and intensity can differ per display, or leave one stock from the Monitors tab. Rendering stays one shared Auto / GPU / CPU choice.",
             },
             {
               icon: IconUndo,

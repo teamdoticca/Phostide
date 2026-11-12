@@ -10,7 +10,7 @@ import { pageMetadata } from "@/lib/seo";
 export const metadata: Metadata = pageMetadata({
   title: "Install & run",
   description:
-    "Install Phostide with the signed Setup.exe or run the portable zip. No admin required.",
+    "Install Phostide with the signed Setup.exe or portable zip. Multi-monitor Settings, no admin required.",
   path: "/docs/install",
 });
 
@@ -18,6 +18,7 @@ const toc = [
   { href: "#setup", label: "1 · Setup.exe" },
   { href: "#files", label: "2 · Where it goes" },
   { href: "#run", label: "3 · Tray & Settings" },
+  { href: "#monitors", label: "Multi-monitor" },
   { href: "#portable", label: "Portable zip" },
   { href: "#settings-file", label: "Settings file" },
   { href: "#uninstall", label: "Uninstall" },
@@ -121,9 +122,9 @@ export default async function InstallPage() {
                 themes on or off without quitting
               </li>
               <li>
-                <span className="text-zinc-100">Settings…</span> — per‑monitor
-                themes, intensity, rendering, which displays are active, Start
-                with Windows, updates
+                <span className="text-zinc-100">Settings…</span> — Taskbar
+                (theme/intensity per display), Monitors (on/off), System
+                (shared rendering, Start with Windows, updates)
               </li>
               <li>
                 <span className="text-zinc-100">Exit</span> — quit and restore
@@ -161,6 +162,32 @@ export default async function InstallPage() {
             </div>
           </section>
 
+          <section id="monitors" className="mt-14">
+            <h2 className="text-2xl font-semibold">Multi-monitor</h2>
+            <p className="mt-3 text-soft">
+              Every attached display can look different — or stay stock.
+            </p>
+            <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-soft">
+              <li>
+                <span className="text-zinc-100">Taskbar › APPLY TO</span> —{" "}
+                <span className="text-zinc-100">All</span> writes the current
+                theme and intensity to every display (and the fallback for newly
+                plugged monitors). A numbered chip edits one display only.
+              </li>
+              <li>
+                <span className="text-zinc-100">Monitors</span> — uncheck a
+                display to leave its taskbar alone. Grayed chips on the Taskbar
+                tab mean that display is off here; you can still edit its look
+                for when you turn it back on.
+              </li>
+              <li>
+                <span className="text-zinc-100">System › RENDERING</span> is
+                shared by every active bar (Auto / GPU / CPU). It is not
+                per‑monitor.
+              </li>
+            </ul>
+          </section>
+
           <section id="portable" className="mt-14">
             <h2 className="text-2xl font-semibold">
               Prefer not to install? Use the portable zip.
@@ -179,9 +206,11 @@ export default async function InstallPage() {
           <section id="settings-file" className="mt-14">
             <h2 className="text-2xl font-semibold">Settings file</h2>
             <p className="mt-3 text-soft">
-              Fallback theme, intensity, and{" "}
+              Fallback <code className="text-zinc-100">theme</code> /{" "}
+              <code className="text-zinc-100">intensity</code>, app‑global{" "}
               <code className="text-zinc-100">renderMode</code> (Auto / GPU /
-              CPU), plus <code className="text-zinc-100">monitorSettings</code>,{" "}
+              CPU), <code className="text-zinc-100">monitorSettings</code>{" "}
+              (per‑display theme/intensity),{" "}
               <code className="text-zinc-100">disabledMonitors</code>, Start with
               Windows, and a few runtime flags are saved here. Delete the file to
               reset to defaults (Rainbow, 45% intensity, Auto rendering, all
