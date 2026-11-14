@@ -252,6 +252,8 @@ std::wstring TapDllPath() {
   return ModuleDir() + L"\\ExplorerTAP.dll";
 }
 
+void ResetTapBoundEvent() { ResetBoundEvent(); }
+
 bool InjectExplorerTap(std::wstring* errorOut) {
   // Stale in-Explorer TAP (previous version) cannot be unloaded without a shell
   // bounce — XAML Diagnostics pins the module for Explorer's lifetime.

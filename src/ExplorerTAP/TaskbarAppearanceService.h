@@ -29,6 +29,7 @@ struct TaskbarVisual {
   winrt::Windows::UI::Xaml::Media::Brush originalFill{nullptr};
   winrt::Windows::UI::Xaml::Media::Imaging::WriteableBitmap bitmap{nullptr};
   winrt::Windows::UI::Xaml::Media::ImageBrush imageBrush{nullptr};
+  uint64_t diagnosticsHandle = 0;  // XAML Diagnostics InstanceHandle
   HWND trayHwnd = nullptr;  // Shell_TrayWnd / Shell_SecondaryTrayWnd
   TaskbarGeom geom{};
   uint64_t deviceHash = 0;
@@ -43,8 +44,9 @@ class TaskbarAppearanceService {
   static TaskbarAppearanceService& Instance();
 
   void RegisterBackground(winrt::Windows::UI::Xaml::Shapes::Shape const& shape,
-                          HWND trayHwnd = nullptr);
-  void UnregisterHandle(uint64_t unusedHandle);
+                          HWND trayHwnd = nullptr,
+                          uint64_t diagnosticsHandle = 0);
+  void UnregisterHandle(uint64_t diagnosticsHandle);
   void Apply(const ThemeCommand& cmd);
   void RestoreAll();
   void StartRenderLoop();

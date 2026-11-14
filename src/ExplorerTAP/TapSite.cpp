@@ -35,6 +35,15 @@ HANDLE TAPSite::ReadyEvent() {
   return CreateEventW(nullptr, TRUE, FALSE, kTapReadyEvent.data());
 }
 
+void TAPSite::RequestRescan() {
+  if (auto watcher = s_watcher_.get()) {
+    try {
+      watcher->ScanExistingViaHitTest();
+    } catch (...) {
+    }
+  }
+}
+
 DWORD WINAPI TAPSite::Install(void*) {
   HANDLE ready = ReadyEvent();
   const auto signalReady = [&] {

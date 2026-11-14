@@ -3,6 +3,7 @@
 #include "../Common/MonitorEnum.h"
 #include "GpuThemeRenderer.h"
 #include "PixelThemes.h"
+#include "TapSite.h"
 #include "TaskbarGeometry.h"
 
 #include <algorithm>
@@ -152,7 +153,8 @@ TaskbarAppearanceService& TaskbarAppearanceService::Instance() {
 
 void TaskbarAppearanceService::SignalBound() { SetBoundEvent(); }
 
-void TaskbarAppearanceService::RegisterBackground(wuxs::Shape const& shape, HWND trayHwnd) {
+void TaskbarAppearanceService::RegisterBackground(wuxs::Shape const& shape, HWND trayHwnd,
+                                                  uint64_t diagnosticsHandle) {
   if (!shape) return;
   if (!dispatcher_) {
     dispatcher_ = wsys::DispatcherQueue::GetForCurrentThread();
@@ -170,6 +172,9 @@ void TaskbarAppearanceService::RegisterBackground(wuxs::Shape const& shape, HWND
           trayCorrected = true;
           target = &tv;
         }
+        if (diagnosticsHandle && tv.diagnosticsHandle != diagnosticsHandle) {
+          tv.diagnosticsHandle = diagnosticsHandle;
+        }
         if (!trayCorrected) return;
         break;
       }
@@ -178,6 +183,7 @@ void TaskbarAppearanceService::RegisterBackground(wuxs::Shape const& shape, HWND
       TaskbarVisual tv;
       tv.background = shape;
       tv.trayHwnd = trayHwnd;
+      tv.diagnosticsHandle = diagnosticsHandle;
       try {
         tv.originalFill = shape.Fill();
       } catch (...) {
@@ -224,7 +230,19 @@ void TaskbarAppearanceService::RegisterBackground(wuxs::Shape const& shape, HWND
   }
 }
 
-void TaskbarAppearanceService::UnregisterHandle(uint64_t) {}
+void TaskbarAppearanceService::UnregisterHandle(uint64_t diagnosticsHandle) {
+  if (!diagnosticsHandle) return;
+  std::lock_guard lock(mutex_);
+  for (auto it = taskbars_.begin(); it != taskbars_.end(); ++it) {
+    if (it->diagnosticsHandle != diagnosticsHandle) continue;
+    const bool wasBound = it->bound;
+    UnbindVisual(*it);
+    if (wasBound) boundCount_.fetch_sub(1);
+    taskbars_.erase(it);
+    LogService(L"UnregisterHandle removed BackgroundFill");
+    return;
+  }
+}
 
 void TaskbarAppearanceService::RefreshDeviceHash(TaskbarVisual& tv) {
   std::wstring name;
@@ -303,25 +321,34 @@ void TaskbarAppearanceService::Apply(const ThemeCommand& cmd) {
   }
 
   dispatcher_.TryEnqueue([this] {
-    std::lock_guard lock(mutex_);
-    for (auto& tv : taskbars_) {
-      if (!tv.background) continue;
-      RefreshGeomAndBitmap(tv);
-      const bool wasBound = tv.bound;
-      if (!SlotEnabled(tv)) {
-        if (wasBound) {
-          UnbindVisual(tv);
-          boundCount_.fetch_sub(1);
+    bool needRescan = false;
+    {
+      std::lock_guard lock(mutex_);
+      needRescan = taskbars_.empty();
+      for (auto& tv : taskbars_) {
+        if (!tv.background) continue;
+        RefreshGeomAndBitmap(tv);
+        const bool wasBound = tv.bound;
+        if (!SlotEnabled(tv)) {
+          if (wasBound) {
+            UnbindVisual(tv);
+            boundCount_.fetch_sub(1);
+          }
+          continue;
         }
-        continue;
+        if (wasBound) UnbindVisual(tv);
+        if (BindVisual(tv)) {
+          if (!wasBound) boundCount_.fetch_add(1);
+          SignalBound();
+        }
       }
-      if (wasBound) UnbindVisual(tv);
-      if (BindVisual(tv)) {
-        if (!wasBound) boundCount_.fetch_add(1);
-        SignalBound();
-      }
+      EnsureUiTimer();
     }
-    EnsureUiTimer();
+    // Same-process tray rebuild: fills were cleared / never registered — re-hit-test.
+    if (needRescan) {
+      LogService(L"Apply: no taskbars — RequestRescan");
+      TAPSite::RequestRescan();
+    }
   });
 }
 
@@ -342,6 +369,7 @@ void TaskbarAppearanceService::RestoreAll() {
     UnbindVisual(tv);
   }
   gpu_.DetachAll();
+  taskbars_.clear();
   boundCount_.store(0);
   LogService(L"RestoreAll done");
 }

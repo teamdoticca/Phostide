@@ -12,6 +12,7 @@
 #include <windows.h>
 #include <wtsapi32.h>
 
+#include <atomic>
 #include <chrono>
 #include <memory>
 #include <string>
@@ -23,11 +24,13 @@ constexpr UINT WM_TRAY = WM_APP + 1;
 constexpr UINT WM_INJECT_DONE = WM_APP + 2;
 constexpr UINT WM_UPDATE_DONE = WM_APP + 3;
 constexpr UINT_PTR ID_ANIM_TIMER = 1;
+constexpr UINT_PTR ID_REINJECT_TIMER = 2;
 constexpr UINT ID_ENABLE = 100;
 constexpr UINT ID_SETTINGS = 110;
 constexpr UINT ID_OPEN_UPDATE = 310;
 constexpr UINT ID_EXIT = 399;
 constexpr UINT kAnimIntervalMs = 33;  // ~30 fps host-side accent animation
+constexpr UINT kReinjectDebounceMs = 1000;
 
 HWND g_hwnd = nullptr;
 HINSTANCE g_instance = nullptr;
@@ -41,6 +44,7 @@ bool g_sessionLocked = false;
 bool g_tapBound = false;
 bool g_clearedAccentForTap = false;
 bool g_updateCheckRunning = false;
+std::atomic<bool> g_injectInFlight{false};
 std::wstring g_updateStatusText;
 std::chrono::steady_clock::time_point g_animStart = std::chrono::steady_clock::now();
 HANDLE g_boundEvent = nullptr;
@@ -89,6 +93,22 @@ bool RefreshTapBound() {
   return g_tapBound;
 }
 
+void StartInjectWorker() {
+  bool expected = false;
+  if (!g_injectInFlight.compare_exchange_strong(expected, true)) {
+    return;
+  }
+  std::thread([] {
+    std::wstring err;
+    phostide::InjectExplorerTap(&err);
+    if (g_hwnd) {
+      PostMessageW(g_hwnd, WM_INJECT_DONE, 0, 0);
+    } else {
+      g_injectInFlight.store(false);
+    }
+  }).detach();
+}
+
 void ApplyTheme(bool pushToTap = true) {
   const auto cmd = MakeCommand();
   const bool bound = RefreshTapBound();
@@ -115,6 +135,19 @@ void SyncAnimTimer(HWND hwnd) {
   } else {
     KillTimer(hwnd, ID_ANIM_TIMER);
   }
+}
+
+void ScheduleReinjectAfterTrayRecreate(HWND hwnd) {
+  // Explorer recreated the tray — TAP is gone or painting dead XAML.
+  g_tapBound = false;
+  g_clearedAccentForTap = false;
+  phostide::ResetTapBoundEvent();
+  // Same-process rebuild: drop stale fills so the next Apply triggers a rescan.
+  phostide::RequestTapRestore();
+  SyncAnimTimer(hwnd);
+  ApplyTheme(true);
+  // Debounce bursts of TaskbarCreated (and overlap with our own shell bounce).
+  SetTimer(hwnd, ID_REINJECT_TIMER, kReinjectDebounceMs, nullptr);
 }
 
 bool HasPendingUpdate() {
@@ -316,8 +349,10 @@ void HandleUpdateDone(UpdateDonePayload* payload) {
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
   if (g_taskbarCreatedMsg && msg == g_taskbarCreatedMsg) {
-    // Explorer was restarted (by us or the user) — notification icons are gone.
+    // Explorer was restarted (by us or the user) — notification icons are gone,
+    // and ExplorerTAP must be reinjected into the new tray process/tree.
     if (g_instance) AddTrayIcon(hwnd, g_instance, /*force=*/true);
+    ScheduleReinjectAfterTrayRecreate(hwnd);
     return 0;
   }
   switch (msg) {
@@ -326,6 +361,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
       SyncAnimTimer(hwnd);
       return 0;
     case WM_TIMER:
+      if (wParam == ID_REINJECT_TIMER) {
+        KillTimer(hwnd, ID_REINJECT_TIMER);
+        StartInjectWorker();
+        return 0;
+      }
       if (wParam == ID_ANIM_TIMER && g_settings.enabled && !g_sessionLocked) {
         if (RefreshTapBound()) {
           SyncAnimTimer(hwnd);
@@ -337,6 +377,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
       }
       return 0;
     case WM_INJECT_DONE:
+      g_injectInFlight.store(false);
       // Injection may have bounced Explorer — restore the tray icon first.
       if (g_instance) AddTrayIcon(hwnd, g_instance, /*force=*/true);
       // Injection finished — push theme; poll bound so we can drop accent.
@@ -492,13 +533,7 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR cmdLine, int) {
   WTSRegisterSessionNotification(g_hwnd, NOTIFY_FOR_THIS_SESSION);
 
   // Inject on a worker so the UI thread stays responsive.
-  std::thread([] {
-    std::wstring err;
-    phostide::InjectExplorerTap(&err);
-    if (g_hwnd) {
-      PostMessageW(g_hwnd, WM_INJECT_DONE, 0, 0);
-    }
-  }).detach();
+  StartInjectWorker();
 
   // Daily (or first-run) update check — silent unless newer.
   if (phostide::IsUpdateCheckDue(g_settings.lastUpdateCheckUtc)) {

@@ -29,6 +29,8 @@ struct VisualTreeWatcher : winrt::implements<VisualTreeWatcher, IVisualTreeServi
   HRESULT STDMETHODCALLTYPE OnElementStateChanged(InstanceHandle element, VisualElementState elementState,
                                                   LPCWSTR context) noexcept override;
 
+  void ScanExistingViaHitTest();
+
  private:
   template <typename T>
   T FromHandle(InstanceHandle handle) {
@@ -39,8 +41,8 @@ struct VisualTreeWatcher : winrt::implements<VisualTreeWatcher, IVisualTreeServi
   }
 
   void TryRegisterShape(winrt::Windows::UI::Xaml::Shapes::Shape const& shape,
-                        HWND trayHwnd = nullptr);
-  void ScanExistingViaHitTest();
+                        HWND trayHwnd = nullptr,
+                        InstanceHandle diagnosticsHandle = 0);
   void Log(const wchar_t* msg);
 
   winrt::com_ptr<IXamlDiagnostics> xamlDiagnostics_;

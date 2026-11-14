@@ -106,7 +106,8 @@ VisualTreeWatcher::VisualTreeWatcher(winrt::com_ptr<IUnknown> site, HANDLE ready
   }).detach();
 }
 
-void VisualTreeWatcher::TryRegisterShape(wuxs::Shape const& shape, HWND trayHwnd) {
+void VisualTreeWatcher::TryRegisterShape(wuxs::Shape const& shape, HWND trayHwnd,
+                                         InstanceHandle diagnosticsHandle) {
   if (!shape) return;
   try {
     if (shape.Name() != L"BackgroundFill") return;
@@ -115,7 +116,7 @@ void VisualTreeWatcher::TryRegisterShape(wuxs::Shape const& shape, HWND trayHwnd
   }
   Log(trayHwnd ? L"Registering BackgroundFill shape (tray-bound)"
                : L"Registering BackgroundFill shape");
-  TaskbarAppearanceService::Instance().RegisterBackground(shape, trayHwnd);
+  TaskbarAppearanceService::Instance().RegisterBackground(shape, trayHwnd, diagnosticsHandle);
 }
 
 void VisualTreeWatcher::ScanExistingViaHitTest() {
@@ -124,25 +125,25 @@ void VisualTreeWatcher::ScanExistingViaHitTest() {
     try {
       auto insp = FromHandle<winrt::Windows::Foundation::IInspectable>(handle);
       if (auto shape = insp.try_as<wuxs::Shape>()) {
-        TryRegisterShape(shape, trayHwnd);
+        TryRegisterShape(shape, trayHwnd, handle);
         return;
       }
       if (auto fe = insp.try_as<wux::FrameworkElement>()) {
         // Shallow walk only — deep recursion previously risked Explorer instability.
         if (auto shape = fe.try_as<wuxs::Shape>()) {
-          TryRegisterShape(shape, trayHwnd);
+          TryRegisterShape(shape, trayHwnd, handle);
         }
         const int n = wuxm::VisualTreeHelper::GetChildrenCount(fe);
         for (int i = 0; i < n; ++i) {
           auto child = wuxm::VisualTreeHelper::GetChild(fe, i);
           if (auto shape = child.try_as<wuxs::Shape>()) {
-            TryRegisterShape(shape, trayHwnd);
+            TryRegisterShape(shape, trayHwnd, 0);
           }
           try {
             if (auto named = child.try_as<wux::FrameworkElement>();
                 named && named.Name() == L"BackgroundFill") {
               if (auto shape = named.try_as<wuxs::Shape>()) {
-                TryRegisterShape(shape, trayHwnd);
+                TryRegisterShape(shape, trayHwnd, 0);
               }
             }
           } catch (...) {
@@ -154,7 +155,7 @@ void VisualTreeWatcher::ScanExistingViaHitTest() {
             if (auto named = parent.try_as<wux::FrameworkElement>();
                 named && named.Name() == L"BackgroundFill") {
               if (auto shape = named.try_as<wuxs::Shape>()) {
-                TryRegisterShape(shape, trayHwnd);
+                TryRegisterShape(shape, trayHwnd, 0);
               }
             }
           } catch (...) {
@@ -197,7 +198,7 @@ HRESULT STDMETHODCALLTYPE VisualTreeWatcher::OnVisualTreeChange(ParentChildRelat
     case Add: {
       if (TypeIsRectangle(type) && NameIsBackgroundFill(name)) {
         try {
-          TryRegisterShape(FromHandle<wuxs::Shape>(element.Handle));
+          TryRegisterShape(FromHandle<wuxs::Shape>(element.Handle), nullptr, element.Handle);
         } catch (...) {
           Log(L"BackgroundFill FromHandle failed");
         }
@@ -205,7 +206,8 @@ HRESULT STDMETHODCALLTYPE VisualTreeWatcher::OnVisualTreeChange(ParentChildRelat
       break;
     }
     case Remove:
-      TaskbarAppearanceService::Instance().UnregisterHandle(element.Handle);
+      TaskbarAppearanceService::Instance().UnregisterHandle(
+          static_cast<uint64_t>(element.Handle));
       break;
   }
 
