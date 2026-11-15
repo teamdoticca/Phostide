@@ -10,7 +10,7 @@ import { themes } from "@/lib/themes";
 export const metadata: Metadata = pageMetadata({
   title: "Themes",
   description:
-    "Five built-in Phostide themes — real taskbar captures, Apply to all monitors or one.",
+    "Five built-in Phostide themes for everyday OLED use — real taskbar captures; pair with OLED Care for idle.",
   path: "/docs/themes",
 });
 
@@ -30,13 +30,16 @@ export default function ThemesPage() {
           </Link>
           <p className="mt-6 eyebrow">Themes</p>
           <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">
-            Five built‑in themes
+            Five looks for everyday OLED use
           </h1>
           <p className="mt-5 max-w-xl text-lg text-soft">
-            Each strip is a real Native‑48px capture of the taskbar painter.
-            Hover a strip on desktop to play the loop. These five are the only
-            themes — there is no theme editor, and Phostide does not need
-            Windhawk or any overlay tool.
+            Themes keep the fill moving while you work — the everyday layer of
+            Phostide&apos;s OLED care. Pair with{" "}
+            <Link href="/docs/oled" className="text-ember hover:underline">
+              OLED Care
+            </Link>{" "}
+            for idle. Each strip is a real Native‑48px capture. No theme editor;
+            no Windhawk or overlay tool required.
           </p>
         </div>
         <div className="rounded-xl border border-line bg-panel p-6 text-sm lg:col-span-5">

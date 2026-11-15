@@ -44,12 +44,12 @@ const approaches = [
   },
   {
     name: "Phostide",
-    how: "Standalone app that paints motion into Explorer’s real taskbar BackgroundFill — not a floating window, not a Windhawk mod. Optional OLED Care hybrid-idle dims the fill (AFK all bars; unused displays alone while you work) and can experimentally soften icons/clock.",
+    how: "Standalone OLED taskbar solution: moving fill in Explorer’s real BackgroundFill while you work, hybrid idle Care when you AFK (and unused displays alone while you work), optional experimental chrome dim/clock nudge — not a floating window, not a Windhawk mod.",
     burnIn:
-      "Moves the fill so the background isn’t one fixed bright block. Idle Care further darkens the fill; optional chrome dim/nudge targets residual static UI.",
+      "Reduces locked-bright time on the strip (motion + idle Care). Optional chrome dim/nudge targets residual static UI. Not a burn-in warranty.",
     usability:
-      "Bar stays visible; five built-in themes (no editor) from the tray; per-monitor on/off and appearance; SoftSuspend on Enable; Exit restores stock brushes and chrome.",
-    fit: "When you want the bar usable and themed, with optional idle protection — not hidden or covered.",
+      "Bar stays visible; five built-in themes; OLED Care; per-monitor on/off; SoftSuspend on Enable; Exit restores stock brushes and chrome.",
+    fit: "When you want a full OLED care package that keeps the bar usable — not hidden or covered.",
   },
 ];
 
@@ -106,9 +106,10 @@ export default function ComparePage() {
         <p className="mt-5 max-w-2xl text-lg text-soft">
           People search for ways to protect an OLED from a static taskbar —
           auto‑hide, dimmer overlays, idle‑fade mods, or painting the real fill.
-          Here is an honest map of those approaches and where Phostide sits.
-          Phostide is standalone — it does not need Windhawk — and ships five
-          built‑in themes with no theme editor.
+          Here is an honest map of those approaches. Phostide keeps the bar
+          usable: moving fill while you work, hybrid idle Care when you step
+          away, per‑monitor control — standalone, no Windhawk, five built‑in
+          themes, no theme editor.
         </p>
 
         <section className="mt-14">
@@ -116,9 +117,11 @@ export default function ComparePage() {
           <p className="mt-3 max-w-2xl text-soft">
             OLED pixels age with light. The Windows taskbar is a bright, mostly
             static strip for hours. Tools either hide it, cover it, fade it when
-            idle, or — like Phostide — keep it usable and move the{" "}
+            idle, or — like Phostide — keep it usable with a full care package:
+            move the{" "}
             <strong className="font-medium text-zinc-100">background</strong>{" "}
-            so that fill is not one locked pattern.
+            while you work, dim when you leave, and target only the OLED on
+            multi‑monitor desks.
           </p>
         </section>
 
@@ -210,9 +213,9 @@ export default function ComparePage() {
             <IconDisplay className="h-5 w-5 text-ember" />
             <h3 className="mt-4 font-semibold">OLED‑aware, not a warranty</h3>
             <p className="mt-2 text-sm text-soft">
-              Motion plus optional idle Care reduce how long the same pixels
-              stay locked bright. Residual chrome can still age when Care is
-              off — see{" "}
+              Moving fill plus idle Care reduce locked‑bright time; they are not
+              a burn‑in warranty. Residual chrome can still age unless
+              experimental chrome Care is on (and working) — see{" "}
               <Link href="/docs/oled" className="text-zinc-100 underline-offset-2 hover:underline">
                 OLED notes
               </Link>
@@ -236,13 +239,13 @@ export default function ComparePage() {
         <section className="mt-16 rounded-xl border border-ember/50 bg-emberdim/30 p-8">
           <p className="text-xs text-soft">Try it</p>
           <h2 className="mt-1 text-2xl font-semibold">
-            Prefer a usable bar with moving fill?
+            Prefer a usable OLED taskbar — not a hidden one?
           </h2>
           <p className="mt-3 max-w-xl text-soft">
             Install the signed Setup.exe (per‑user, no admin), open Settings from
-            the tray, pick a theme (All monitors or one display), Apply. Use the
-            Monitors tab to leave a panel stock. Start with Space or Aurora at
-            modest intensity if you want the quietest OLED look.
+            the tray: Taskbar theme + OLED Care (or everyday preset), Monitors to
+            leave an LCD stock. Start with Space or Aurora at modest intensity
+            for the quietest everyday look.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <LatestDownload className="btn-ember">

@@ -1,8 +1,8 @@
 # Phostide
 
-**OLED-safe animated themes on the real Windows 11 taskbar.**
+**OLED care for the real Windows 11 taskbar.**
 
-Phostide paints motion into Explorer’s own taskbar `BackgroundFill` — not a floating overlay, not auto-hide. Icons stay on top. Quit, and the normal bar comes back.
+Phostide keeps the bar usable: moving fill while you work, hybrid idle Care when you step away, per-monitor control — painted into Explorer’s own `BackgroundFill`. Not a floating overlay, not auto-hide. Quit, and the normal bar comes back.
 
 **[Download](https://phostide.doticca.com)** · [GitHub Releases](https://github.com/teamdoticca/Phostide/releases) · [Docs](https://phostide.doticca.com/docs) · [FAQ](https://phostide.doticca.com/docs/faq)
 

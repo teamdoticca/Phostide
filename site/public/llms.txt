@@ -1,6 +1,6 @@
 # Phostide
 
-> Free, MIT-licensed Windows 11 utility that paints OLED-safe animated themes into the real taskbar background (Explorer BackgroundFill), not a floating overlay.
+> Free, MIT-licensed Windows 11 OLED taskbar solution: moving fill while you work, hybrid idle Care when you step away, per-monitor control — painted into Explorer BackgroundFill, not a floating overlay.
 
 Site: https://phostide.doticca.com
 Source: https://github.com/teamdoticca/Phostide
@@ -36,7 +36,7 @@ Defaults after reset: Rainbow, 45% intensity, Auto rendering, OLED Care idle Off
 3. **Taskbar** › Apply to the OLED monitor number › pick **Space** or **Aurora** › modest intensity › **Apply**.
 4. **OLED Care** › optionally **OLED everyday preset** (care defaults only) or set Idle after + care toggles › Apply. **System** › RENDERING **Auto**; optionally Start with Windows › Apply.
 
-Honest limits: animated fill is always on when enabled. OLED Care uses hybrid idle (AFK → all bars; while active → unused displays can dim alone) and can experimentally dim icons/tray/clock or micro-nudge the clock on idle bars. It is not a burn-in warranty. Care applies only to monitors left on in the Monitors tab.
+Honest limits: Phostide reduces locked-bright time (moving fill + idle Care); it is not a burn-in warranty. Themes move the fill; residual Windows chrome stays static unless experimental chrome Care is on (may no-op after XAML renames). Hybrid idle: AFK → all enabled bars; while active → unused displays follow the cursor. Care applies only to monitors left on.
 
 ## Not Phostide
 

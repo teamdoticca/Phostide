@@ -2,17 +2,17 @@ import type { Metadata } from "next";
 
 export const SITE_URL = "https://phostide.doticca.com";
 export const SITE_NAME = "Phostide";
-export const SITE_TAGLINE = "Animated themes for the Windows taskbar";
+export const SITE_TAGLINE = "OLED care for the real Windows taskbar";
 export const SITE_DESCRIPTION =
-  "Phostide paints OLED-safe motion into the real Windows taskbar background — per-monitor themes, shared GPU/CPU rendering. Free, MIT, signed installer for Windows 11.";
+  "Phostide keeps OLED taskbars usable: moving fill while you work, hybrid idle Care when you step away, per-monitor control — painted into Explorer’s real BackgroundFill. Free, MIT, signed installer for Windows 11.";
 export const SITE_OG_DESCRIPTION =
-  "Animated themes on your real Windows taskbar, including per-monitor control. Free · MIT · Windows 11.";
+  "OLED taskbar care without hiding the bar — moving fill, idle dim, per-monitor control. Free · MIT · Windows 11.";
 
 export const OG_IMAGE = {
   url: "/og.png",
   width: 1200,
   height: 630,
-  alt: "Phostide — animated themes for the Windows taskbar",
+  alt: "Phostide — OLED care for the real Windows taskbar",
 } as const;
 
 export const GITHUB_REPO = "https://github.com/teamdoticca/Phostide";
@@ -71,8 +71,8 @@ export const SITE_ROUTES = [
   { path: "/docs/install", priority: 0.8, changeFrequency: "monthly" as const },
   { path: "/docs/faq", priority: 0.85, changeFrequency: "monthly" as const },
   { path: "/docs/themes", priority: 0.8, changeFrequency: "monthly" as const },
-  { path: "/docs/oled", priority: 0.7, changeFrequency: "monthly" as const },
-  { path: "/docs/compare", priority: 0.85, changeFrequency: "monthly" as const },
+  { path: "/docs/oled", priority: 0.85, changeFrequency: "monthly" as const },
+  { path: "/docs/compare", priority: 0.8, changeFrequency: "monthly" as const },
   {
     path: "/docs/troubleshooting",
     priority: 0.7,

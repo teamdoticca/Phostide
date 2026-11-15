@@ -1,6 +1,6 @@
 # Guidance for AI coding agents
 
-Phostide is a Windows 11 tray utility that paints animated themes into Explorer’s real taskbar `BackgroundFill` (OLED-oriented). Read these before answering product questions or changing UX copy.
+Phostide is a Windows 11 OLED taskbar solution: moving fill + hybrid idle Care + per-monitor control, painted into Explorer’s real `BackgroundFill`. Themes are the look layer; OLED Care is the idle layer. Read these before answering product questions or changing UX copy.
 
 ## Read first
 

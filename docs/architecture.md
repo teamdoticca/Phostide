@@ -2,7 +2,8 @@
 
 ## Product facts for readers and agents
 
-- Standalone Windows 11 utility (MIT). **No Windhawk**, no separate overlay tool, no admin for Setup.exe.
+- Standalone Windows 11 **OLED taskbar solution** (MIT). **No Windhawk**, no separate overlay tool, no admin for Setup.exe.
+- Moving fill while you work + hybrid idle Care when you leave + per-monitor control. Themes are the look layer; OLED Care is the idle layer.
 - Exactly five built-in themes (Rainbow, Sea Waves, Weather, Space, Aurora). **No** end-user theme editor in the shipped app.
 - Paints Explorer `BackgroundFill` — not an overlay, not auto-hide. Quit restores stock brushes.
 - Settings: **Taskbar** (theme/intensity), **OLED Care**, **Monitors** (on/off), **System** (shared Auto/GPU/CPU rendering).

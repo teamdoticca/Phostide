@@ -8,14 +8,14 @@ import { absoluteUrl, pageMetadata, SITE_NAME } from "@/lib/seo";
 export const metadata: Metadata = pageMetadata({
   title: "FAQ",
   description:
-    "What Phostide is, how Settings tabs work, dual-monitor OLED setup, Windhawk, themes, and burn-in limits.",
+    "What Phostide is (OLED taskbar care), Settings tabs, dual-monitor recipe, Windhawk, themes, and honest limits.",
   path: "/docs/faq",
 });
 
 const faqs: { q: string; a: string }[] = [
   {
     q: "What does Phostide do?",
-    a: "Phostide paints OLED-safe animated themes into the real Windows 11 taskbar background (Explorer BackgroundFill). Icons stay on top. It is not a floating overlay and not Windows auto-hide. Quit from the tray and the normal bar comes back.",
+    a: "Phostide is an OLED taskbar solution for Windows 11: moving fill while you work, hybrid idle Care when you step away, and per-monitor control — painted into Explorer’s real BackgroundFill. Icons stay on top. It is not a floating overlay and not Windows auto-hide. Quit from the tray and the normal bar comes back.",
   },
   {
     q: "Does Phostide need Windhawk or other software?",
@@ -47,7 +47,7 @@ const faqs: { q: string; a: string }[] = [
   },
   {
     q: "Does Phostide prevent OLED burn-in completely?",
-    a: "No. Animated fill always helps the background strip. OLED Care can further reduce idle fill brightness and optionally soften residual Windows chrome, but it is not a burn-in warranty. Chrome Care is experimental and may no-op if Explorer XAML names change. Windows tips: show clock seconds; hide the date if you do not need it.",
+    a: "No. Phostide reduces locked-bright time on the taskbar (moving fill + idle Care); it is not a burn-in warranty or pixel-shift replacement. Themes move the fill; residual Windows chrome stays static unless you enable experimental chrome dim / clock nudge (may no-op after Explorer XAML renames). Windows tips: show clock seconds; hide the date if you do not need it.",
   },
   {
     q: "Does it collect data or need an account?",

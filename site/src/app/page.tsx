@@ -39,14 +39,15 @@ export default async function Home() {
               {tag} · Free · MIT · Windows 11
             </span>
             <h1 className="mt-7 text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
-              Animated themes,
+              OLED care for the
               <br />
-              painted into your real taskbar.
+              real Windows taskbar.
             </h1>
             <p className="mt-6 max-w-xl text-base leading-relaxed text-soft sm:text-lg">
-              Phostide draws OLED‑safe motion directly into the Windows taskbar
-              background inside Explorer — GPU when available, CPU otherwise.
-              Your icons stay on top. Quit, and the normal bar comes back.
+              Keep the bar usable. Moving fill while you work, hybrid idle Care
+              when you step away, per‑monitor control — painted into Explorer’s
+              own background, not a floating overlay. Quit, and Windows comes
+              back.
             </p>
             <div className="mt-9 flex flex-wrap items-center gap-3">
               <LatestDownload className="btn-ember">
@@ -63,11 +64,11 @@ export default async function Home() {
           <div className="lg:col-span-5 lg:pt-14">
             <div className="divide-y divide-line rounded-2xl border border-line bg-panel text-sm">
               {[
-                ["What it is", "Taskbar background fill"],
+                ["What it is", "OLED taskbar care + themes"],
                 ["What it isn't", "Overlay · auto-hide · Windhawk"],
-                ["Themes", "5 built-in (no editor)"],
-                ["Monitors", "Theme/intensity + on/off"],
-                ["Data", "Stays on your PC"],
+                ["While you work", "Moving BackgroundFill"],
+                ["When idle", "OLED Care (hybrid dim)"],
+                ["Monitors", "OLED-only or per-display"],
                 ["Made by", "Doticca"],
               ].map(([k, v]) => (
                 <div
@@ -88,12 +89,12 @@ export default async function Home() {
           <div>
             <p className="eyebrow">Themes</p>
             <h2 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-              Five looks. One click in the tray.
+              Five dark looks for everyday OLED use.
             </h2>
           </div>
           <p className="max-w-sm text-sm leading-relaxed text-soft">
-            Every strip below is a real capture of the taskbar running Phostide.
-            Dark by default, so OLED panels stay comfortable.
+            Real taskbar captures. Themes keep the fill moving while you work;
+            pair with OLED Care for idle. Space and Aurora stay the quietest.
           </p>
         </div>
         <div className="space-y-4">
@@ -125,17 +126,17 @@ export default async function Home() {
             {
               icon: IconLayers,
               title: "Real background fill",
-              body: "Phostide paints the taskbar's own background inside Explorer — D3D11 GPU when the hardware allows, with a CPU fallback. No floating window covering anything.",
+              body: "Motion paints Explorer’s own BackgroundFill — D3D11 GPU when the hardware allows, CPU fallback. No floating window covering the bar.",
             },
             {
               icon: IconGrid,
-              title: "Per monitor, if you want",
-              body: "Theme and intensity can differ per display, or leave one stock from the Monitors tab. Rendering stays one shared Auto / GPU / CPU choice.",
+              title: "Idle Care + per monitor",
+              body: "OLED Care dims when you AFK (and can dim an unused display alone while you work). Theme only the OLED; leave an LCD stock.",
             },
             {
               icon: IconUndo,
               title: "Quit restores it",
-              body: "Close Phostide from the tray and Windows' normal taskbar returns. Nothing left behind.",
+              body: "Close Phostide from the tray and Windows’ normal taskbar (and Care chrome) returns. Nothing left behind.",
             },
           ].map((step) => (
             <div

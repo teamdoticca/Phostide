@@ -20,7 +20,7 @@ import { pageMetadata } from "@/lib/seo";
 export const metadata: Metadata = pageMetadata({
   title: "Docs",
   description:
-    "Install Phostide, set themes per monitor, and fix the odd hiccup.",
+    "Install Phostide, set OLED Care and themes per monitor, and fix the odd hiccup.",
   path: "/docs",
 });
 
@@ -35,25 +35,25 @@ const cards = [
     href: "/docs/faq",
     icon: IconSliders,
     title: "FAQ",
-    body: "Mechanism, Windhawk, Settings tabs, OLED-only recipe, burn-in limits.",
-  },
-  {
-    href: "/docs/themes",
-    icon: IconPalette,
-    title: "Themes",
-    body: "Five looks, per-monitor intensity, and how to Apply from Settings.",
+    body: "OLED Care, Settings tabs, dual-monitor recipe, Windhawk, honest limits.",
   },
   {
     href: "/docs/oled",
     icon: IconDisplay,
     title: "OLED notes",
-    body: "Why a static taskbar matters on OLED, and what Phostide does about it.",
+    body: "Full OLED taskbar solution: moving fill, idle Care, per-monitor, honest limits.",
+  },
+  {
+    href: "/docs/themes",
+    icon: IconPalette,
+    title: "Themes",
+    body: "Five looks for everyday OLED use, intensity, and how to Apply.",
   },
   {
     href: "/docs/compare",
     icon: IconLayers,
     title: "Compare approaches",
-    body: "Auto-hide, overlays, idle fade mods, and real BackgroundFill.",
+    body: "Auto-hide, overlays, idle fade mods vs usable bar + Care.",
   },
   {
     href: "/docs/troubleshooting",
@@ -92,8 +92,8 @@ export default async function DocsPage() {
               Everything you need to run Phostide.
             </h1>
             <p className="mt-5 max-w-xl text-lg text-soft">
-              Short pages. Install it, open Settings from the tray, Apply a
-              theme (all displays or one), fix the odd hiccup. Agent briefs:{" "}
+              Short pages. Install it, set OLED Care and themes from the tray
+              (all displays or one), fix the odd hiccup. Agent briefs:{" "}
               <a href="/llms.txt" className="text-ember hover:underline">
                 llms.txt
               </a>{" "}

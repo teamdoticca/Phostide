@@ -12,15 +12,15 @@ Next.js App Router under `site/`, deployed on Vercel project `phostide` (https:/
 
 ## Users
 
-Windows 11 desktop users with OLED (or burn-in-sensitive) displays who want animated taskbar themes without autohide or overlays. Secondary: enthusiasts evaluating a local MIT utility from Doticca.
+Windows 11 desktop users with OLED (or burn-in-sensitive) displays who want the taskbar to stay usable while reducing locked-bright static pixels — without autohide or overlays. Secondary: enthusiasts evaluating a local MIT utility from Doticca.
 
 ## Product Purpose
 
-Phostide paints OLED-safe animated themes into the real Windows 11 taskbar background fill (Explorer `BackgroundFill`), not a floating overlay. Success: visitor understands the mechanism, trusts safety, and downloads the latest GitHub Release.
+Phostide is an OLED taskbar solution for Windows 11: moving fill while you work, hybrid idle Care when you step away, and per-monitor control — painted into Explorer’s real `BackgroundFill`, not a floating overlay. Success: visitor understands the full care story (not themes alone), trusts honest limits, and downloads the latest GitHub Release.
 
 ## Positioning
 
-Themes live inside Explorer’s own fill via a TAP helper — icons stay on top; brushes restore on exit. Neighboring tools that overlay windows or only autohide the bar cannot truthfully claim this. Phostide is standalone: no Windhawk or separate overlay required.
+Keep the bar visible. Motion + idle Care reduce how long the same bright taskbar pixels stay locked; neighboring tools that only hide, overlay, or idle-fade the bar cannot truthfully claim the same package. Themes are the everyday look layer; OLED Care is the idle layer. Standalone: no Windhawk or separate overlay required.
 
 ## Capabilities
 
