@@ -1,4 +1,5 @@
 #include "ChromeCare.h"
+#include "TaskbarAppearanceService.h"
 
 #include "../Common/MonitorEnum.h"
 
@@ -107,19 +108,35 @@ ChromeKind ClassifyChrome(std::wstring_view name, std::wstring_view type) {
   return ChromeKind::Icons;
 }
 
+bool ResolveChromeMonitor(ChromeVisual& cv) {
+  if (cv.trayHwnd && !cv.deviceHash) {
+    phostide::DeviceHashFromWindow(cv.trayHwnd, cv.deviceHash);
+  }
+  if (!cv.deviceHash && cv.element) {
+    // Advise path registers chrome with trayHwnd=null; bind via shared XamlRoot
+    // with the BackgroundFill on that same taskbar island.
+    cv.deviceHash = TaskbarAppearanceService::Instance().DeviceHashForElement(cv.element);
+    if (cv.deviceHash && !cv.trayHwnd) {
+      cv.trayHwnd =
+          TaskbarAppearanceService::Instance().TrayHwndForDeviceHash(cv.deviceHash);
+    }
+  }
+  return cv.deviceHash != 0;
+}
+
 bool SlotCareActive(const ThemeCommand& cmd, uint64_t deviceHash) {
-  if (cmd.apiVersion >= 6 && cmd.slotCount > 0 && deviceHash != 0) {
+  // v6: strictly per-slot. Never fall back to global careActive OR — that dimmed
+  // chrome on every bar whenever any one display was idle.
+  if (cmd.apiVersion >= 6 && cmd.slotCount > 0) {
+    if (deviceHash == 0) return false;
     const uint32_t n = (std::min)(cmd.slotCount, kMaxMonitorSlots);
     for (uint32_t i = 0; i < n; ++i) {
       if (cmd.slots[i].deviceHash == deviceHash) {
         return cmd.slots[i].careActive != 0 && cmd.slots[i].enabled != 0;
       }
     }
-    // Hash present but no matching slot — stay off.
     return false;
   }
-  // No tray→monitor mapping (common for Advise-only chrome): use global OR, same
-  // as pre-v6, so icons/Search still dim when care is on.
   return cmd.careActive != 0;
 }
 
@@ -145,9 +162,16 @@ bool ChromeCareService::TryRegister(winrt::Windows::UI::Xaml::FrameworkElement c
   }
 
   std::lock_guard lock(mutex_);
-  for (const auto& existing : elements_) {
-    if (existing.element == fe) return true;
-    if (diagnosticsHandle && existing.diagnosticsHandle == diagnosticsHandle) return true;
+  for (auto& existing : elements_) {
+    const bool same = existing.element == fe ||
+                      (diagnosticsHandle && existing.diagnosticsHandle == diagnosticsHandle);
+    if (!same) continue;
+    // Hit-test often arrives after Advise(null tray) — upgrade mapping in place.
+    if (trayHwnd && (!existing.trayHwnd || !existing.deviceHash)) {
+      existing.trayHwnd = trayHwnd;
+      phostide::DeviceHashFromWindow(trayHwnd, existing.deviceHash);
+    }
+    return true;
   }
 
   ChromeVisual cv;
@@ -173,12 +197,16 @@ bool ChromeCareService::TryRegister(winrt::Windows::UI::Xaml::FrameworkElement c
   cv.trayHwnd = trayHwnd;
   if (trayHwnd) {
     phostide::DeviceHashFromWindow(trayHwnd, cv.deviceHash);
+  } else {
+    ResolveChromeMonitor(cv);
   }
   elements_.push_back(std::move(cv));
 
   wchar_t line[256];
-  swprintf_s(line, L"Chrome registered kind=%d name=%s type=%s", static_cast<int>(kind),
-             name.c_str(), type.c_str());
+  swprintf_s(line, L"Chrome registered kind=%d name=%s type=%s hash=%llu tray=%p",
+             static_cast<int>(kind), name.c_str(), type.c_str(),
+             static_cast<unsigned long long>(elements_.back().deviceHash),
+             static_cast<void*>(elements_.back().trayHwnd));
   LogChrome(line);
   return true;
 }
@@ -215,10 +243,7 @@ void ChromeCareService::RestoreOne(ChromeVisual& cv) {
 void ChromeCareService::ApplyOne(ChromeVisual& cv, const ThemeCommand& cmd,
                                  float timeSeconds) {
   if (!cv.element) return;
-  // Prefer tray→monitor hash; unknown tray falls back to global careActive OR.
-  if (cv.trayHwnd && !cv.deviceHash) {
-    phostide::DeviceHashFromWindow(cv.trayHwnd, cv.deviceHash);
-  }
+  ResolveChromeMonitor(cv);
   const bool care = SlotCareActive(cmd, cv.deviceHash);
   const bool chromeDim = care && (cmd.careFlags & kCareFlagChromeDim) != 0;
   const bool clockNudge = care && (cmd.careFlags & kCareFlagClockNudge) != 0 &&

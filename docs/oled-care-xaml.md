@@ -2,7 +2,7 @@
 
 Phostide’s TAP historically paints only `Rectangle#BackgroundFill`. Idle Chrome Dim / Clock Care need a **shallow** whitelist of shell-owned elements. Names below come from public Windows 11 taskbar styling references (Windhawk / RamenSoftware guide) and are treated as best-effort — OS updates may rename them.
 
-Idle uses classic session `GetLastInputInfo` (no input → all displays dim, same as pre-per-monitor). While the session is active, recent input is also attributed to the cursor / focused-window monitor so an unused secondary can idle alone. Fill intensity and chrome dim follow `MonitorPaintSlot.careActive` (ThemeCommand v6); chrome without a tray mapping falls back to global `careActive`.
+Idle is hybrid: classic session `GetLastInputInfo` AFK dims all bars; while the session is active, attendance follows the **cursor monitor only** so an unused secondary can idle alone (a leftover focused window on another display must not keep that bar awake). Leaving full AFK wakes every bar on the next poll (~200 ms while dimmed). Fill intensity and chrome dim follow per-slot `careActive` (ThemeCommand v6) — chrome maps to a tray via hit-test HWND or shared `XamlRoot` with that bar’s `BackgroundFill` (no global `careActive` OR fallback).
 
 ## Containers / buttons
 

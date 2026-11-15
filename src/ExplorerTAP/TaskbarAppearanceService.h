@@ -53,6 +53,10 @@ class TaskbarAppearanceService {
   void StopRenderLoop();
   void WatchHostMutex();
   bool HasBoundFill() const { return boundCount_.load() > 0; }
+  // Map a chrome element to the BackgroundFill tray that shares its XamlRoot.
+  uint64_t DeviceHashForElement(
+      winrt::Windows::UI::Xaml::FrameworkElement const& fe) const;
+  HWND TrayHwndForDeviceHash(uint64_t deviceHash) const;
 
  private:
   TaskbarAppearanceService() = default;
@@ -75,7 +79,7 @@ class TaskbarAppearanceService {
   void RefreshDeviceHash(TaskbarVisual& tv);
   void SignalBound();
 
-  std::mutex mutex_;
+  mutable std::mutex mutex_;
   std::vector<TaskbarVisual> taskbars_;
   ThemeCommand command_{};
   std::atomic<bool> running_{false};

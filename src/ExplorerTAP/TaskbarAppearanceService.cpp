@@ -275,6 +275,34 @@ void TaskbarAppearanceService::RefreshDeviceHash(TaskbarVisual& tv) {
   }
 }
 
+uint64_t TaskbarAppearanceService::DeviceHashForElement(
+    winrt::Windows::UI::Xaml::FrameworkElement const& fe) const {
+  if (!fe) return 0;
+  try {
+    const auto root = fe.XamlRoot();
+    if (!root) return 0;
+    std::lock_guard lock(mutex_);
+    for (const auto& tv : taskbars_) {
+      if (!tv.background || !tv.deviceHash) continue;
+      try {
+        if (tv.background.XamlRoot() == root) return tv.deviceHash;
+      } catch (...) {
+      }
+    }
+  } catch (...) {
+  }
+  return 0;
+}
+
+HWND TaskbarAppearanceService::TrayHwndForDeviceHash(uint64_t deviceHash) const {
+  if (!deviceHash) return nullptr;
+  std::lock_guard lock(mutex_);
+  for (const auto& tv : taskbars_) {
+    if (tv.deviceHash == deviceHash && tv.trayHwnd) return tv.trayHwnd;
+  }
+  return nullptr;
+}
+
 const MonitorPaintSlot* TaskbarAppearanceService::SlotFor(const TaskbarVisual& tv) const {
   if (command_.apiVersion < 4 || command_.slotCount == 0 || tv.deviceHash == 0) {
     return nullptr;
@@ -834,7 +862,13 @@ void TaskbarAppearanceService::WatchHostMutex() {
         mutex = OpenMutexW(SYNCHRONIZE, FALSE, kMutexName.data());
         if (!mutex) Sleep(250);
       }
-      WaitForSingleObject(mutex, INFINITE);
+      // Wait returns OBJECT_0 / ABANDONED with ownership. Always Release before
+      // Close — otherwise TAP keeps the SingleInstance mutex forever and the next
+      // Phostide.exe sees ERROR_ALREADY_EXISTS and exits without painting.
+      const DWORD wait = WaitForSingleObject(mutex, INFINITE);
+      if (wait == WAIT_OBJECT_0 || wait == WAIT_ABANDONED) {
+        ReleaseMutex(mutex);
+      }
       CloseHandle(mutex);
       // Soft-suspend: restore stock fills but KEEP BackgroundFill refs so the next
       // Phostide.exe can BindVisual without a fragile hit-test rescan. Full
@@ -847,6 +881,8 @@ void TaskbarAppearanceService::WatchHostMutex() {
       } else {
         SuspendPainting();
       }
+      // Wait until no handles remain so CreateMutex in the next host is a fresh
+      // create (err=0), not ERROR_ALREADY_EXISTS from our probe/watch handle.
       for (;;) {
         HANDLE probe = OpenMutexW(SYNCHRONIZE, FALSE, kMutexName.data());
         if (!probe) break;

@@ -201,9 +201,11 @@ export default async function InstallPage() {
                 </li>
                 <li>
                   <span className="text-zinc-100">OLED Care</span> tab —
-                  per-display idle fill dim (cursor / focused window); optional
-                  experimental chrome/clock care; night boost; OLED everyday
-                  preset
+                  hybrid idle fill dim (AFK dims all; unused displays can dim
+                  alone while you work); optional experimental chrome/clock
+                  care; night boost;{" "}
+                  <span className="text-zinc-100">OLED everyday preset</span>{" "}
+                  (care-only — does not change theme/intensity)
                 </li>
                 <li>
                   <span className="text-zinc-100">System</span> tab —{" "}
@@ -215,10 +217,10 @@ export default async function InstallPage() {
                 Apply under All writes the draft theme/intensity to every
                 attached display (and the fallback for newly plugged monitors).
                 Apply under a monitor number writes only that display. Rendering
-                mode is app‑wide; OLED Care idle is per display (Care only paints
-                monitors left on). Auto uses D3D11 GPU paint when it can and
-                falls back to CPU. Closing without Apply keeps your previous
-                look.
+                mode is app‑wide; OLED Care only paints monitors left on. Auto
+                uses D3D11 GPU paint when it can and falls back to CPU. Closing
+                without Apply keeps your previous look. Tray left-click toggles
+                Enable (soft-pause); Exit restores stock brushes.
               </p>
             </div>
           </section>
@@ -268,8 +270,8 @@ export default async function InstallPage() {
               </li>
               <li>
                 <span className="text-zinc-100">OLED Care</span> — optionally{" "}
-                <span className="text-zinc-100">OLED everyday preset</span> or set
-                Idle after › Apply.{" "}
+                <span className="text-zinc-100">OLED everyday preset</span>{" "}
+                (care defaults only) or set Idle after › Apply.{" "}
                 <span className="text-zinc-100">System</span> — leave{" "}
                 <span className="text-zinc-100">RENDERING</span> on{" "}
                 <span className="text-zinc-100">Auto</span>; enable Start with

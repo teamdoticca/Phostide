@@ -98,17 +98,20 @@ export default function OledPage() {
         <div className="rounded-xl border border-line bg-panel p-8 md:col-span-2">
           <h2 className="text-xl font-semibold">OLED Care</h2>
           <p className="mt-3 text-soft">
-            Settings › OLED Care lowers fill intensity per display after the
-            cursor and focused window stay off that monitor (1 / 5 / 10 / 30
-            minutes). Optional experimental toggles dim icons, tray, and clock
-            opacity, or micro‑nudge the clock, only on idle displays — then
-            restore when that display is attended again, or on Exit. Night boost
-            tightens care in the evening. Care follows the Monitors on/off list.
-            Use{" "}
+            Settings › OLED Care lowers fill intensity with{" "}
+            <strong className="font-medium text-zinc-100">hybrid idle</strong>:
+            walk away (no input for 1 / 5 / 10 / 30 minutes) and every enabled
+            bar dims; while you keep working, an unused display can dim alone
+            once the cursor and focused window stay off it. Optional
+            experimental toggles dim icons, tray, Search, and clock opacity, or
+            micro‑nudge the clock, only on idle displays — then restore when
+            attended again, or on Exit. Night boost tightens care in the
+            evening. Care follows the Monitors on/off list. Use{" "}
             <strong className="font-medium text-zinc-100">
               OLED everyday preset
             </strong>{" "}
-            for Space + modest intensity + a sensible care defaults pack.
+            for a sensible care defaults pack (idle/fill/chrome — not your
+            Taskbar theme or intensity).
           </p>
         </div>
 

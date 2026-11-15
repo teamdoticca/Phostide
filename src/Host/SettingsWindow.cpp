@@ -269,24 +269,17 @@ void InvalidateThemeRows(HWND hwnd);
 void RefreshPreview(HWND hwnd);
 
 void ApplyOledEverydayPreset(HWND hwnd) {
-  g_draftTheme = ThemeId::Space;
-  g_draftIntensity = 35;
+  // Care-only: never touch Taskbar theme / intensity (user's active look stays).
   g_draftCareIdleMinutes = 5;
   g_draftCareFillIntensity = 5;
   g_draftCareChromeDim = true;
   g_draftCareClockNudge = true;
   g_draftCareNightBoost = true;
-  g_previewTime = ThemeBaseTime(g_draftTheme);
-  SendDlgItemMessageW(hwnd, IDC_INTENSITY, TBM_SETPOS, TRUE,
-                      static_cast<LPARAM>(g_draftIntensity));
-  UpdateIntensityValue(hwnd);
   SendDlgItemMessageW(hwnd, IDC_CARE_FILL, TBM_SETPOS, TRUE,
                       static_cast<LPARAM>(g_draftCareFillIntensity));
   UpdateCareFillValue(hwnd);
-  InvalidateThemeRows(hwnd);
   InvalidateCareIdleChips(hwnd);
   InvalidateCareChecks(hwnd);
-  RefreshPreview(hwnd);
 }
 
 void InvalidateThemeRows(HWND hwnd) {
@@ -544,12 +537,18 @@ void LoadControlsFromDraft(HWND hwnd) {
 }
 
 void ReadDraftFromControls(HWND hwnd) {
-  g_draftIntensity =
-      static_cast<int>(SendDlgItemMessageW(hwnd, IDC_INTENSITY, TBM_GETPOS, 0, 0));
-  g_draftIntensity = ClampPercent(g_draftIntensity);
-  g_draftCareFillIntensity =
-      static_cast<int>(SendDlgItemMessageW(hwnd, IDC_CARE_FILL, TBM_GETPOS, 0, 0));
-  g_draftCareFillIntensity = ClampPercent(g_draftCareFillIntensity);
+  // Only sample the trackbar for the active tab. Hidden trackbars have been seen
+  // to disagree with draft after Care layout/preset, which previously saved Idle
+  // fill % over Taskbar intensity (themes looked "not applied" at ~5%).
+  if (g_activeTab == 0) {
+    g_draftIntensity =
+        static_cast<int>(SendDlgItemMessageW(hwnd, IDC_INTENSITY, TBM_GETPOS, 0, 0));
+    g_draftIntensity = ClampPercent(g_draftIntensity);
+  } else if (g_activeTab == 1) {
+    g_draftCareFillIntensity =
+        static_cast<int>(SendDlgItemMessageW(hwnd, IDC_CARE_FILL, TBM_GETPOS, 0, 0));
+    g_draftCareFillIntensity = ClampPercent(g_draftCareFillIntensity);
+  }
   (void)hwnd;
 }
 

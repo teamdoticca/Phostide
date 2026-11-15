@@ -44,11 +44,11 @@ const approaches = [
   },
   {
     name: "Phostide",
-    how: "Standalone app that paints motion into Explorer’s real taskbar BackgroundFill — not a floating window, not a Windhawk mod. Optional OLED Care idle-dims the fill and can experimentally soften icons/clock.",
+    how: "Standalone app that paints motion into Explorer’s real taskbar BackgroundFill — not a floating window, not a Windhawk mod. Optional OLED Care hybrid-idle dims the fill (AFK all bars; unused displays alone while you work) and can experimentally soften icons/clock.",
     burnIn:
       "Moves the fill so the background isn’t one fixed bright block. Idle Care further darkens the fill; optional chrome dim/nudge targets residual static UI.",
     usability:
-      "Bar stays visible; five built-in themes (no editor) from the tray; per-monitor on/off and appearance; Exit restores stock brushes and chrome.",
+      "Bar stays visible; five built-in themes (no editor) from the tray; per-monitor on/off and appearance; SoftSuspend on Enable; Exit restores stock brushes and chrome.",
     fit: "When you want the bar usable and themed, with optional idle protection — not hidden or covered.",
   },
 ];

@@ -26,7 +26,8 @@ Themes live inside Explorer’s own fill via a TAP helper — icons stay on top;
 
 - Themes: Rainbow, Sea Waves, Weather, Space, Aurora (exactly five; no end-user theme editor)
 - Settings tabs: Taskbar (theme + intensity), OLED Care, Monitors (on/off), System (shared Auto/GPU/CPU rendering, Start with Windows, updates)
-- OLED Care tab: per-display idle fill intensity drop (cursor / focused window); optional experimental chrome dim + clock micro-nudge; night boost; OLED everyday preset; applies only to Monitors-enabled bars
+- OLED Care tab: hybrid idle (session AFK dims all; while active, unused displays can dim alone via cursor / focused window); optional experimental chrome dim + clock micro-nudge; night boost; OLED everyday preset is **care-only** (does not change Taskbar theme/intensity); applies only to Monitors-enabled bars
+- SoftSuspend on tray Enable / host stop keeps `BackgroundFill` refs so the next host can rebind without a fragile rescan; Exit restores stock brushes
 - Rendering: Auto / GPU / CPU (D3D11 Composition paint when available; CPU pixel fallback). `Themes.hlsl` ships with the app for the GPU path
 - Tray host + ExplorerTAP injection
 - Local settings; no account / no telemetry (as documented)

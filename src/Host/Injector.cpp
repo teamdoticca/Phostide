@@ -129,18 +129,21 @@ bool RestartExplorerShell(bool explainToUser) {
     LogInject(L"explorer restart: tray not found");
     return false;
   }
-  // Let the XAML taskbar island settle before ixde (same ritual as docs/development.md).
-  Sleep(8000);
+  // XAML Diagnostics (ixde) returns ERROR_NOT_FOUND if the island is still
+  // warming — and once that sticks, the Explorer process may never advise.
+  // 8s was too short after TaskbarCreated storms; wait longer.
+  Sleep(15000);
   LogInject(L"explorer restart: tray ready");
   return true;
 }
 
 bool NeedsExplorerBounceForFreshTap() {
-  if (!BoundEventIsSet()) return false;
   const std::wstring stamped = ReadTapVersionStamp();
+  // Bounce whenever the on-disk stamp disagrees with this host — even if Bound
+  // is clear. Skipping that case left Explorer mapped to an old TAP that held
+  // the SingleInstance mutex and blocked host restart after Kill-Process.
   if (stamped.empty()) {
-    // Bound but no stamp (pre-0.1.10 TAP) — treat as stale.
-    return true;
+    return BoundEventIsSet();  // pre-0.1.10 TAP still painting
   }
   return stamped != kAppVersion;
 }
@@ -277,7 +280,24 @@ bool InjectExplorerTap(std::wstring* errorOut) {
     }
   }
 
-  return HookTapIntoTray(dest, errorOut);
+  if (!HookTapIntoTray(dest, errorOut)) {
+    return false;
+  }
+  // ready event can fire after ixde gave up (TapSite signals anyway). Require Bound.
+  if (!BoundEventIsSet()) {
+    LogInject(L"TAP ready but not Bound — retry after explorer restart");
+    if (!RestartExplorerShell(/*explainToUser=*/false)) {
+      if (errorOut) *errorOut = L"ExplorerTAP installed but BackgroundFill never bound";
+      return false;
+    }
+    if (!CopyTapToTemp(dest, errorOut)) return false;
+    if (!HookTapIntoTray(dest, errorOut)) return false;
+    if (!BoundEventIsSet()) {
+      if (errorOut) *errorOut = L"ExplorerTAP installed but BackgroundFill never bound";
+      return false;
+    }
+  }
+  return true;
 }
 
 bool SendThemeCommand(const ThemeCommand& cmd) {

@@ -34,7 +34,8 @@ constexpr UINT ID_OPEN_UPDATE = 310;
 constexpr UINT ID_EXIT = 399;
 constexpr UINT kAnimIntervalMs = 33;  // ~30 fps host-side accent animation
 constexpr UINT kReinjectDebounceMs = 1000;
-constexpr UINT kIdlePollMs = 1000;
+constexpr UINT kIdlePollMs = 1000;       // while awake — cheap attendance
+constexpr UINT kIdlePollCareMs = 200;    // while any bar is dimmed — snappy wake
 
 struct MonitorCareState {
   uint64_t deviceHash = 0;
@@ -187,12 +188,14 @@ bool RefreshOledCareIdleStates() {
   LASTINPUTINFO lii{sizeof(lii)};
   const bool haveInput = GetLastInputInfo(&lii) != FALSE;
   const bool systemIdle = haveInput && (now - lii.dwTime) >= thresholdMs;
-  constexpr DWORD kRecentInputMs = 2500;
-  const bool recentInput = haveInput && (now - lii.dwTime) <= kRecentInputMs;
 
   if (systemIdle) {
     g_careWasSystemIdle = true;
-  } else if (recentInput) {
+  } else {
+    // Per-monitor attendance follows the cursor only. Touching the focused-window
+    // monitor every poll kept a leftover FG on the secondary awake forever while
+    // you worked on the primary — split dim never stuck. Full AFK still uses
+    // systemIdle (all bars). Wake-all when leaving AFK stays below.
     POINT cursor{};
     if (GetCursorPos(&cursor)) {
       uint64_t hash = 0;
@@ -201,13 +204,6 @@ bool RefreshOledCareIdleStates() {
         TouchCareMonitor(hash, now);
       }
     }
-    if (HWND fg = GetForegroundWindow()) {
-      uint64_t hash = 0;
-      if (phostide::DeviceHashFromWindow(fg, hash)) {
-        TouchCareMonitor(hash, now);
-      }
-    }
-    // Leaving full AFK: any input wakes every bar (classic GetLastInputInfo).
     if (g_careWasSystemIdle) {
       for (uint32_t i = 0; i < g_careMonitorCount; ++i) {
         g_careMonitors[i].lastAttendedTick = now;
@@ -282,7 +278,14 @@ phostide::ThemeCommand MakeCommand() {
 
 void SyncIdleTimer(HWND hwnd) {
   if (g_settings.oledCareIdleMinutes > 0 && g_settings.enabled) {
-    SetTimer(hwnd, ID_IDLE_TIMER, kIdlePollMs, nullptr);
+    bool anyIdle = false;
+    for (uint32_t i = 0; i < g_careMonitorCount; ++i) {
+      if (g_careMonitors[i].idle) {
+        anyIdle = true;
+        break;
+      }
+    }
+    SetTimer(hwnd, ID_IDLE_TIMER, anyIdle ? kIdlePollCareMs : kIdlePollMs, nullptr);
   } else {
     KillTimer(hwnd, ID_IDLE_TIMER);
     ClearMonitorCareIdle();
@@ -290,9 +293,11 @@ void SyncIdleTimer(HWND hwnd) {
 }
 
 void PollOledCareIdle(HWND hwnd) {
-  if (!RefreshOledCareIdleStates()) return;
+  const bool changed = RefreshOledCareIdleStates();
+  // Re-arm so wake uses the fast interval while dimmed, slow while awake.
+  SyncIdleTimer(hwnd);
+  if (!changed) return;
   ApplyTheme(true);
-  (void)hwnd;
 }
 
 float AnimSeconds() {
@@ -714,9 +719,26 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR cmdLine, int) {
     return phostide::RequestExistingInstanceExit(20000) ? 0 : 1;
   }
 
-  HANDLE mutex = CreateMutexW(nullptr, TRUE, phostide::kMutexName.data());
-  if (!mutex || GetLastError() == ERROR_ALREADY_EXISTS) {
+  // Single-instance: Create + Wait. Do NOT exit solely on ERROR_ALREADY_EXISTS —
+  // ExplorerTAP watches this mutex with OpenMutex, so the name can still exist
+  // briefly after a crash/kill. Only bail when a live tray window exists or Wait
+  // cannot acquire (another host still owns it).
+  HANDLE mutex = CreateMutexW(nullptr, FALSE, phostide::kMutexName.data());
+  if (!mutex) {
+    return 1;
+  }
+  if (GetLastError() == ERROR_ALREADY_EXISTS &&
+      FindWindowW(L"PhostideTray", nullptr) != nullptr) {
+    CloseHandle(mutex);
     return 0;
+  }
+  const DWORD mutexWait = WaitForSingleObject(mutex, 3000);
+  if (mutexWait == WAIT_TIMEOUT) {
+    CloseHandle(mutex);
+    if (FindWindowW(L"PhostideTray", nullptr) != nullptr) return 0;
+    // Stuck ownership (old TAP bug held the mutex). Continue with a fresh name
+    // attempt only if no tray — last resort: fail closed so we don't dual-host.
+    return 1;
   }
 
   g_instance = hi;

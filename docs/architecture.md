@@ -18,9 +18,10 @@ Paint the real Windows 11 taskbar background (`Rectangle#BackgroundFill`) with O
 1. `Phostide.exe` (tray host) injects `ExplorerTAP.dll` into Explorer via a window hook + XAML Diagnostics TAP.
 2. TAP finds each taskbar’s `BackgroundFill` shape and remembers the original brush.
 3. Effect engine renders into a `CompositionDrawingSurface` and assigns a `CompositionSurfaceBrush` as the Fill.
-4. Host polls OLED Care per display: recent `GetLastInputInfo` is attributed to the cursor’s and foreground window’s monitors; idle displays get lower fill intensity and per-slot `careActive` (ThemeCommand v6). Chrome dim / clock nudge apply only on idle trays.
-5. Optional `ChromeCareService` dims whitelisted icons/tray/clock elements and can micro-nudge the clock host.
-6. On host exit/crash, TAP restores original brushes and chrome opacity/transforms.
+4. Host polls OLED Care with **hybrid idle**: classic session `GetLastInputInfo` AFK dims every bar; while the session is active, each poll attributes the cursor / focused-window monitor so an unused secondary can idle alone. Idle slots get lower fill intensity and per-slot `careActive` (ThemeCommand v6). Leaving full AFK wakes every bar on the next care poll (~200 ms while dimmed).
+5. Optional `ChromeCareService` dims whitelisted icons/tray/clock (incl. Search pill) and can micro-nudge the clock host — only on idle trays.
+6. Tray Enable / host stop uses **SoftSuspend**: restore stock fills but keep `BackgroundFill` refs so the next host can Bind again. TAP watches `Local\Phostide.SingleInstance` and must `ReleaseMutex` after Wait so a killed host can restart. Full Exit restores brushes + chrome.
+7. Version-stamped TAP upgrades bounce Explorer when `tap.version` disagrees; after bounce the host waits ~15 s for XAML Diagnostics and retries inject if Bound never signals.
 
 ## Multi-monitor
 
@@ -29,7 +30,7 @@ Settings has four tabs:
 | Tab | Scope |
 |-----|--------|
 | **Taskbar** | Apply to **All** or monitor *N*: theme + intensity (preview, then Apply) |
-| **OLED Care** | Idle fill dim, optional experimental chrome/clock care, night boost, pause when locked |
+| **OLED Care** | Hybrid idle fill dim, optional experimental chrome/clock care, night boost, pause when locked; everyday preset is care-only |
 | **Monitors** | Per-display on/off (default all on). Off → stock Windows bar |
 | **System** | App-global: Auto/GPU/CPU rendering, Start with Windows, updates |
 

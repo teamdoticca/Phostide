@@ -43,14 +43,21 @@ Open from the tray icon: right-click › **Settings…**
 
 ### OLED Care tab
 
-Idle is **per display** (cursor / focused window on that monitor); care settings are shared. Applies only to monitors left on in the Monitors tab:
+Care settings are shared; apply only to monitors left on in the Monitors tab. Idle is **hybrid**:
 
-- **Idle after**: Off / 1 / 5 / 10 / 30 minutes — when a display is unattended that long, its fill intensity drops to **Idle fill intensity**. A busy primary does not keep secondaries awake.
-- Optional **Dim icons, tray & clock (experimental)** — soft opacity on whitelisted Explorer chrome on idle displays only.
+- Classic session **AFK** (`GetLastInputInfo`): no input for Idle after → **every** enabled bar dims (same as classic care).
+- While the session is **active**, each poll attributes the cursor and focused-window monitors so an unused secondary can reach Idle after alone. Leaving full AFK wakes every bar on the next care poll (~200 ms while dimmed).
+
+Controls:
+
+- **Idle after**: Off / 1 / 5 / 10 / 30 minutes — unattended displays drop to **Idle fill intensity**.
+- Optional **Dim icons, tray & clock (experimental)** — soft opacity on whitelisted Explorer chrome (incl. Search pill) on idle displays only.
 - Optional **Micro-nudge clock (experimental)** — ±1–2 px shift on the clock host on idle displays.
 - Optional **Night boost** — evenings (20:00–06:59): shorter idle timeout and darker fill.
 - **Pause themes while locked** (surfaces the existing pause-when-locked behavior).
-- **OLED everyday preset** — Space + modest intensity + 5‑minute idle care + chrome dim + clock nudge + night boost.
+- **OLED everyday preset** — care-only: 5‑minute idle + low idle fill + chrome dim + clock nudge + night boost. Does **not** change Taskbar theme or intensity.
+
+Tray left-click / Enable soft-pauses paint (**SoftSuspend** keeps `BackgroundFill` refs for rebind). Exit restores stock brushes and chrome.
 
 ### Monitors tab
 
@@ -89,7 +96,14 @@ You may also leave both monitors on and set different themes/intensities per dis
 
 ## Honest OLED limits
 
-Phostide always reduces how long the **background fill** stays as one static bright strip. Optional OLED Care further dims that fill per idle display (cursor / focused window), and can experimentally dim or micro-nudge residual Windows chrome on those bars. Chrome Care depends on stable Explorer XAML names and may no-op after OS updates. Phostide is not a burn-in warranty or a full OLED pixel-shift replacement. Windows tips that help without Phostide code: enable clock seconds; hide the date if you do not need it.
+Phostide always reduces how long the **background fill** stays as one static bright strip. Optional OLED Care further dims that fill on AFK / unattended displays (hybrid idle), and can experimentally dim or micro-nudge residual Windows chrome on those bars. Chrome Care depends on stable Explorer XAML names and may no-op after OS updates. Phostide is not a burn-in warranty or a full OLED pixel-shift replacement. Windows tips that help without Phostide code: enable clock seconds; hide the date if you do not need it.
+
+## Runtime notes (agents / support)
+
+- ThemeCommand **v6**: per-slot `careActive`; top-level `careActive` is OR of slots.
+- After Explorer bounce for TAP upgrade, wait ~15 s before ixde; `0x80070490` / `ixde gave up` may require another bounce.
+- Force-killing the host without releasing `Local\Phostide.SingleInstance` used to block restart (TAP watch must `ReleaseMutex` after Wait). Prefer tray Exit or `Phostide.exe /exit`.
+- Very low Taskbar intensity (e.g. 5%) can look like “theme not applied” on OLED — check Settings › Taskbar intensity, not only Care.
 
 ## Comparison keywords (for search / diagnosis)
 

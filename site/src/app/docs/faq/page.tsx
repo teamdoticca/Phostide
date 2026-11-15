@@ -31,7 +31,7 @@ const faqs: { q: string; a: string }[] = [
   },
   {
     q: "How do Settings tabs work?",
-    a: "Tray › Settings… has four tabs. Taskbar: Apply to All or a monitor number, theme and intensity, then Apply. OLED Care: per-display idle fill dim (cursor / focused window) and optional experimental chrome/clock care. Monitors: turn displays on or off (off keeps a stock Windows taskbar). System: shared Auto/GPU/CPU rendering, Start with Windows, and updates. Rendering mode is app-global; Care idle is per display and only affects monitors left on in Monitors.",
+    a: "Tray › Settings… has four tabs. Taskbar: Apply to All or a monitor number, theme and intensity, then Apply. OLED Care: hybrid idle fill dim and optional experimental chrome/clock care (everyday preset is care-only — it does not change your theme). Monitors: turn displays on or off (off keeps a stock Windows taskbar). System: shared Auto/GPU/CPU rendering, Start with Windows, and updates. Rendering mode is app-global; Care only affects monitors left on in Monitors.",
   },
   {
     q: "Can I theme only my OLED and leave the other monitor alone?",
@@ -39,11 +39,11 @@ const faqs: { q: string; a: string }[] = [
   },
   {
     q: "Which theme should I use on an OLED panel?",
-    a: "Start with Space or Aurora — they stay darkest. Keep intensity modest (default is 45%). Weather and Sea Waves are busier; dial intensity down if you want calmer motion. System › OLED everyday preset applies Space + modest intensity + idle care in one click.",
+    a: "Start with Space or Aurora — they stay darkest. Keep intensity modest (default is 45%). Weather and Sea Waves are busier; dial intensity down if you want calmer motion. OLED Care › OLED everyday preset sets idle care only (5m idle, low fill, chrome/clock care, night boost) — it does not change your Taskbar theme or intensity.",
   },
   {
     q: "What is OLED Care?",
-    a: "A dedicated Settings tab. Idle is per display: after 1/5/10/30 minutes (or Off) without keyboard/mouse activity on that display, its fill intensity drops. Activity is detected via recent system input attributed to the cursor’s monitor and the focused window’s monitor — a focused app alone does not block idle. A busy primary does not keep a secondary awake. Optional experimental toggles can dim icons/tray/clock or micro-nudge the clock on idle displays. Night boost shortens the idle timeout and darkens the fill in the evening. Exit restores stock brushes and chrome.",
+    a: "A dedicated Settings tab. Idle is hybrid: walk away (no input for Idle after) and every enabled bar dims; while you keep working, leave the cursor on one display and the other can dim alone after Idle after (attendance follows the cursor). Optional experimental toggles dim icons/tray/clock (including Search) or micro-nudge the clock only on that idle bar — not on the one you’re using. Night boost shortens the idle timeout and darkens the fill in the evening. OLED everyday preset applies those care defaults only — it does not change Taskbar theme or intensity. Exit restores stock brushes and chrome.",
   },
   {
     q: "Does Phostide prevent OLED burn-in completely?",

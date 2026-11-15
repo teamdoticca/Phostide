@@ -23,7 +23,7 @@ Host `InjectExplorerTap` finds `Shell_TrayWnd`, loads `ExplorerTAP.dll` via `WH_
 | 3 | Space | Forward cinematic nebula → stars (no rewind / no start fade-in) |
 | 4 | Aurora | Green→teal→violet curtains, standing undulation |
 
-Settings file: `%APPDATA%\Phostide\settings.json` (`theme` / `intensity` fallbacks, app-global `renderMode`, OLED Care fields, `monitorSettings`, `disabledMonitors`, `enabled`, …). ThemeCommand **v6** sends per-monitor paint slots (theme, intensity, enabled, `careActive`), shared `renderMode`, and OLED Care opacities/`careFlags`. Idle is per display (cursor / focused window). XAML whitelist for chrome care: [oled-care-xaml.md](oled-care-xaml.md).
+Settings file: `%APPDATA%\Phostide\settings.json` (`theme` / `intensity` fallbacks, app-global `renderMode`, OLED Care fields, `monitorSettings`, `disabledMonitors`, `enabled`, …). ThemeCommand **v6** sends per-monitor paint slots (theme, intensity, enabled, `careActive`), shared `renderMode`, and OLED Care opacities/`careFlags`. Idle is **hybrid**: session AFK (`GetLastInputInfo`) dims all; while active, cursor / focused-window attendance can idle a secondary alone. SoftSuspend keeps fill refs across host Enable/stop; watch-mutex must `ReleaseMutex` or the next `Phostide.exe` exits on `ERROR_ALREADY_EXISTS`. XAML whitelist: [oled-care-xaml.md](oled-care-xaml.md).
 
 Multi-monitor verify: after reinject, `%TEMP%\Phostide\tap.log` should show two `Bound fill … hash=… hwnd=…` lines with **different** hashes, then `slot[0]` / `slot[1]` with matching hashes and distinct theme/intensity when Settings differ per display.
 
@@ -50,8 +50,9 @@ Use when a new paint landed and Bound must be proven. Prefer this over guessing 
 2. Restart Explorer (dev only):
    - `taskkill /F /IM explorer.exe`
    - wait until gone; `Start-Process explorer.exe`
-3. Wait for `Shell_TrayWnd` (`FindWindow`), then **settle ~10–12 seconds** more.
-   - Rushing causes `ixde hr=0x80070490` → `ixde gave up`.
+3. Wait for `Shell_TrayWnd` (`FindWindow`), then **settle ~15 seconds** more (product bounce uses 15 s).
+   - Rushing causes `ixde hr=0x80070490` → `ixde gave up` (can stick for that Explorer process lifetime — bounce again).
+   - Prefer `Stop-Process` then a clean start, or tray Exit / `Phostide.exe /exit`, so the SingleInstance mutex is released; after Force-kill, confirm the next host actually stays up.
 4. Ensure settings theme/intensity as needed under `%APPDATA%\Phostide\settings.json`.
 5. Copy DLL (must succeed):
    - `Copy-Item out\Release\ExplorerTAP.dll $env:TEMP\Phostide\ExplorerTAP.dll -Force`

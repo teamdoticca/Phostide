@@ -52,15 +52,15 @@ Tray icon › **Settings…** — four tabs with different jobs:
 | Tab | Controls |
 | --- | --- |
 | **Taskbar** | Apply to **All** or monitor *N*: theme + intensity (preview, then **Apply**) |
-| **OLED Care** | Per-display idle fill dim (cursor / focused window); optional experimental chrome/clock care; night boost; preset |
+| **OLED Care** | Hybrid idle fill dim (full AFK dims all bars; while you work, unused displays can dim alone); optional experimental chrome/clock care; night boost; **OLED everyday preset** (care-only — does not change theme/intensity) |
 | **Monitors** | Per-display **on/off** (default all on). Off → stock Windows bar |
 | **System** | App-global only: Auto / GPU / CPU rendering, Start with Windows, updates |
 
-Rendering mode is app-global. OLED Care idle is per display (a busy primary does not keep secondaries awake); Care still only paints monitors left on. Defaults after reset: Rainbow, 45% intensity, Auto rendering, OLED Care idle Off, all monitors on. Settings file: `%APPDATA%\Phostide\settings.json`.
+Rendering mode is app-global. Care only paints monitors left on. Tray left-click toggles Enable (soft-pause; Exit restores stock brushes). Defaults after reset: Rainbow, 45% intensity, Auto rendering, OLED Care idle Off, all monitors on. Settings file: `%APPDATA%\Phostide\settings.json`.
 
 ### Multi-monitor OLED
 
-On an OLED + LCD setup you can theme only the OLED: **Monitors** → uncheck the LCD; **Taskbar** → Apply to the OLED monitor → **Space** or **Aurora** at modest intensity → **Apply**. Optionally enable **OLED Care** (idle fill dim; experimental chrome dim / clock micro-nudge). Residual static chrome can still contribute to burn-in when Care is off.
+On an OLED + LCD setup you can theme only the OLED: **Monitors** → uncheck the LCD; **Taskbar** → Apply to the OLED monitor → **Space** or **Aurora** at modest intensity → **Apply**. Optionally enable **OLED Care** or click **OLED everyday preset** (idle care only — your Taskbar theme stays put). Residual static chrome can still contribute to burn-in when Care is off.
 
 ## Requirements
 

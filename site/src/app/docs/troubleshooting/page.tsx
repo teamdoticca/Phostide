@@ -19,9 +19,10 @@ const fixes = [
     items: [
       "Confirm Windows 11 22H2 or newer, x64.",
       "Make sure ExplorerTAP.dll sits next to Phostide.exe.",
-      "Tray › Enable Phostide must be checked.",
+      "Tray › Enable Phostide must be checked (left-click toggles soft-pause).",
       "Open Settings…, pick a theme, then click Apply (preview alone does not paint the live bar).",
-      "Raise intensity if the bar looks almost black — default is 45%.",
+      "Raise Taskbar intensity if the bar looks almost black — default is 45%. Very low values (~5%) look like no theme on OLED.",
+      "Prefer tray Exit (or Phostide.exe /exit) before relaunching — Force-kill can leave the host unable to start until Explorer is restarted.",
       "Exit from the tray and start Phostide again.",
     ],
   },
@@ -30,8 +31,9 @@ const fixes = [
     title: "After Explorer restarts",
     items: [
       "If Explorer crashed or was restarted, the theme may drop until Phostide reinjects.",
-      "Exit Phostide from the tray and start it again.",
-      "To restart Explorer yourself: Task Manager › Windows Explorer › Restart, then relaunch Phostide.",
+      "Wait ~15 seconds after Explorer is back, then Exit Phostide from the tray and start it again (XAML Diagnostics needs the island settled).",
+      "To restart Explorer yourself: Task Manager › Windows Explorer › Restart, wait for the taskbar, then relaunch Phostide.",
+      "If themes still never appear: Exit Phostide, restart Explorer once more, wait, relaunch — a rushed inject can leave diagnostics stuck for that Explorer process.",
     ],
   },
   {

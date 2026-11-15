@@ -23,20 +23,20 @@ Four tabs — do not confuse them:
 | Tab | What it controls |
 |-----|------------------|
 | **Taskbar** | Scope **All** or monitor *N*, then theme + intensity (0–100%). Live preview; **Apply** commits. |
-| **OLED Care** | Per-display idle fill dim (Off/1/5/10/30m; cursor / focused window), optional experimental chrome dim / clock micro-nudge, night boost, pause when locked, OLED everyday preset. |
+| **OLED Care** | Hybrid idle fill dim (Off/1/5/10/30m): full session AFK dims all bars; while you work, unused displays dim alone based on **cursor** monitor. Optional experimental chrome dim / clock micro-nudge (per idle bar only), night boost, pause when locked. **OLED everyday preset** = care-only (does **not** change Taskbar theme/intensity). |
 | **Monitors** | Per-display **on/off** only. Off = stock Windows taskbar. Default: all on. |
 | **System** | App-global: **RENDERING** Auto / GPU / CPU (shared by every bar), Start with Windows, updates. |
 
-Defaults after reset: Rainbow, 45% intensity, Auto rendering, OLED Care idle Off, all monitors active. Settings file: `%APPDATA%\Phostide\settings.json`.
+Defaults after reset: Rainbow, 45% intensity, Auto rendering, OLED Care idle Off, all monitors active. Settings file: `%APPDATA%\Phostide\settings.json`. Tray left-click toggles Enable (SoftSuspend); Exit restores stock brushes.
 
 ## Dual-monitor OLED recipe
 
 1. Install Setup.exe (or run portable `Phostide.exe`).
 2. Tray › Settings… › **Monitors** — leave the OLED on; uncheck the LCD (or other) display if you want it stock.
 3. **Taskbar** › Apply to the OLED monitor number › pick **Space** or **Aurora** › modest intensity › **Apply**.
-4. **OLED Care** › optionally **OLED everyday preset** or set Idle after + care toggles › Apply. **System** › RENDERING **Auto**; optionally Start with Windows › Apply.
+4. **OLED Care** › optionally **OLED everyday preset** (care defaults only) or set Idle after + care toggles › Apply. **System** › RENDERING **Auto**; optionally Start with Windows › Apply.
 
-Honest limits: animated fill is always on when enabled. Optional OLED Care dims the fill per idle display (a busy primary does not keep secondaries awake), and can experimentally dim icons/tray/clock or micro-nudge the clock on those bars. It is not a burn-in warranty. Care applies only to monitors left on in the Monitors tab.
+Honest limits: animated fill is always on when enabled. OLED Care uses hybrid idle (AFK → all bars; while active → unused displays can dim alone) and can experimentally dim icons/tray/clock or micro-nudge the clock on idle bars. It is not a burn-in warranty. Care applies only to monitors left on in the Monitors tab.
 
 ## Not Phostide
 

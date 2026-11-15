@@ -16,12 +16,13 @@ Phostide is a Windows 11 tray utility that paints animated themes into Explorer�
 - There is **no** end-user theme editor or custom theme import in the shipped app.
 - Settings has four tabs with different jobs:
   - **Taskbar** — Apply to All or monitor *N*: theme + intensity
-  - **OLED Care** — per-display idle fill dim (cursor / focused window), optional experimental chrome/clock care, night boost, pause when locked
+  - **OLED Care** — hybrid idle (full AFK dims all; while the session is active, unused displays can dim alone via cursor / focused window); optional experimental chrome/clock care; night boost; pause when locked; **OLED everyday preset is care-only** (does not change theme/intensity)
   - **Monitors** — per-display on/off only
   - **System** — shared Auto/GPU/CPU rendering (not per-monitor), Start with Windows, updates
 - It is **not** an overlay window and **not** Windows auto-hide.
 - Exactly five themes: Rainbow, Sea Waves, Weather, Space, Aurora.
 - OLED Care chrome dim / clock nudge are optional experimental; they restore on Exit and may no-op if Explorer XAML names change.
+- Tray left-click / Enable soft-pauses paint (SoftSuspend keeps `BackgroundFill` refs for rebind); Exit restores stock brushes.
 
 ## Repo map
 
