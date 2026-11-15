@@ -18,24 +18,25 @@ Full agent brief: https://phostide.doticca.com/llms-full.txt
 
 ## Settings (tray › Settings…)
 
-Three tabs — do not confuse them:
+Four tabs — do not confuse them:
 
 | Tab | What it controls |
 |-----|------------------|
 | **Taskbar** | Scope **All** or monitor *N*, then theme + intensity (0–100%). Live preview; **Apply** commits. |
+| **OLED Care** | Per-display idle fill dim (Off/1/5/10/30m; cursor / focused window), optional experimental chrome dim / clock micro-nudge, night boost, pause when locked, OLED everyday preset. |
 | **Monitors** | Per-display **on/off** only. Off = stock Windows taskbar. Default: all on. |
-| **System** | App-global only: **RENDERING** Auto / GPU / CPU (shared by every bar — not per-monitor), Start with Windows, check for updates. |
+| **System** | App-global: **RENDERING** Auto / GPU / CPU (shared by every bar), Start with Windows, updates. |
 
-Defaults after reset: Rainbow, 45% intensity, Auto rendering, all monitors active. Settings file: `%APPDATA%\Phostide\settings.json`.
+Defaults after reset: Rainbow, 45% intensity, Auto rendering, OLED Care idle Off, all monitors active. Settings file: `%APPDATA%\Phostide\settings.json`.
 
 ## Dual-monitor OLED recipe
 
 1. Install Setup.exe (or run portable `Phostide.exe`).
 2. Tray › Settings… › **Monitors** — leave the OLED on; uncheck the LCD (or other) display if you want it stock.
 3. **Taskbar** › Apply to the OLED monitor number › pick **Space** or **Aurora** › modest intensity › **Apply**.
-4. **System** › RENDERING **Auto** (recommended start); optionally enable Start with Windows › Apply.
+4. **OLED Care** › optionally **OLED everyday preset** or set Idle after + care toggles › Apply. **System** › RENDERING **Auto**; optionally Start with Windows › Apply.
 
-Honest limit: Phostide only animates the background fill. Static icons, Start, tray, and clock still age OLED pixels; motion is not a burn-in warranty.
+Honest limits: animated fill is always on when enabled. Optional OLED Care dims the fill per idle display (a busy primary does not keep secondaries awake), and can experimentally dim icons/tray/clock or micro-nudge the clock on those bars. It is not a burn-in warranty. Care applies only to monitors left on in the Monitors tab.
 
 ## Not Phostide
 

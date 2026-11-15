@@ -63,6 +63,22 @@ bool MonitorDeviceNameFromRect(const RECT& rc, std::wstring& outDeviceName) {
   return true;
 }
 
+bool DeviceHashFromHmonitor(HMONITOR monitor, uint64_t& outHash) {
+  outHash = 0;
+  if (!monitor) return false;
+  MONITORINFOEXW mi{};
+  mi.cbSize = sizeof(mi);
+  if (!GetMonitorInfoW(monitor, &mi)) return false;
+  outHash = HashMonitorDeviceName(mi.szDevice);
+  return true;
+}
+
+bool DeviceHashFromWindow(HWND hwnd, uint64_t& outHash) {
+  outHash = 0;
+  if (!hwnd || !IsWindow(hwnd)) return false;
+  return DeviceHashFromHmonitor(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST), outHash);
+}
+
 MonitorAppearance ResolveMonitorAppearance(const Settings& settings,
                                            std::wstring_view deviceName) {
   for (const auto& entry : settings.monitorSettings) {

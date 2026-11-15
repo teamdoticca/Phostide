@@ -40,6 +40,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="TaskbarAppearanceService.h" />
+    <ClInclude Include="ChromeCare.h" />
     <ClInclude Include="GpuThemeRenderer.h" />
     <ClInclude Include="PixelThemes.h" />
     <ClInclude Include="TaskbarGeometry.h" />
@@ -52,6 +53,7 @@
     <ClCompile Include="TapSite.cpp" />
     <ClCompile Include="VisualTreeWatcher.cpp" />
     <ClCompile Include="TaskbarAppearanceService.cpp" />
+    <ClCompile Include="ChromeCare.cpp" />
     <ClCompile Include="GpuThemeRenderer.cpp" />
     <ClCompile Include="PixelThemes.cpp" />
     <ClCompile Include="TaskbarGeometry.cpp" />

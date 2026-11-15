@@ -94,7 +94,7 @@ void ExplainExplorerRestartToUser() {
       nullptr,
       L"Phostide needs to briefly restart Windows Explorer so the taskbar "
       L"theme engine can update.\n\n"
-      L"Your desktop may flicker for a few seconds. This is expected — "
+      L"Your desktop may flicker for a few seconds. This is expected - "
       L"open windows stay open.",
       L"Phostide", MB_OK | MB_ICONINFORMATION | MB_SETFOREGROUND | MB_TOPMOST);
 }
@@ -255,6 +255,9 @@ std::wstring TapDllPath() {
 void ResetTapBoundEvent() { ResetBoundEvent(); }
 
 bool InjectExplorerTap(std::wstring* errorOut) {
+  // Do not inherit a stale Bound signal from a previous host session.
+  ResetBoundEvent();
+
   // Stale in-Explorer TAP (previous version) cannot be unloaded without a shell
   // bounce — XAML Diagnostics pins the module for Explorer's lifetime.
   if (NeedsExplorerBounceForFreshTap()) {

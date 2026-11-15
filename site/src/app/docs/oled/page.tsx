@@ -96,24 +96,44 @@ export default function OledPage() {
         </div>
 
         <div className="rounded-xl border border-line bg-panel p-8 md:col-span-2">
+          <h2 className="text-xl font-semibold">OLED Care</h2>
+          <p className="mt-3 text-soft">
+            Settings › OLED Care lowers fill intensity per display after the
+            cursor and focused window stay off that monitor (1 / 5 / 10 / 30
+            minutes). Optional experimental toggles dim icons, tray, and clock
+            opacity, or micro‑nudge the clock, only on idle displays — then
+            restore when that display is attended again, or on Exit. Night boost
+            tightens care in the evening. Care follows the Monitors on/off list.
+            Use{" "}
+            <strong className="font-medium text-zinc-100">
+              OLED everyday preset
+            </strong>{" "}
+            for Space + modest intensity + a sensible care defaults pack.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-line bg-panel p-8 md:col-span-2">
           <h2 className="text-xl font-semibold">Honest limits</h2>
           <ul className="mt-3 list-disc space-y-2 pl-5 text-soft">
             <li>
-              Icons, Start, the tray, and the clock are still drawn by Windows
-              and stay static — Phostide only changes the background fill.
+              Without OLED Care, icons, Start, the tray, and the clock stay fully
+              Windows‑static — only the background fill moves.
             </li>
             <li>
-              Motion reduces how long the same background pixels stay locked
-              bright; it is not a burn‑in warranty.
+              Chrome dim / clock nudge are experimental and depend on Explorer
+              XAML names; after a Windows update they may quietly do nothing.
             </li>
             <li>
-              For the darkest everyday look, start with Space or Aurora and keep
-              intensity modest.
+              Motion and idle care reduce locked‑bright time; they are not a
+              burn‑in warranty.
             </li>
             <li>
-              On multi‑monitor setups you can theme only the OLED panel (Monitors
-              tab) or use a quieter theme/intensity on that display alone (Taskbar
-              › Apply to that monitor).
+              Windows tips that help without Phostide: show clock seconds; hide
+              the date if you do not need it.
+            </li>
+            <li>
+              On multi‑monitor setups theme only the OLED panel (Monitors tab) or
+              use a quieter theme/intensity on that display alone.
             </li>
           </ul>
         </div>

@@ -41,6 +41,17 @@ Open from the tray icon: right-click › **Settings…**
 - Live preview while drafting; click **Apply** to commit. Closing without Apply keeps the previous look.
 - Apply under All writes theme/intensity to every display. Apply under a monitor number writes only that display.
 
+### OLED Care tab
+
+Idle is **per display** (cursor / focused window on that monitor); care settings are shared. Applies only to monitors left on in the Monitors tab:
+
+- **Idle after**: Off / 1 / 5 / 10 / 30 minutes — when a display is unattended that long, its fill intensity drops to **Idle fill intensity**. A busy primary does not keep secondaries awake.
+- Optional **Dim icons, tray & clock (experimental)** — soft opacity on whitelisted Explorer chrome on idle displays only.
+- Optional **Micro-nudge clock (experimental)** — ±1–2 px shift on the clock host on idle displays.
+- Optional **Night boost** — evenings (20:00–06:59): shorter idle timeout and darker fill.
+- **Pause themes while locked** (surfaces the existing pause-when-locked behavior).
+- **OLED everyday preset** — Space + modest intensity + 5‑minute idle care + chrome dim + clock nudge + night boost.
+
 ### Monitors tab
 
 - Per-display **enable/disable** only.
@@ -64,7 +75,7 @@ Example: ASUS OLED primary + second LCD.
 1. Run Phostide (Setup or portable).
 2. Settings › **Monitors**: keep OLED checked; uncheck the LCD if you want a normal bar there.
 3. Settings › **Taskbar**: Apply to the OLED monitor › theme **Space** or **Aurora** › modest intensity › Apply.
-4. Settings › **System**: RENDERING Auto; optionally Start with Windows › Apply.
+4. Settings › **OLED Care**: optionally **OLED everyday preset** or set Idle after › Apply. **System**: RENDERING Auto; optionally Start with Windows › Apply.
 
 You may also leave both monitors on and set different themes/intensities per display from Taskbar › Apply to.
 
@@ -73,25 +84,25 @@ You may also leave both monitors on and set different themes/intensities per dis
 - No account, no cloud login, no telemetry.
 - Themes paint offline; network is optional (update check only).
 - Does not modify Windows system files.
-- Tray › Exit (or crash recovery) restores original taskbar brushes.
+- Tray › Exit (or crash recovery) restores original taskbar brushes and any chrome opacity/transform changes from OLED Care.
 - License: MIT.
 
 ## Honest OLED limits
 
-Phostide reduces how long the **background fill** stays as one static bright strip. Icons, Start button, tray icons, and the clock remain Windows-drawn and static. That residual static UI can still contribute to burn-in. Phostide is not a burn-in warranty or an OLED pixel-shift replacement.
+Phostide always reduces how long the **background fill** stays as one static bright strip. Optional OLED Care further dims that fill per idle display (cursor / focused window), and can experimentally dim or micro-nudge residual Windows chrome on those bars. Chrome Care depends on stable Explorer XAML names and may no-op after OS updates. Phostide is not a burn-in warranty or a full OLED pixel-shift replacement. Windows tips that help without Phostide code: enable clock seconds; hide the date if you do not need it.
 
 ## Comparison keywords (for search / diagnosis)
 
 - vs auto-hide: Phostide keeps the bar visible.
 - vs dimmer overlays: Phostide is not a window on top of the taskbar.
-- vs Windhawk idle-fade mods: Phostide is standalone; Windhawk is not required; Phostide themes the fill while the bar stays usable.
+- vs Windhawk idle-fade mods: Phostide is standalone; Windhawk is not required; Phostide themes the fill and can optionally idle-dim chrome without hiding the bar.
 - Product category: Windows 11 animated taskbar background / OLED-safe taskbar theme utility.
 
 ## Defaults and settings file
 
 Path: `%APPDATA%\Phostide\settings.json`
 
-Holds fallback `theme` / `intensity`, app-global `renderMode` (Auto/GPU/CPU), `monitorSettings` (per-display theme/intensity), `disabledMonitors`, Start with Windows flags, and related runtime fields. Delete the file to reset to defaults: Rainbow, 45% intensity, Auto rendering, all monitors active.
+Holds fallback `theme` / `intensity`, app-global `renderMode` (Auto/GPU/CPU), OLED Care fields (`oledCareIdleMinutes`, fill/chrome/clock options), `monitorSettings` (per-display theme/intensity), `disabledMonitors`, Start with Windows flags, and related runtime fields. Delete the file to reset to defaults: Rainbow, 45% intensity, Auto rendering, OLED Care idle Off, all monitors active.
 
 ## Canonical URLs
 

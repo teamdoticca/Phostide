@@ -177,7 +177,7 @@ export default async function InstallPage() {
               </li>
               <li>
                 <span className="text-zinc-100">Settings…</span> — Taskbar
-                (theme/intensity per display), Monitors (on/off), System
+                (theme/intensity), OLED Care, Monitors (on/off), System
                 (shared rendering, Start with Windows, updates)
               </li>
               <li>
@@ -200,6 +200,12 @@ export default async function InstallPage() {
                   keep a stock Windows taskbar
                 </li>
                 <li>
+                  <span className="text-zinc-100">OLED Care</span> tab —
+                  per-display idle fill dim (cursor / focused window); optional
+                  experimental chrome/clock care; night boost; OLED everyday
+                  preset
+                </li>
+                <li>
                   <span className="text-zinc-100">System</span> tab —{" "}
                   <span className="text-zinc-100">RENDERING</span> (Auto / GPU /
                   CPU, shared by all bars), Start with Windows, check for updates
@@ -209,7 +215,8 @@ export default async function InstallPage() {
                 Apply under All writes the draft theme/intensity to every
                 attached display (and the fallback for newly plugged monitors).
                 Apply under a monitor number writes only that display. Rendering
-                is always app‑wide. Auto uses D3D11 GPU paint when it can and
+                mode is app‑wide; OLED Care idle is per display (Care only paints
+                monitors left on). Auto uses D3D11 GPU paint when it can and
                 falls back to CPU. Closing without Apply keeps your previous
                 look.
               </p>
@@ -260,15 +267,19 @@ export default async function InstallPage() {
                 › <span className="text-zinc-100">Apply</span>.
               </li>
               <li>
+                <span className="text-zinc-100">OLED Care</span> — optionally{" "}
+                <span className="text-zinc-100">OLED everyday preset</span> or set
+                Idle after › Apply.{" "}
                 <span className="text-zinc-100">System</span> — leave{" "}
                 <span className="text-zinc-100">RENDERING</span> on{" "}
-                <span className="text-zinc-100">Auto</span>; optionally enable Start
-                with Windows › Apply.
+                <span className="text-zinc-100">Auto</span>; enable Start with
+                Windows if you want › Apply.
               </li>
             </ol>
             <p className="mt-4 text-sm text-soft">
-              Honest limit: only the background fill moves. Static icons, Start,
-              tray, and clock can still contribute to OLED burn‑in. See{" "}
+              Honest limit: the fill always moves when themes are on. OLED Care
+              can further idle‑dim the fill and optionally soften icons/clock.
+              See{" "}
               <Link href="/docs/oled" className="text-ember hover:underline">
                 OLED notes
               </Link>{" "}

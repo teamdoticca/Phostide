@@ -242,6 +242,14 @@ Settings LoadSettings() {
   s.startWithWindows = ParseBool(json, "startWithWindows", IsStartWithWindowsEnabled());
   s.pauseWhenLocked = ParseBool(json, "pauseWhenLocked", true);
   s.renderMode = RenderModeFromIndex(ParseInt(json, "renderMode", 0));
+  s.oledCareIdleMinutes =
+      ClampOledCareIdleMinutes(ParseInt(json, "oledCareIdleMinutes", 0));
+  s.oledCareFillIntensity = ClampPercent(ParseInt(json, "oledCareFillIntensity", 8));
+  s.oledCareChromeDim = ParseBool(json, "oledCareChromeDim", false);
+  s.oledCareChromeOpacity = ClampPercent(ParseInt(json, "oledCareChromeOpacity", 35));
+  s.oledCareClockOpacity = ClampPercent(ParseInt(json, "oledCareClockOpacity", 22));
+  s.oledCareClockNudge = ParseBool(json, "oledCareClockNudge", false);
+  s.oledCareNightBoost = ParseBool(json, "oledCareNightBoost", false);
   s.lastUpdateCheckUtc = ParseInt64(json, "lastUpdateCheckUtc", 0);
   s.pendingUpdateTag = Utf8ToWide(ParseUtf8String(json, "pendingUpdateTag"));
   s.pendingSetupUrl = Utf8ToWide(ParseUtf8String(json, "pendingSetupUrl"));
@@ -263,6 +271,16 @@ void SaveSettings(const Settings& settings) {
       << "  \"pauseWhenLocked\": " << (settings.pauseWhenLocked ? "true" : "false")
       << ",\n"
       << "  \"renderMode\": " << static_cast<int>(settings.renderMode) << ",\n"
+      << "  \"oledCareIdleMinutes\": " << settings.oledCareIdleMinutes << ",\n"
+      << "  \"oledCareFillIntensity\": " << settings.oledCareFillIntensity << ",\n"
+      << "  \"oledCareChromeDim\": " << (settings.oledCareChromeDim ? "true" : "false")
+      << ",\n"
+      << "  \"oledCareChromeOpacity\": " << settings.oledCareChromeOpacity << ",\n"
+      << "  \"oledCareClockOpacity\": " << settings.oledCareClockOpacity << ",\n"
+      << "  \"oledCareClockNudge\": " << (settings.oledCareClockNudge ? "true" : "false")
+      << ",\n"
+      << "  \"oledCareNightBoost\": " << (settings.oledCareNightBoost ? "true" : "false")
+      << ",\n"
       << "  \"lastUpdateCheckUtc\": " << settings.lastUpdateCheckUtc << ",\n"
       << "  \"pendingUpdateTag\": \""
       << EscapeJson(WideToUtf8(settings.pendingUpdateTag)) << "\",\n"

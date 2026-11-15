@@ -47,19 +47,20 @@ Most OLED taskbar tools **hide** the bar. Phostide keeps it usable and moves the
 
 ## Settings
 
-Tray icon › **Settings…** — three tabs with different jobs:
+Tray icon › **Settings…** — four tabs with different jobs:
 
 | Tab | Controls |
 | --- | --- |
 | **Taskbar** | Apply to **All** or monitor *N*: theme + intensity (preview, then **Apply**) |
+| **OLED Care** | Per-display idle fill dim (cursor / focused window); optional experimental chrome/clock care; night boost; preset |
 | **Monitors** | Per-display **on/off** (default all on). Off → stock Windows bar |
 | **System** | App-global only: Auto / GPU / CPU rendering, Start with Windows, updates |
 
-Rendering is shared by every active bar — it is not per-monitor. Defaults after reset: Rainbow, 45% intensity, Auto rendering, all monitors on. Settings file: `%APPDATA%\Phostide\settings.json`.
+Rendering mode is app-global. OLED Care idle is per display (a busy primary does not keep secondaries awake); Care still only paints monitors left on. Defaults after reset: Rainbow, 45% intensity, Auto rendering, OLED Care idle Off, all monitors on. Settings file: `%APPDATA%\Phostide\settings.json`.
 
 ### Multi-monitor OLED
 
-On an OLED + LCD setup you can theme only the OLED: **Monitors** → uncheck the LCD; **Taskbar** → Apply to the OLED monitor → **Space** or **Aurora** at modest intensity → **Apply**. Phostide only animates the background fill — static icons, Start, tray, and clock can still contribute to burn-in.
+On an OLED + LCD setup you can theme only the OLED: **Monitors** → uncheck the LCD; **Taskbar** → Apply to the OLED monitor → **Space** or **Aurora** at modest intensity → **Apply**. Optionally enable **OLED Care** (idle fill dim; experimental chrome dim / clock micro-nudge). Residual static chrome can still contribute to burn-in when Care is off.
 
 ## Requirements
 

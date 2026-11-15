@@ -31,19 +31,23 @@ const faqs: { q: string; a: string }[] = [
   },
   {
     q: "How do Settings tabs work?",
-    a: "Tray › Settings… has three tabs. Taskbar: choose Apply to All or a monitor number, set theme and intensity, then Apply. Monitors: turn individual displays on or off (off keeps a stock Windows taskbar). System: shared Auto/GPU/CPU rendering for every bar, Start with Windows, and updates. Rendering is not per-monitor.",
+    a: "Tray › Settings… has four tabs. Taskbar: Apply to All or a monitor number, theme and intensity, then Apply. OLED Care: per-display idle fill dim (cursor / focused window) and optional experimental chrome/clock care. Monitors: turn displays on or off (off keeps a stock Windows taskbar). System: shared Auto/GPU/CPU rendering, Start with Windows, and updates. Rendering mode is app-global; Care idle is per display and only affects monitors left on in Monitors.",
   },
   {
     q: "Can I theme only my OLED and leave the other monitor alone?",
-    a: "Yes. Open Settings › Monitors and uncheck the non-OLED display. Then on the Taskbar tab, Apply to the OLED monitor number, pick Space or Aurora at a modest intensity, and Apply. You can also leave both on and set different themes per display.",
+    a: "Yes. Open Settings › Monitors and uncheck the non-OLED display. Then on the Taskbar tab, Apply to the OLED monitor number, pick Space or Aurora at a modest intensity, and Apply. You can also leave both on and set different themes per display. OLED Care follows the same on/off list.",
   },
   {
     q: "Which theme should I use on an OLED panel?",
-    a: "Start with Space or Aurora — they stay darkest. Keep intensity modest (default is 45%). Weather and Sea Waves are busier; dial intensity down if you want calmer motion.",
+    a: "Start with Space or Aurora — they stay darkest. Keep intensity modest (default is 45%). Weather and Sea Waves are busier; dial intensity down if you want calmer motion. System › OLED everyday preset applies Space + modest intensity + idle care in one click.",
+  },
+  {
+    q: "What is OLED Care?",
+    a: "A dedicated Settings tab. Idle is per display: after 1/5/10/30 minutes (or Off) without keyboard/mouse activity on that display, its fill intensity drops. Activity is detected via recent system input attributed to the cursor’s monitor and the focused window’s monitor — a focused app alone does not block idle. A busy primary does not keep a secondary awake. Optional experimental toggles can dim icons/tray/clock or micro-nudge the clock on idle displays. Night boost shortens the idle timeout and darkens the fill in the evening. Exit restores stock brushes and chrome.",
   },
   {
     q: "Does Phostide prevent OLED burn-in completely?",
-    a: "No. It reduces how long the background fill stays as one static bright strip. Icons, Start, the tray, and the clock remain Windows-drawn and static, so they can still contribute to burn-in. Phostide is not a burn-in warranty.",
+    a: "No. Animated fill always helps the background strip. OLED Care can further reduce idle fill brightness and optionally soften residual Windows chrome, but it is not a burn-in warranty. Chrome Care is experimental and may no-op if Explorer XAML names change. Windows tips: show clock seconds; hide the date if you do not need it.",
   },
   {
     q: "Does it collect data or need an account?",

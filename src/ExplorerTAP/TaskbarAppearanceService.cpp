@@ -1,5 +1,7 @@
 #include "TaskbarAppearanceService.h"
 
+#include "ChromeCare.h"
+
 #include "../Common/MonitorEnum.h"
 #include "GpuThemeRenderer.h"
 #include "PixelThemes.h"
@@ -9,6 +11,7 @@
 #include <algorithm>
 #include <cmath>
 #include <string>
+#include <thread>
 
 #include <wrl/client.h>
 #include <robuffer.h>
@@ -51,6 +54,16 @@ void SetBoundEvent() {
       WriteFile(f, line, static_cast<DWORD>(n + 1), &written, nullptr);
     }
     CloseHandle(f);
+  }
+}
+
+void ClearBoundEvent() {
+  if (HANDLE ev = OpenEventW(EVENT_MODIFY_STATE, FALSE, kTapBoundEvent.data())) {
+    ResetEvent(ev);
+    CloseHandle(ev);
+  } else if (HANDLE ev = CreateEventW(nullptr, TRUE, FALSE, kTapBoundEvent.data())) {
+    ResetEvent(ev);
+    CloseHandle(ev);
   }
 }
 
@@ -162,6 +175,7 @@ void TaskbarAppearanceService::RegisterBackground(wuxs::Shape const& shape, HWND
 
   TaskbarVisual* target = nullptr;
   bool trayCorrected = false;
+  bool needsBind = false;
   {
     std::lock_guard lock(mutex_);
     for (auto& tv : taskbars_) {
@@ -170,16 +184,17 @@ void TaskbarAppearanceService::RegisterBackground(wuxs::Shape const& shape, HWND
         if (trayHwnd && tv.trayHwnd != trayHwnd) {
           tv.trayHwnd = trayHwnd;
           trayCorrected = true;
-          target = &tv;
         }
         if (diagnosticsHandle && tv.diagnosticsHandle != diagnosticsHandle) {
           tv.diagnosticsHandle = diagnosticsHandle;
         }
-        if (!trayCorrected) return;
+        target = &tv;
+        // After SoftSuspend, the shape is still listed but unbound — must Bind again.
+        needsBind = !tv.bound || (!tv.gpuActive && !tv.imageBrush);
         break;
       }
     }
-    if (!trayCorrected) {
+    if (!target) {
       TaskbarVisual tv;
       tv.background = shape;
       tv.trayHwnd = trayHwnd;
@@ -190,10 +205,11 @@ void TaskbarAppearanceService::RegisterBackground(wuxs::Shape const& shape, HWND
       }
       taskbars_.push_back(std::move(tv));
       target = &taskbars_.back();
+      needsBind = true;
     }
   }
 
-  if (trayCorrected && target) {
+  if (trayCorrected && target && !needsBind) {
     std::lock_guard lock(mutex_);
     RefreshGeomAndBitmap(*target);
     wchar_t line[192];
@@ -204,7 +220,7 @@ void TaskbarAppearanceService::RegisterBackground(wuxs::Shape const& shape, HWND
     return;
   }
 
-  if (target && BindVisual(*target)) {
+  if (target && needsBind && BindVisual(*target)) {
     try {
       target->background.SizeChanged([this, shape](auto&&, auto&&) {
         std::lock_guard lock(mutex_);
@@ -232,6 +248,12 @@ void TaskbarAppearanceService::RegisterBackground(wuxs::Shape const& shape, HWND
 
 void TaskbarAppearanceService::UnregisterHandle(uint64_t diagnosticsHandle) {
   if (!diagnosticsHandle) return;
+  // Soft-suspend Unbind (Fill restore / GPU Detach) can emit spurious Remove mutations
+  // for the same BackgroundFill handle. Dropping the ref here is what broke tray rebind.
+  if (suspended_.load()) {
+    LogService(L"UnregisterHandle ignored (suspended)");
+    return;
+  }
   std::lock_guard lock(mutex_);
   for (auto it = taskbars_.begin(); it != taskbars_.end(); ++it) {
     if (it->diagnosticsHandle != diagnosticsHandle) continue;
@@ -283,13 +305,30 @@ void TaskbarAppearanceService::AppearanceFor(const TaskbarVisual& tv, ThemeId& t
 void TaskbarAppearanceService::Apply(const ThemeCommand& cmd) {
   {
     std::lock_guard lock(mutex_);
-    const auto prevMode = static_cast<RenderMode>(command_.renderMode);
+    const ThemeCommand prev = command_;
+    const auto prevMode = static_cast<RenderMode>(prev.renderMode);
+    const bool wasLive = prev.enabled != 0 && prev.paused == 0;
     command_ = cmd;
     const auto mode = static_cast<RenderMode>(command_.renderMode);
     if (mode != prevMode && mode != RenderMode::Cpu) {
       gpuFailedThisSession_ = false;
     }
-    if (cmd.enabled && !cmd.paused) {
+    // Care / intensity polls must NOT rewind animation time — that looks like a
+    // full theme reapply and hides the idle dim. Only restart the clock when
+    // paint actually (re)starts or the theme identity changes.
+    const bool nowLive = cmd.enabled != 0 && cmd.paused == 0;
+    bool themeChanged = prev.theme != cmd.theme;
+    if (!themeChanged) {
+      const uint32_t n = (std::min)((std::min)(prev.slotCount, cmd.slotCount), kMaxMonitorSlots);
+      for (uint32_t i = 0; i < n; ++i) {
+        if (prev.slots[i].deviceHash == cmd.slots[i].deviceHash &&
+            prev.slots[i].theme != cmd.slots[i].theme) {
+          themeChanged = true;
+          break;
+        }
+      }
+    }
+    if (nowLive && (!wasLive || themeChanged)) {
       start_ = std::chrono::steady_clock::now();
     }
   }
@@ -302,28 +341,44 @@ void TaskbarAppearanceService::Apply(const ThemeCommand& cmd) {
     const uint32_t n = (std::min)(cmd.slotCount, kMaxMonitorSlots);
     for (uint32_t i = 0; i < n; ++i) {
       wchar_t slotLine[160];
-      swprintf_s(slotLine, L"  slot[%u] hash=%llu theme=%u intensity=%u enabled=%u", i,
-                 static_cast<unsigned long long>(cmd.slots[i].deviceHash), cmd.slots[i].theme,
-                 cmd.slots[i].intensity, cmd.slots[i].enabled);
+      swprintf_s(slotLine, L"  slot[%u] hash=%llu theme=%u intensity=%u enabled=%u care=%u",
+                 i, static_cast<unsigned long long>(cmd.slots[i].deviceHash),
+                 cmd.slots[i].theme, cmd.slots[i].intensity, cmd.slots[i].enabled,
+                 cmd.slots[i].careActive);
       LogService(slotLine);
     }
   }
   if (!dispatcher_) return;
 
   if (!cmd.enabled) {
-    dispatcher_.TryEnqueue([this] { RestoreAll(); });
+    // Soft pause (tray Enable toggle): keep shape refs so re-enable can BindVisual
+    // without a fragile BackgroundFill rescan. Full RestoreAll is for host Exit only.
+    dispatcher_.TryEnqueue([this] { SuspendPainting(); });
     return;
   }
+
+  suspended_.store(false);
 
   if (cmd.paused) {
-    dispatcher_.TryEnqueue([this] { StopUiTimer(); });
+    dispatcher_.TryEnqueue([this, cmd] {
+      // Never hold mutex_ while calling ChromeCare (opposite order from TickUi).
+      {
+        std::lock_guard lock(mutex_);
+        StopUiTimer();
+      }
+      ChromeCareService::Instance().Apply(cmd);
+    });
     return;
   }
 
-  dispatcher_.TryEnqueue([this] {
+  dispatcher_.TryEnqueue([this, cmd] {
     bool needRescan = false;
+    int kept = 0;
+    int rebound = 0;
+    int live = 0;
     {
       std::lock_guard lock(mutex_);
+      kept = static_cast<int>(taskbars_.size());
       needRescan = taskbars_.empty();
       for (auto& tv : taskbars_) {
         if (!tv.background) continue;
@@ -336,18 +391,56 @@ void TaskbarAppearanceService::Apply(const ThemeCommand& cmd) {
           }
           continue;
         }
-        if (wasBound) UnbindVisual(tv);
+        // Live paint only if we still own a GPU target or ImageBrush. SoftSuspend
+        // can leave bound=true with no brush after a failed partial unbind — then
+        // skipping BindVisual leaves a stock Windows fill forever.
+        const bool livePaint = wasBound && (tv.gpuActive || tv.imageBrush);
+        if (livePaint) {
+          PaintVisual(tv, std::chrono::duration<float>(
+                              std::chrono::steady_clock::now() - start_)
+                              .count());
+          ++live;
+          continue;
+        }
+        if (wasBound) {
+          UnbindVisual(tv);
+          boundCount_.fetch_sub(1);
+        }
         if (BindVisual(tv)) {
-          if (!wasBound) boundCount_.fetch_add(1);
+          boundCount_.fetch_add(1);
           SignalBound();
+          ++rebound;
         }
       }
       EnsureUiTimer();
     }
+    {
+      wchar_t line[160];
+      swprintf_s(line, L"Apply rebind kept=%d live=%d rebound=%d needRescan=%d", kept, live,
+                 rebound, needRescan ? 1 : 0);
+      LogService(line);
+    }
+    // Chrome Care after releasing paint mutex — avoids deadlock with TickUi.
+    ChromeCareService::Instance().Apply(cmd);
     // Same-process tray rebuild: fills were cleared / never registered — re-hit-test.
     if (needRescan) {
       LogService(L"Apply: no taskbars — RequestRescan");
       TAPSite::RequestRescan();
+      // After host Exit→RestoreAll, the first hit-test often misses BackgroundFill.
+      // Retry on the dispatcher a few times so reinject without Explorer bounce recovers.
+      std::thread([this] {
+        for (int i = 0; i < 5; ++i) {
+          Sleep(350 + static_cast<DWORD>(i) * 250);
+          if (HasBoundFill()) return;
+          if (suspended_.load()) return;
+          if (!command_.enabled) return;
+          if (!dispatcher_) return;
+          dispatcher_.TryEnqueue([] {
+            LogService(L"Apply: delayed RequestRescan");
+            TAPSite::RequestRescan();
+          });
+        }
+      }).detach();
     }
   });
 }
@@ -362,15 +455,45 @@ void TaskbarAppearanceService::StopUiTimer() {
   }
 }
 
-void TaskbarAppearanceService::RestoreAll() {
-  std::lock_guard lock(mutex_);
-  StopUiTimer();
-  for (auto& tv : taskbars_) {
-    UnbindVisual(tv);
+void TaskbarAppearanceService::SuspendPainting() {
+  // Set before Unbind so VisualTree Remove callbacks do not erase fill refs.
+  suspended_.store(true);
+  int kept = 0;
+  {
+    std::lock_guard lock(mutex_);
+    StopUiTimer();
+    kept = static_cast<int>(taskbars_.size());
+    for (auto& tv : taskbars_) {
+      if (!tv.bound) continue;
+      UnbindVisual(tv);
+      boundCount_.fetch_sub(1);
+    }
   }
-  gpu_.DetachAll();
-  taskbars_.clear();
-  boundCount_.store(0);
+  ClearBoundEvent();
+  ThemeCommand careOff = command_;
+  careOff.careActive = 0;
+  careOff.careFlags = 0;
+  ChromeCareService::Instance().Apply(careOff);
+  wchar_t line[96];
+  swprintf_s(line, L"SuspendPainting kept=%d fill refs for rebind", kept);
+  LogService(line);
+}
+
+void TaskbarAppearanceService::RestoreAll() {
+  suspended_.store(false);
+  {
+    std::lock_guard lock(mutex_);
+    StopUiTimer();
+    for (auto& tv : taskbars_) {
+      UnbindVisual(tv);
+    }
+    gpu_.DetachAll();
+    taskbars_.clear();
+    boundCount_.store(0);
+  }
+  ClearBoundEvent();
+  // Outside mutex_: TickUi must never wait on ChromeCare while holding mutex_.
+  ChromeCareService::Instance().RestoreAll();
   LogService(L"RestoreAll done");
 }
 
@@ -491,6 +614,7 @@ void TaskbarAppearanceService::RefreshGeomAndBitmap(TaskbarVisual& tv) {
 
 bool TaskbarAppearanceService::BindVisual(TaskbarVisual& tv) {
   if (!tv.background || tv.bound) return tv.bound;
+  if (suspended_.load() || !command_.enabled) return false;
   try {
     RefreshGeomAndBitmap(tv);
     if (!SlotEnabled(tv)) return false;
@@ -656,27 +780,33 @@ void TaskbarAppearanceService::EnsureUiTimer() {
 }
 
 void TaskbarAppearanceService::TickUi() {
-  std::lock_guard lock(mutex_);
-  if (!command_.enabled || command_.paused) return;
-  // Occasional remeasure catches DPI / monitor changes SizeChanged may miss.
-  if ((++paintFrame_ % 90u) == 0u) {
-    for (auto& tv : taskbars_) {
-      if (tv.bound) RefreshGeomAndBitmap(tv);
-    }
-  }
-  const float t =
-      std::chrono::duration<float>(std::chrono::steady_clock::now() - start_).count();
-  for (auto& tv : taskbars_) {
-    if (!tv.background) continue;
-    if (!SlotEnabled(tv)) {
-      if (tv.bound) {
-        UnbindVisual(tv);
-        boundCount_.fetch_sub(1);
+  float t = 0.f;
+  bool nudge = false;
+  {
+    std::lock_guard lock(mutex_);
+    if (!command_.enabled || command_.paused) return;
+    // Occasional remeasure catches DPI / monitor changes SizeChanged may miss.
+    if ((++paintFrame_ % 90u) == 0u) {
+      for (auto& tv : taskbars_) {
+        if (tv.bound) RefreshGeomAndBitmap(tv);
       }
-      continue;
     }
-    if (tv.bound) PaintVisual(tv, t);
+    t = std::chrono::duration<float>(std::chrono::steady_clock::now() - start_).count();
+    for (auto& tv : taskbars_) {
+      if (!tv.background) continue;
+      if (!SlotEnabled(tv)) {
+        if (tv.bound) {
+          UnbindVisual(tv);
+          boundCount_.fetch_sub(1);
+        }
+        continue;
+      }
+      if (tv.bound) PaintVisual(tv, t);
+    }
+    nudge = command_.careActive != 0 && (command_.careFlags & kCareFlagClockNudge) != 0;
   }
+  // Outside mutex_ — Apply/RestoreAll also touch ChromeCare; never nest both locks.
+  if (nudge) ChromeCareService::Instance().TickNudge(t);
 }
 
 void TaskbarAppearanceService::StartRenderLoop() { EnsureUiTimer(); }
@@ -706,8 +836,17 @@ void TaskbarAppearanceService::WatchHostMutex() {
       }
       WaitForSingleObject(mutex, INFINITE);
       CloseHandle(mutex);
-      LogService(L"Host mutex released - restoring");
-      StopRenderLoop();
+      // Soft-suspend: restore stock fills but KEEP BackgroundFill refs so the next
+      // Phostide.exe can BindVisual without a fragile hit-test rescan. Full
+      // RestoreAll (clear) made host-only restarts fall back to accent-only tint.
+      LogService(L"Host mutex released - soft suspend for rebind");
+      running_ = false;
+      if (dispatcher_) {
+        dispatcher_.TryEnqueue([this] { SuspendPainting(); });
+        Sleep(80);
+      } else {
+        SuspendPainting();
+      }
       for (;;) {
         HANDLE probe = OpenMutexW(SYNCHRONIZE, FALSE, kMutexName.data());
         if (!probe) break;

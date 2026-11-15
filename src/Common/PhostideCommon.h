@@ -11,7 +11,7 @@ namespace phostide {
 
 inline constexpr std::wstring_view kAppName = L"Phostide";
 // Keep in sync with scripts/package-release.ps1 -Version default and GitHub release tags (vX.Y.Z).
-inline constexpr std::wstring_view kAppVersion = L"0.1.15";
+inline constexpr std::wstring_view kAppVersion = L"0.1.28";
 // Stable across installs/updates so Windows taskbar / Start treat us as the same app.
 inline constexpr std::wstring_view kAppUserModelId = L"Doticca.Phostide";
 inline constexpr std::wstring_view kMutexName = L"Local\\Phostide.SingleInstance";
@@ -20,9 +20,18 @@ inline constexpr std::wstring_view kTapBoundEvent = L"Local\\Phostide.TAP.Bound"
 // Written by ExplorerTAP on bind; host compares to kAppVersion to detect stale in-Explorer DLLs.
 inline constexpr std::wstring_view kTapVersionStamp = L"tap.version";
 inline constexpr std::wstring_view kSettingsFileName = L"settings.json";
-// v4: ThemeCommand monitor slots — per-display theme/intensity/enabled (renderMode is global).
-inline constexpr int kTapApiVersion = 4;
+// v4: monitor slots. v5: OLED Care fields. v6: per-slot careActive (per-monitor idle).
+inline constexpr int kTapApiVersion = 6;
 inline constexpr uint32_t kMaxMonitorSlots = 8;
+
+// ThemeCommand.careFlags bits (v5).
+inline constexpr uint32_t kCareFlagChromeDim = 1u << 0;
+inline constexpr uint32_t kCareFlagClockNudge = 1u << 1;
+
+// Idle-after presets (minutes). 0 = OLED Care off.
+inline constexpr int kOledCareIdleChoices[] = {0, 1, 5, 10, 30};
+inline constexpr int kOledCareIdleChoiceCount =
+    static_cast<int>(sizeof(kOledCareIdleChoices) / sizeof(kOledCareIdleChoices[0]));
 
 enum class RenderMode : uint32_t {
   Auto = 0,  // D3D11 hardware if available, else CPU
@@ -99,6 +108,15 @@ struct Settings {
   bool pauseWhenLocked = true;
   // App-global (System tab) — not per-monitor.
   RenderMode renderMode = RenderMode::Auto;
+  // OLED Care (dedicated Settings tab). Idle is per display (cursor / focused window).
+  // Applies only to monitors that remain enabled on the Monitors tab.
+  int oledCareIdleMinutes = 0;       // 0=Off, else 1/5/10/30
+  int oledCareFillIntensity = 8;     // 0-100 while idle
+  bool oledCareChromeDim = false;    // experimental — dim icons/tray/clock
+  int oledCareChromeOpacity = 35;    // 0-100 when chrome dim active
+  int oledCareClockOpacity = 22;     // 0-100 (stronger than icons)
+  bool oledCareClockNudge = false;   // ±1–2 px micro-shift while idle
+  bool oledCareNightBoost = false;   // evenings: shorter idle + darker fill
   // Device names that are off; empty = all monitors active.
   std::vector<std::wstring> disabledMonitors;
   // Per-monitor theme/intensity; missing key → theme/intensity fallbacks.
@@ -115,6 +133,7 @@ struct MonitorPaintSlot {
   uint32_t theme = 0;
   uint32_t intensity = 45;
   uint32_t enabled = 1;
+  uint32_t careActive = 0;  // v6: 1 while this display is OLED-Care idle
 };
 
 struct ThemeCommand {
@@ -128,7 +147,25 @@ struct ThemeCommand {
   uint32_t renderMode = static_cast<uint32_t>(RenderMode::Auto);
   uint32_t slotCount = 0;
   MonitorPaintSlot slots[kMaxMonitorSlots]{};
+  // OLED Care — opacities/flags shared; careActive is OR of slot.careActive (v6).
+  uint32_t careActive = 0;       // 1 if any display has idle care engaged
+  uint32_t chromeOpacity = 100;  // 0-100 (icons / tray)
+  uint32_t clockOpacity = 100;   // 0-100
+  uint32_t careFlags = 0;        // kCareFlag*
 };
 #pragma pack(pop)
+
+inline int ClampOledCareIdleMinutes(int minutes) {
+  for (int i = 0; i < kOledCareIdleChoiceCount; ++i) {
+    if (kOledCareIdleChoices[i] == minutes) return minutes;
+  }
+  return 0;
+}
+
+inline int ClampPercent(int v) {
+  if (v < 0) return 0;
+  if (v > 100) return 100;
+  return v;
+}
 
 }  // namespace phostide

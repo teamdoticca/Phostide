@@ -43,6 +43,13 @@ struct VisualTreeWatcher : winrt::implements<VisualTreeWatcher, IVisualTreeServi
   void TryRegisterShape(winrt::Windows::UI::Xaml::Shapes::Shape const& shape,
                         HWND trayHwnd = nullptr,
                         InstanceHandle diagnosticsHandle = 0);
+  void TryRegisterChrome(winrt::Windows::UI::Xaml::FrameworkElement const& fe,
+                         HWND trayHwnd = nullptr,
+                         InstanceHandle diagnosticsHandle = 0);
+  void ScanChromeTree(winrt::Windows::UI::Xaml::FrameworkElement const& root, HWND trayHwnd,
+                      int depth);
+  void FindBackgroundFillTree(winrt::Windows::UI::Xaml::FrameworkElement const& root,
+                              HWND trayHwnd, int depth);
   void Log(const wchar_t* msg);
 
   winrt::com_ptr<IXamlDiagnostics> xamlDiagnostics_;

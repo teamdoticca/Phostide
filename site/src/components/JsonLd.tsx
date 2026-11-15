@@ -63,6 +63,7 @@ export function JsonLd({ softwareVersion }: JsonLdProps) {
     featureList: [
       "OLED-safe animated taskbar themes",
       "Paints Explorer BackgroundFill (not an overlay, not auto-hide)",
+      "Optional OLED Care idle fill dim and experimental chrome/clock care",
       "Standalone — no Windhawk or overlay tool required",
       "Per-monitor theme and intensity; enable or disable each display",
       "Shared Auto / GPU / CPU rendering (D3D11 with CPU fallback)",

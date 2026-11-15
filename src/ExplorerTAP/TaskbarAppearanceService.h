@@ -57,6 +57,8 @@ class TaskbarAppearanceService {
  private:
   TaskbarAppearanceService() = default;
 
+  // Tray Enable toggle: unbind paints but keep BackgroundFill refs for instant rebind.
+  void SuspendPainting();
   void EnsureUiTimer();
   void StopUiTimer();
   void TickUi();
@@ -77,6 +79,7 @@ class TaskbarAppearanceService {
   std::vector<TaskbarVisual> taskbars_;
   ThemeCommand command_{};
   std::atomic<bool> running_{false};
+  std::atomic<bool> suspended_{false};  // tray Enable off — keep fill refs across Unbind
   std::atomic<int> boundCount_{0};
   unsigned paintFrame_{0};
   std::thread watchThread_;

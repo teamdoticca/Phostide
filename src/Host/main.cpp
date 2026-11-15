@@ -12,8 +12,10 @@
 #include <windows.h>
 #include <wtsapi32.h>
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cstring>
 #include <memory>
 #include <string>
 #include <thread>
@@ -25,12 +27,21 @@ constexpr UINT WM_INJECT_DONE = WM_APP + 2;
 constexpr UINT WM_UPDATE_DONE = WM_APP + 3;
 constexpr UINT_PTR ID_ANIM_TIMER = 1;
 constexpr UINT_PTR ID_REINJECT_TIMER = 2;
+constexpr UINT_PTR ID_IDLE_TIMER = 3;
 constexpr UINT ID_ENABLE = 100;
 constexpr UINT ID_SETTINGS = 110;
 constexpr UINT ID_OPEN_UPDATE = 310;
 constexpr UINT ID_EXIT = 399;
 constexpr UINT kAnimIntervalMs = 33;  // ~30 fps host-side accent animation
 constexpr UINT kReinjectDebounceMs = 1000;
+constexpr UINT kIdlePollMs = 1000;
+
+struct MonitorCareState {
+  uint64_t deviceHash = 0;
+  DWORD lastAttendedTick = 0;
+  bool idle = false;
+  bool primary = false;
+};
 
 HWND g_hwnd = nullptr;
 HINSTANCE g_instance = nullptr;
@@ -41,6 +52,10 @@ bool g_trayAdded = false;
 bool g_trayIconOwned = false;
 UINT g_taskbarCreatedMsg = 0;
 bool g_sessionLocked = false;
+MonitorCareState g_careMonitors[phostide::kMaxMonitorSlots]{};
+uint32_t g_careMonitorCount = 0;
+DWORD g_careProcessStartTick = 0;
+bool g_careWasSystemIdle = false;
 bool g_tapBound = false;
 bool g_clearedAccentForTap = false;
 bool g_updateCheckRunning = false;
@@ -54,30 +69,230 @@ struct UpdateDonePayload {
   phostide::UpdateCheckResult result;
 };
 
+void ApplyTheme(bool pushToTap);
+void ShowBalloon(const wchar_t* title, const wchar_t* body);
+
+bool IsNightBoostWindow() {
+  SYSTEMTIME st{};
+  GetLocalTime(&st);
+  // 20:00–06:59 — quieter OLED stretch for evening / overnight desks.
+  return st.wHour >= 20 || st.wHour < 7;
+}
+
+int EffectiveCareIdleMinutes() {
+  int minutes = phostide::ClampOledCareIdleMinutes(g_settings.oledCareIdleMinutes);
+  if (minutes <= 0) return 0;
+  if (g_settings.oledCareNightBoost && IsNightBoostWindow()) {
+    minutes = (std::max)(1, minutes / 2);
+  }
+  return minutes;
+}
+
+int EffectiveCareFillIntensity() {
+  int fill = phostide::ClampPercent(g_settings.oledCareFillIntensity);
+  if (g_settings.oledCareNightBoost && IsNightBoostWindow()) {
+    fill = (std::max)(0, fill - 5);
+  }
+  return fill;
+}
+
+uint32_t CareScaledIntensity(int baseIntensity, bool idle) {
+  if (!idle) return static_cast<uint32_t>(phostide::ClampPercent(baseIntensity));
+  // Visible drop: honor Idle fill %, but never stay above ~20% of the live intensity.
+  const int care = EffectiveCareFillIntensity();
+  const int capped = (std::max)(2, phostide::ClampPercent(baseIntensity) / 5);
+  return static_cast<uint32_t>((std::min)(care, capped));
+}
+
+bool MonitorCareIdle(uint64_t deviceHash) {
+  if (!deviceHash) return false;
+  for (uint32_t i = 0; i < g_careMonitorCount; ++i) {
+    if (g_careMonitors[i].deviceHash == deviceHash) return g_careMonitors[i].idle;
+  }
+  return false;
+}
+
+void ClearMonitorCareIdle() {
+  for (uint32_t i = 0; i < g_careMonitorCount; ++i) {
+    g_careMonitors[i].idle = false;
+  }
+}
+
+void TouchCareMonitor(uint64_t deviceHash, DWORD now) {
+  if (!deviceHash) return;
+  for (uint32_t i = 0; i < g_careMonitorCount; ++i) {
+    if (g_careMonitors[i].deviceHash != deviceHash) continue;
+    g_careMonitors[i].lastAttendedTick = now;
+    return;
+  }
+}
+
+// Returns true if any monitor's idle bit changed.
+bool RefreshOledCareIdleStates() {
+  const int minutes = EffectiveCareIdleMinutes();
+  const DWORD now = GetTickCount();
+  if (g_careProcessStartTick == 0) g_careProcessStartTick = now;
+  const auto monitors = phostide::EnumerateAttachedMonitors();
+
+  // Rebuild attendance table when the monitor set changes; keep lastAttended for survivors.
+  MonitorCareState next[phostide::kMaxMonitorSlots]{};
+  uint32_t nextCount = 0;
+  for (const auto& mon : monitors) {
+    if (nextCount >= phostide::kMaxMonitorSlots) break;
+    MonitorCareState st;
+    st.deviceHash = mon.deviceHash;
+    st.primary = mon.primary;
+    st.lastAttendedTick = now;
+    st.idle = false;
+    for (uint32_t i = 0; i < g_careMonitorCount; ++i) {
+      if (g_careMonitors[i].deviceHash == mon.deviceHash) {
+        st.lastAttendedTick = g_careMonitors[i].lastAttendedTick;
+        st.idle = g_careMonitors[i].idle;
+        break;
+      }
+    }
+    next[nextCount++] = st;
+  }
+  std::memcpy(g_careMonitors, next, sizeof(next));
+  g_careMonitorCount = nextCount;
+
+  if (minutes <= 0 || !g_settings.enabled || g_sessionLocked || g_careMonitorCount == 0) {
+    bool changed = false;
+    for (uint32_t i = 0; i < g_careMonitorCount; ++i) {
+      if (g_careMonitors[i].idle) {
+        g_careMonitors[i].idle = false;
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
+  const DWORD thresholdMs = static_cast<DWORD>(minutes) * 60u * 1000u;
+
+  // Startup grace: Explorer reinject / settle often leaves GetLastInputInfo already
+  // "old", which would enter care immediately and feel stuck until input.
+  constexpr DWORD kStartupGraceMs = 8000;
+  if (now - g_careProcessStartTick < kStartupGraceMs) {
+    bool changed = false;
+    for (uint32_t i = 0; i < g_careMonitorCount; ++i) {
+      g_careMonitors[i].lastAttendedTick = now;
+      if (g_careMonitors[i].idle) {
+        g_careMonitors[i].idle = false;
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
+  LASTINPUTINFO lii{sizeof(lii)};
+  const bool haveInput = GetLastInputInfo(&lii) != FALSE;
+  const bool systemIdle = haveInput && (now - lii.dwTime) >= thresholdMs;
+  constexpr DWORD kRecentInputMs = 2500;
+  const bool recentInput = haveInput && (now - lii.dwTime) <= kRecentInputMs;
+
+  if (systemIdle) {
+    g_careWasSystemIdle = true;
+  } else if (recentInput) {
+    POINT cursor{};
+    if (GetCursorPos(&cursor)) {
+      uint64_t hash = 0;
+      if (phostide::DeviceHashFromHmonitor(
+              MonitorFromPoint(cursor, MONITOR_DEFAULTTONEAREST), hash)) {
+        TouchCareMonitor(hash, now);
+      }
+    }
+    if (HWND fg = GetForegroundWindow()) {
+      uint64_t hash = 0;
+      if (phostide::DeviceHashFromWindow(fg, hash)) {
+        TouchCareMonitor(hash, now);
+      }
+    }
+    // Leaving full AFK: any input wakes every bar (classic GetLastInputInfo).
+    if (g_careWasSystemIdle) {
+      for (uint32_t i = 0; i < g_careMonitorCount; ++i) {
+        g_careMonitors[i].lastAttendedTick = now;
+      }
+      g_careWasSystemIdle = false;
+    }
+  }
+
+  bool changed = false;
+  uint32_t idleCount = 0;
+  for (uint32_t i = 0; i < g_careMonitorCount; ++i) {
+    const bool unattended =
+        (now - g_careMonitors[i].lastAttendedTick) >= thresholdMs;
+    const bool idle = systemIdle || unattended;
+    if (idle != g_careMonitors[i].idle) {
+      g_careMonitors[i].idle = idle;
+      changed = true;
+    }
+    if (g_careMonitors[i].idle) ++idleCount;
+  }
+  if (changed && idleCount > 0) {
+    wchar_t body[80];
+    swprintf_s(body, L"OLED Care on — %u display(s) dimmed.", idleCount);
+    ShowBalloon(L"Phostide", body);
+  }
+  return changed;
+}
+
 phostide::ThemeCommand MakeCommand() {
   phostide::ThemeCommand cmd;
   cmd.apiVersion = phostide::kTapApiVersion;
   cmd.theme = static_cast<uint32_t>(g_settings.theme);
-  cmd.intensity = static_cast<uint32_t>(g_settings.intensity);
   cmd.enabled = g_settings.enabled ? 1u : 0u;
   cmd.paused =
       (g_settings.pauseWhenLocked && g_sessionLocked && g_settings.enabled) ? 1u : 0u;
   cmd.renderMode = static_cast<uint32_t>(g_settings.renderMode);
+  cmd.chromeOpacity =
+      static_cast<uint32_t>(phostide::ClampPercent(g_settings.oledCareChromeOpacity));
+  cmd.clockOpacity =
+      static_cast<uint32_t>(phostide::ClampPercent(g_settings.oledCareClockOpacity));
+  cmd.careFlags = 0;
+  if (g_settings.oledCareChromeDim) cmd.careFlags |= phostide::kCareFlagChromeDim;
+  if (g_settings.oledCareClockNudge) cmd.careFlags |= phostide::kCareFlagClockNudge;
 
   const auto monitors = phostide::EnumerateAttachedMonitors();
   cmd.slotCount = 0;
+  bool anyCare = false;
+  bool primaryIdle = false;
+  bool sawPrimary = false;
   for (const auto& mon : monitors) {
     if (cmd.slotCount >= phostide::kMaxMonitorSlots) break;
     const auto appearance =
         phostide::ResolveMonitorAppearance(g_settings, mon.deviceName);
+    const bool idle = MonitorCareIdle(mon.deviceHash);
     auto& slot = cmd.slots[cmd.slotCount++];
     slot.deviceHash = mon.deviceHash;
     slot.theme = static_cast<uint32_t>(appearance.theme);
-    slot.intensity = static_cast<uint32_t>(appearance.intensity);
+    slot.intensity = CareScaledIntensity(appearance.intensity, idle);
     slot.enabled =
         phostide::IsMonitorDisabled(g_settings, mon.deviceName) ? 0u : 1u;
+    slot.careActive = (idle && slot.enabled && g_settings.enabled && !g_sessionLocked) ? 1u : 0u;
+    if (slot.careActive) anyCare = true;
+    if (mon.primary) {
+      sawPrimary = true;
+      primaryIdle = idle;
+    }
   }
+  cmd.careActive = anyCare ? 1u : 0u;
+  cmd.intensity = CareScaledIntensity(g_settings.intensity, sawPrimary ? primaryIdle : anyCare);
   return cmd;
+}
+
+void SyncIdleTimer(HWND hwnd) {
+  if (g_settings.oledCareIdleMinutes > 0 && g_settings.enabled) {
+    SetTimer(hwnd, ID_IDLE_TIMER, kIdlePollMs, nullptr);
+  } else {
+    KillTimer(hwnd, ID_IDLE_TIMER);
+    ClearMonitorCareIdle();
+  }
+}
+
+void PollOledCareIdle(HWND hwnd) {
+  if (!RefreshOledCareIdleStates()) return;
+  ApplyTheme(true);
+  (void)hwnd;
 }
 
 float AnimSeconds() {
@@ -86,9 +301,11 @@ float AnimSeconds() {
 }
 
 bool RefreshTapBound() {
-  if (g_tapBound) return true;
+  // Always re-query — TAP ClearBoundEvent on suspend/Exit must not leave a sticky true.
   if (g_boundEvent && WaitForSingleObject(g_boundEvent, 0) == WAIT_OBJECT_0) {
     g_tapBound = true;
+  } else {
+    g_tapBound = false;
   }
   return g_tapBound;
 }
@@ -109,7 +326,7 @@ void StartInjectWorker() {
   }).detach();
 }
 
-void ApplyTheme(bool pushToTap = true) {
+void ApplyTheme(bool pushToTap) {
   const auto cmd = MakeCommand();
   const bool bound = RefreshTapBound();
   if (bound) {
@@ -180,6 +397,8 @@ void OnApplyAppearanceFromSettings() {
   g_animStart = std::chrono::steady_clock::now();
   phostide::SaveSettings(g_settings);
   SyncAnimTimer(g_hwnd);
+  SyncIdleTimer(g_hwnd);
+  RefreshOledCareIdleStates();
   ApplyTheme(true);
 }
 
@@ -359,11 +578,16 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     case WM_CREATE:
       AddTrayIcon(hwnd, reinterpret_cast<LPCREATESTRUCTW>(lParam)->hInstance);
       SyncAnimTimer(hwnd);
+      SyncIdleTimer(hwnd);
       return 0;
     case WM_TIMER:
       if (wParam == ID_REINJECT_TIMER) {
         KillTimer(hwnd, ID_REINJECT_TIMER);
         StartInjectWorker();
+        return 0;
+      }
+      if (wParam == ID_IDLE_TIMER) {
+        PollOledCareIdle(hwnd);
         return 0;
       }
       if (wParam == ID_ANIM_TIMER && g_settings.enabled && !g_sessionLocked) {
@@ -397,10 +621,20 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                  lParam == WM_RBUTTONUP || lParam == WM_CONTEXTMENU) {
         ShowContextMenu(hwnd);
       } else if (LOWORD(lParam) == WM_LBUTTONUP || lParam == WM_LBUTTONUP) {
+        // Left-click toggles Enable (same as tray menu). Soft-suspend in TAP keeps
+        // fill refs so the next click can rebind without a full Explorer rescan.
         g_settings.enabled = !g_settings.enabled;
         phostide::SaveSettings(g_settings);
+        if (!g_settings.enabled) {
+          g_tapBound = false;
+          phostide::ResetTapBoundEvent();
+        }
         SyncAnimTimer(hwnd);
+        SyncIdleTimer(hwnd);
+        RefreshOledCareIdleStates();
         ApplyTheme(true);
+        ShowBalloon(g_settings.enabled ? L"Phostide" : L"Phostide",
+                    g_settings.enabled ? L"Themes on." : L"Themes paused. Click again to resume.");
       }
       return 0;
     case WM_COMMAND: {
@@ -408,7 +642,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
       if (id == ID_ENABLE) {
         g_settings.enabled = !g_settings.enabled;
         phostide::SaveSettings(g_settings);
+        if (!g_settings.enabled) {
+          g_tapBound = false;
+          phostide::ResetTapBoundEvent();
+        }
         SyncAnimTimer(hwnd);
+        SyncIdleTimer(hwnd);
+        RefreshOledCareIdleStates();
         ApplyTheme(true);
         return 0;
       }
@@ -442,13 +682,17 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
       if (g_settings.pauseWhenLocked) {
         if (wParam == WTS_SESSION_LOCK) {
           g_sessionLocked = true;
+          ClearMonitorCareIdle();
           SyncAnimTimer(hwnd);
+          SyncIdleTimer(hwnd);
           phostide::ClearTaskbarAccent();
           // Stop TAP paint loop inside explorer.exe while the desktop is covered.
           ApplyTheme(true);
         } else if (wParam == WTS_SESSION_UNLOCK) {
           g_sessionLocked = false;
           SyncAnimTimer(hwnd);
+          SyncIdleTimer(hwnd);
+          RefreshOledCareIdleStates();
           ApplyTheme(true);
         }
       }
@@ -504,7 +748,12 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR cmdLine, int) {
   host.onOpenUpdate = &OpenPendingUpdate;
   phostide::SettingsWindowBind(host);
 
+  // Named manual-reset event can still be signaled from a previous session's TAP
+  // bind — reset so we don't skip accent / assume fills are live before reinject.
+  phostide::ResetTapBoundEvent();
+  g_tapBound = false;
   g_boundEvent = CreateEventW(nullptr, TRUE, FALSE, phostide::kTapBoundEvent.data());
+  phostide::ResetTapBoundEvent();
 
   WNDCLASSEXW wc{sizeof(wc)};
   wc.lpfnWndProc = WndProc;
@@ -528,6 +777,8 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR cmdLine, int) {
   // Tray immediately — before any injection work.
   AddTrayIcon(g_hwnd, hi);
   SyncAnimTimer(g_hwnd);
+  SyncIdleTimer(g_hwnd);
+  RefreshOledCareIdleStates();
   ApplyTheme(true);
 
   WTSRegisterSessionNotification(g_hwnd, NOTIFY_FOR_THIS_SESSION);

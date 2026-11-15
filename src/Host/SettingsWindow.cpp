@@ -20,8 +20,8 @@ namespace {
 
 constexpr wchar_t kClassName[] = L"PhostideSettings";
 
-constexpr int kClientW = 560;
-constexpr int kClientH = 740;
+constexpr int kClientW = 720;
+constexpr int kClientH = 700;
 constexpr int kPreviewH = 44;
 constexpr UINT_PTR ID_PREVIEW_TIMER = 77;
 constexpr UINT kPreviewIntervalMs = 50;
@@ -45,18 +45,33 @@ constexpr int IDC_PREVIEW_CAPTION = 1507;
 constexpr int IDC_PREVIEW = 1508;
 constexpr int IDC_PREVIEW_HINT = 1509;
 constexpr int IDC_TAB_TASKBAR = 1510;
-constexpr int IDC_TAB_MONITORS = 1511;
-constexpr int IDC_TAB_SYSTEM = 1512;
-constexpr int IDC_GENERAL_CAPTION = 1513;
-constexpr int IDC_RENDER_CAPTION = 1514;
+constexpr int IDC_TAB_CARE = 1511;
+constexpr int IDC_TAB_MONITORS = 1512;
+constexpr int IDC_TAB_SYSTEM = 1513;
+constexpr int IDC_GENERAL_CAPTION = 1514;
+constexpr int IDC_RENDER_CAPTION = 1515;
 constexpr int IDC_RENDER_BASE = 1520;  // +0 Auto, +1 GPU, +2 CPU
 constexpr int IDC_SCOPE_CAPTION = 1530;
 constexpr int IDC_SCOPE_BASE = 1540;  // +0 All, +1..N monitors
 constexpr int IDC_MONITORS_CAPTION = 1560;
 constexpr int IDC_MONITORS_HINT = 1561;
 constexpr int IDC_MONITOR_BASE = 1570;  // +0..N-1 toggle rows
+constexpr int IDC_CARE_SUBTITLE = 1620;
+constexpr int IDC_CARE_IDLE_CAPTION = 1621;
+constexpr int IDC_CARE_IDLE_BASE = 1630;  // Off / 1 / 5 / 10 / 30
+constexpr int IDC_CARE_FILL_CAPTION = 1640;
+constexpr int IDC_CARE_FILL = 1641;
+constexpr int IDC_CARE_FILL_VALUE = 1642;
+constexpr int IDC_CARE_CHROME = 1643;
+constexpr int IDC_CARE_NUDGE = 1644;
+constexpr int IDC_CARE_NIGHT = 1645;
+constexpr int IDC_CARE_PAUSE_LOCK = 1646;
+constexpr int IDC_CARE_PRESET = 1647;
+constexpr int IDC_CARE_HINT = 1648;
+constexpr int IDC_CARE_OPTIONS_CAPTION = 1649;
 
 constexpr int kMaxScopeChips = 1 + static_cast<int>(kMaxMonitorSlots);  // All + 8
+constexpr int kCareIdleChipCount = kOledCareIdleChoiceCount;
 
 constexpr COLORREF kVoid = RGB(0, 0, 0);
 constexpr COLORREF kScreen = RGB(17, 17, 17);
@@ -75,9 +90,15 @@ ThemeId g_draftTheme = ThemeId::Rainbow;
 int g_draftIntensity = 45;
 bool g_draftAutostart = false;
 RenderMode g_draftRenderMode = RenderMode::Auto;
+int g_draftCareIdleMinutes = 0;
+int g_draftCareFillIntensity = 8;
+bool g_draftCareChromeDim = false;
+bool g_draftCareClockNudge = false;
+bool g_draftCareNightBoost = false;
+bool g_draftPauseWhenLocked = true;
 // -1 = All monitors; 0..n-1 = attached monitor index.
 int g_scopeIndex = -1;
-int g_activeTab = 0;  // 0 Taskbar, 1 Monitors, 2 System
+int g_activeTab = 0;  // 0 Taskbar, 1 OLED Care, 2 Monitors, 3 System
 float g_previewTime = 3.2f;
 int g_previewW = 480;
 HBITMAP g_previewBmp = nullptr;
@@ -151,6 +172,12 @@ void SyncDraftFromScope() {
   if (!g_host.settings) return;
   g_draftAutostart = g_host.settings->startWithWindows;
   g_draftRenderMode = g_host.settings->renderMode;
+  g_draftCareIdleMinutes = ClampOledCareIdleMinutes(g_host.settings->oledCareIdleMinutes);
+  g_draftCareFillIntensity = ClampPercent(g_host.settings->oledCareFillIntensity);
+  g_draftCareChromeDim = g_host.settings->oledCareChromeDim;
+  g_draftCareClockNudge = g_host.settings->oledCareClockNudge;
+  g_draftCareNightBoost = g_host.settings->oledCareNightBoost;
+  g_draftPauseWhenLocked = g_host.settings->pauseWhenLocked;
   if (g_scopeIndex >= 0 && g_scopeIndex < static_cast<int>(g_monitors.size())) {
     LoadAppearanceDraft(
         ResolveMonitorAppearance(*g_host.settings, g_monitors[g_scopeIndex].deviceName));
@@ -204,6 +231,62 @@ void UpdateIntensityValue(HWND hwnd) {
   wchar_t buf[32];
   swprintf_s(buf, L"%d%%", g_draftIntensity);
   SetWindowTextW(GetDlgItem(hwnd, IDC_INTENSITY_VALUE), buf);
+}
+
+void UpdateCareFillValue(HWND hwnd) {
+  wchar_t buf[32];
+  swprintf_s(buf, L"%d%%", g_draftCareFillIntensity);
+  SetWindowTextW(GetDlgItem(hwnd, IDC_CARE_FILL_VALUE), buf);
+}
+
+void InvalidateCareIdleChips(HWND hwnd) {
+  for (int i = 0; i < kCareIdleChipCount; ++i) {
+    HWND c = GetDlgItem(hwnd, IDC_CARE_IDLE_BASE + i);
+    if (c) InvalidateRect(c, nullptr, TRUE);
+  }
+}
+
+void InvalidateCareChecks(HWND hwnd) {
+  for (int id : {IDC_CARE_CHROME, IDC_CARE_NUDGE, IDC_CARE_NIGHT, IDC_CARE_PAUSE_LOCK,
+                 IDC_AUTOSTART}) {
+    HWND c = GetDlgItem(hwnd, id);
+    if (c) InvalidateRect(c, nullptr, TRUE);
+  }
+}
+
+const wchar_t* CareIdleChipLabel(int index) {
+  switch (index) {
+    case 0: return L"Off";
+    case 1: return L"1m";
+    case 2: return L"5m";
+    case 3: return L"10m";
+    case 4: return L"30m";
+    default: return L"";
+  }
+}
+
+void InvalidateThemeRows(HWND hwnd);
+void RefreshPreview(HWND hwnd);
+
+void ApplyOledEverydayPreset(HWND hwnd) {
+  g_draftTheme = ThemeId::Space;
+  g_draftIntensity = 35;
+  g_draftCareIdleMinutes = 5;
+  g_draftCareFillIntensity = 5;
+  g_draftCareChromeDim = true;
+  g_draftCareClockNudge = true;
+  g_draftCareNightBoost = true;
+  g_previewTime = ThemeBaseTime(g_draftTheme);
+  SendDlgItemMessageW(hwnd, IDC_INTENSITY, TBM_SETPOS, TRUE,
+                      static_cast<LPARAM>(g_draftIntensity));
+  UpdateIntensityValue(hwnd);
+  SendDlgItemMessageW(hwnd, IDC_CARE_FILL, TBM_SETPOS, TRUE,
+                      static_cast<LPARAM>(g_draftCareFillIntensity));
+  UpdateCareFillValue(hwnd);
+  InvalidateThemeRows(hwnd);
+  InvalidateCareIdleChips(hwnd);
+  InvalidateCareChecks(hwnd);
+  RefreshPreview(hwnd);
 }
 
 void InvalidateThemeRows(HWND hwnd) {
@@ -320,7 +403,70 @@ void UpdateMonitorsHint(HWND hwnd) {
     }
   }
   SetWindowTextW(hint, anyOn ? L"Turn a display off to leave its taskbar alone."
-                             : L"All displays are off — Phostide will not paint any taskbar.");
+                             : L"All displays are off - Phostide will not paint any taskbar.");
+}
+
+void RelayoutCare(HWND hwnd) {
+  if (g_activeTab != 1) return;
+  const int pad = 24;
+  const int contentW = kClientW - pad * 2;
+  const int footerY = kClientH - 52;
+
+  RECT tabRc{};
+  GetWindowRect(GetDlgItem(hwnd, IDC_TAB_CARE), &tabRc);
+  POINT tabBottom{tabRc.left, tabRc.bottom};
+  ScreenToClient(hwnd, &tabBottom);
+  int y = tabBottom.y + 24;  // match Taskbar air under tabs
+
+  auto place = [&](int id, int x, int yy, int w, int h) {
+    HWND c = GetDlgItem(hwnd, id);
+    if (c) SetWindowPos(c, nullptr, x, yy, w, h, SWP_NOZORDER | SWP_NOACTIVATE);
+  };
+
+  place(IDC_CARE_SUBTITLE, pad, y, contentW, 20);
+  y += 30;
+
+  place(IDC_CARE_IDLE_CAPTION, pad, y, contentW, 16);
+  y += 20;
+  {
+    const int chipGap = 10;
+    const int chipH = 36;
+    const int chipW = (contentW - chipGap * (kCareIdleChipCount - 1)) / kCareIdleChipCount;
+    for (int i = 0; i < kCareIdleChipCount; ++i) {
+      place(IDC_CARE_IDLE_BASE + i, pad + i * (chipW + chipGap), y, chipW, chipH);
+    }
+    y += chipH + 20;
+  }
+
+  place(IDC_CARE_FILL_CAPTION, pad, y, contentW - 70, 16);
+  place(IDC_CARE_FILL_VALUE, pad + contentW - 64, y - 2, 64, 22);
+  y += 22;
+  place(IDC_CARE_FILL, pad - 4, y, contentW + 8, 30);
+  y += 38;
+
+  place(IDC_CARE_OPTIONS_CAPTION, pad, y, contentW, 16);
+  y += 20;
+  const int rowH = 38;
+  const int rowGap = 8;
+  const int optIds[] = {IDC_CARE_CHROME, IDC_CARE_NUDGE, IDC_CARE_NIGHT, IDC_CARE_PAUSE_LOCK};
+  for (int id : optIds) {
+    place(id, pad, y, contentW, rowH);
+    y += rowH + rowGap;
+  }
+
+  // Preset + hint always above the footer (never push Close/Apply off-screen).
+  const int presetH = 40;
+  const int hintH = 18;
+  const int presetGap = 14;
+  const int hintGap = 8;
+  const int footerClearance = 16;
+  int bottomY = footerY - footerClearance - hintH - hintGap - presetH;
+  if (bottomY < y + 10) bottomY = y + 10;
+  if (bottomY + presetH + hintGap + hintH > footerY - footerClearance) {
+    bottomY = footerY - footerClearance - hintH - hintGap - presetH;
+  }
+  place(IDC_CARE_PRESET, pad, bottomY, contentW, presetH);
+  place(IDC_CARE_HINT, pad, bottomY + presetH + hintGap, contentW, hintH);
 }
 
 void RelayoutScopeAndMonitors(HWND hwnd) {
@@ -364,16 +510,16 @@ void RelayoutScopeAndMonitors(HWND hwnd) {
   GetWindowRect(GetDlgItem(hwnd, IDC_MONITORS_CAPTION), &captionRc);
   POINT capt{captionRc.left, captionRc.bottom};
   ScreenToClient(hwnd, &capt);
-  int my = capt.y + 10;
-  const int rowH = 44;
+  int my = capt.y + 14;
+  const int rowH = 40;
   for (int i = 0; i < static_cast<int>(kMaxMonitorSlots); ++i) {
     HWND c = GetDlgItem(hwnd, IDC_MONITOR_BASE + i);
     if (!c) continue;
     const bool show = i < static_cast<int>(g_monitors.size());
-    ShowWindow(c, (g_activeTab == 1 && show) ? SW_SHOW : SW_HIDE);
+    ShowWindow(c, (g_activeTab == 2 && show) ? SW_SHOW : SW_HIDE);
     if (!show) continue;
     SetWindowPos(c, nullptr, pad, my, contentW, rowH, SWP_NOZORDER | SWP_NOACTIVATE);
-    my += rowH + 8;
+    my += rowH + 10;
   }
   UpdateMonitorsHint(hwnd);
 }
@@ -382,11 +528,16 @@ void LoadControlsFromDraft(HWND hwnd) {
   SendDlgItemMessageW(hwnd, IDC_INTENSITY, TBM_SETPOS, TRUE,
                       static_cast<LPARAM>(g_draftIntensity));
   UpdateIntensityValue(hwnd);
+  SendDlgItemMessageW(hwnd, IDC_CARE_FILL, TBM_SETPOS, TRUE,
+                      static_cast<LPARAM>(g_draftCareFillIntensity));
+  UpdateCareFillValue(hwnd);
   CheckDlgButton(hwnd, IDC_AUTOSTART, g_draftAutostart ? BST_CHECKED : BST_UNCHECKED);
   InvalidateThemeRows(hwnd);
   InvalidateRenderRows(hwnd);
   InvalidateScopeChips(hwnd);
   InvalidateMonitorRows(hwnd);
+  InvalidateCareIdleChips(hwnd);
+  InvalidateCareChecks(hwnd);
   RefreshUpdateControls(hwnd);
   RelayoutScopeAndMonitors(hwnd);
   RefreshPreview(hwnd);
@@ -395,7 +546,10 @@ void LoadControlsFromDraft(HWND hwnd) {
 void ReadDraftFromControls(HWND hwnd) {
   g_draftIntensity =
       static_cast<int>(SendDlgItemMessageW(hwnd, IDC_INTENSITY, TBM_GETPOS, 0, 0));
-  g_draftIntensity = (std::max)(0, (std::min)(100, g_draftIntensity));
+  g_draftIntensity = ClampPercent(g_draftIntensity);
+  g_draftCareFillIntensity =
+      static_cast<int>(SendDlgItemMessageW(hwnd, IDC_CARE_FILL, TBM_GETPOS, 0, 0));
+  g_draftCareFillIntensity = ClampPercent(g_draftCareFillIntensity);
   (void)hwnd;
 }
 
@@ -404,6 +558,12 @@ void ApplyDraft(HWND hwnd) {
   ReadDraftFromControls(hwnd);
   g_host.settings->startWithWindows = g_draftAutostart;
   g_host.settings->renderMode = g_draftRenderMode;
+  g_host.settings->oledCareIdleMinutes = ClampOledCareIdleMinutes(g_draftCareIdleMinutes);
+  g_host.settings->oledCareFillIntensity = ClampPercent(g_draftCareFillIntensity);
+  g_host.settings->oledCareChromeDim = g_draftCareChromeDim;
+  g_host.settings->oledCareClockNudge = g_draftCareClockNudge;
+  g_host.settings->oledCareNightBoost = g_draftCareNightBoost;
+  g_host.settings->pauseWhenLocked = g_draftPauseWhenLocked;
 
   MonitorAppearance appearance;
   appearance.theme = g_draftTheme;
@@ -557,8 +717,7 @@ void DrawRenderRow(DRAWITEMSTRUCT* dis, int modeIndex) {
   SelectObject(dis->hDC, old);
 }
 
-void DrawCheckRow(DRAWITEMSTRUCT* dis) {
-  const bool checked = g_draftAutostart;
+void DrawCheckRow(DRAWITEMSTRUCT* dis, const wchar_t* label, bool checked) {
   const bool pressed = (dis->itemState & ODS_SELECTED) != 0;
   FillRoundRect(dis->hDC, dis->rcItem, pressed ? RGB(34, 34, 36) : kPanel, kLine, 10);
 
@@ -585,8 +744,7 @@ void DrawCheckRow(DRAWITEMSTRUCT* dis) {
   HFONT old = static_cast<HFONT>(SelectObject(dis->hDC, g_fontUi));
   RECT textRc = dis->rcItem;
   textRc.left += 42;
-  DrawTextW(dis->hDC, L"Start with Windows", -1, &textRc,
-            DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+  DrawTextW(dis->hDC, label, -1, &textRc, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
   SelectObject(dis->hDC, old);
 }
 
@@ -665,8 +823,9 @@ void DrawPreview(DRAWITEMSTRUCT* dis) {
 void ShowTab(HWND hwnd, int tab) {
   g_activeTab = tab;
   const BOOL taskbar = (tab == 0) ? TRUE : FALSE;
-  const BOOL monitors = (tab == 1) ? TRUE : FALSE;
-  const BOOL system = (tab == 2) ? TRUE : FALSE;
+  const BOOL care = (tab == 1) ? TRUE : FALSE;
+  const BOOL monitors = (tab == 2) ? TRUE : FALSE;
+  const BOOL system = (tab == 3) ? TRUE : FALSE;
 
   const int taskbarIds[] = {
       IDC_SUBTITLE,          IDC_SCOPE_CAPTION,      IDC_PREVIEW_CAPTION,    IDC_PREVIEW,
@@ -680,6 +839,20 @@ void ShowTab(HWND hwnd, int tab) {
   for (int i = 0; i < static_cast<int>(ThemeId::Count); ++i) {
     HWND c = GetDlgItem(hwnd, IDC_THEME_BASE + i);
     if (c) ShowWindow(c, taskbar ? SW_SHOW : SW_HIDE);
+  }
+
+  const int careIds[] = {
+      IDC_CARE_SUBTITLE,       IDC_CARE_IDLE_CAPTION, IDC_CARE_FILL_CAPTION, IDC_CARE_FILL_VALUE,
+      IDC_CARE_FILL,           IDC_CARE_OPTIONS_CAPTION, IDC_CARE_CHROME,    IDC_CARE_NUDGE,
+      IDC_CARE_NIGHT,          IDC_CARE_PAUSE_LOCK,   IDC_CARE_PRESET,       IDC_CARE_HINT,
+  };
+  for (int id : careIds) {
+    HWND c = GetDlgItem(hwnd, id);
+    if (c) ShowWindow(c, care ? SW_SHOW : SW_HIDE);
+  }
+  for (int i = 0; i < kCareIdleChipCount; ++i) {
+    HWND c = GetDlgItem(hwnd, IDC_CARE_IDLE_BASE + i);
+    if (c) ShowWindow(c, care ? SW_SHOW : SW_HIDE);
   }
 
   const int monitorIds[] = {IDC_MONITORS_CAPTION, IDC_MONITORS_HINT};
@@ -699,8 +872,10 @@ void ShowTab(HWND hwnd, int tab) {
   }
 
   RelayoutScopeAndMonitors(hwnd);
+  RelayoutCare(hwnd);
 
   InvalidateRect(GetDlgItem(hwnd, IDC_TAB_TASKBAR), nullptr, FALSE);
+  InvalidateRect(GetDlgItem(hwnd, IDC_TAB_CARE), nullptr, FALSE);
   InvalidateRect(GetDlgItem(hwnd, IDC_TAB_MONITORS), nullptr, FALSE);
   InvalidateRect(GetDlgItem(hwnd, IDC_TAB_SYSTEM), nullptr, FALSE);
 
@@ -717,55 +892,56 @@ void BuildChildren(HWND hwnd) {
   const int pad = 24;
   const int contentW = kClientW - pad * 2;
   g_previewW = contentW - 6;
-  int y = 18;
+  int y = 14;
 
-  MkStatic(hwnd, IDC_TITLE, L"Settings", pad, y, contentW, 30, g_fontTitle);
-  y += 36;
+  MkStatic(hwnd, IDC_TITLE, L"Settings", pad, y, contentW, 32, g_fontTitle);
+  y += 44;  // leave room for title descenders (g) before the tab row
 
-  const int tabGap = 8;
-  const int tabW = (contentW - tabGap * 2) / 3;
-  MkButton(hwnd, IDC_TAB_TASKBAR, L"Taskbar", pad, y, tabW, 34, BS_OWNERDRAW);
-  MkButton(hwnd, IDC_TAB_MONITORS, L"Monitors", pad + tabW + tabGap, y, tabW, 34,
+  const int tabGap = 6;
+  const int tabW = (contentW - tabGap * 3) / 4;
+  MkButton(hwnd, IDC_TAB_TASKBAR, L"Taskbar", pad, y, tabW, 32, BS_OWNERDRAW);
+  MkButton(hwnd, IDC_TAB_CARE, L"OLED Care", pad + tabW + tabGap, y, tabW, 32, BS_OWNERDRAW);
+  MkButton(hwnd, IDC_TAB_MONITORS, L"Monitors", pad + (tabW + tabGap) * 2, y, tabW, 32,
            BS_OWNERDRAW);
-  MkButton(hwnd, IDC_TAB_SYSTEM, L"System", pad + (tabW + tabGap) * 2, y, tabW, 34,
+  MkButton(hwnd, IDC_TAB_SYSTEM, L"System", pad + (tabW + tabGap) * 3, y, tabW, 32,
            BS_OWNERDRAW);
-  y += 48;
+  y += 56;  // air between tabs and first content line on every tab
 
   // --- Taskbar tab ---
   MkStatic(hwnd, IDC_SUBTITLE, L"Preview the taskbar, then Apply when it looks right.", pad,
-           y, contentW, 18, g_fontUi);
-  int ty = y + 26;
+           y, contentW, 20, g_fontUi);
+  int ty = y + 28;
 
-  MkStatic(hwnd, IDC_SCOPE_CAPTION, L"APPLY TO", pad, ty, contentW, 16, g_fontSection);
-  ty += 24;
+  MkStatic(hwnd, IDC_SCOPE_CAPTION, L"APPLY TO", pad, ty, contentW, 14, g_fontSection);
+  ty += 22;
   for (int i = 0; i < kMaxScopeChips; ++i) {
-    MkButton(hwnd, IDC_SCOPE_BASE + i, L"", pad, ty, 44, 32, BS_OWNERDRAW);
+    MkButton(hwnd, IDC_SCOPE_BASE + i, L"", pad, ty, 44, 30, BS_OWNERDRAW);
   }
-  ty += 40;
+  ty += 42;
 
-  MkStatic(hwnd, IDC_PREVIEW_CAPTION, L"TASKBAR PREVIEW", pad, ty, contentW, 16,
+  MkStatic(hwnd, IDC_PREVIEW_CAPTION, L"TASKBAR PREVIEW", pad, ty, contentW, 14,
            g_fontSection);
   ty += 20;
   CreateWindowExW(0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_OWNERDRAW | SS_NOTIFY, pad,
                   ty, contentW, kPreviewH + 8, hwnd,
                   reinterpret_cast<HMENU>(static_cast<INT_PTR>(IDC_PREVIEW)),
                   ParentInstance(hwnd), nullptr);
-  ty += kPreviewH + 12;
+  ty += kPreviewH + 14;
   MkStatic(hwnd, IDC_PREVIEW_HINT,
-           L"Live preview - changes apply only when you click Apply.", pad, ty, contentW, 22,
+           L"Live preview - changes apply only when you click Apply.", pad, ty, contentW, 18,
            g_fontUi);
-  ty += 28;
+  ty += 32;
 
-  const int colGap = 18;
-  const int leftW = (contentW - colGap) * 55 / 100;
+  const int colGap = 20;
+  const int leftW = (contentW - colGap) * 48 / 100;
   const int rightW = contentW - colGap - leftW;
   const int leftX = pad;
   const int rightX = pad + leftW + colGap;
 
   MkStatic(hwnd, IDC_APPEARANCE_CAPTION, L"THEME", leftX, ty, leftW, 16, g_fontSection);
-  int ly = ty + 22;
+  int ly = ty + 28;  // clear gap under THEME caption before first chip
   const int themeH = 32;
-  const int themeGap = 5;
+  const int themeGap = 8;
   for (int i = 0; i < static_cast<int>(ThemeId::Count); ++i) {
     MkButton(hwnd, IDC_THEME_BASE + i, ThemeName(ThemeFromIndex(i)), leftX, ly, leftW,
              themeH, BS_OWNERDRAW);
@@ -774,9 +950,9 @@ void BuildChildren(HWND hwnd) {
 
   MkStatic(hwnd, IDC_INTENSITY_CAPTION, L"INTENSITY", rightX, ty, rightW - 70, 16,
            g_fontSection);
-  MkStatic(hwnd, IDC_INTENSITY_VALUE, L"0%", rightX + rightW - 64, ty - 2, 64, 22, g_fontValue,
+  MkStatic(hwnd, IDC_INTENSITY_VALUE, L"0%", rightX + rightW - 64, ty - 2, 64, 20, g_fontValue,
            SS_RIGHT);
-  int ry = ty + 24;
+  int ry = ty + 28;
   HWND track = CreateWindowExW(0, TRACKBAR_CLASSW, L"",
                                WS_CHILD | WS_VISIBLE | WS_TABSTOP | TBS_HORZ | TBS_NOTICKS,
                                rightX - 4, ry, rightW + 8, 28, hwnd,
@@ -788,41 +964,82 @@ void BuildChildren(HWND hwnd) {
   SetWindowTheme(track, L"", L"");
   (void)ry;
 
+  // --- OLED Care tab (single column — use full height, not a cramped top cluster) ---
+  const int cy = y;
+  MkStatic(hwnd, IDC_CARE_SUBTITLE,
+           L"Per-display idle on recent input (cursor / focus). Optional chrome care is experimental.",
+           pad, cy, contentW, 20, g_fontUi);
+
+  MkStatic(hwnd, IDC_CARE_IDLE_CAPTION, L"IDLE AFTER", pad, cy, contentW, 16, g_fontSection);
+  for (int i = 0; i < kCareIdleChipCount; ++i) {
+    MkButton(hwnd, IDC_CARE_IDLE_BASE + i, CareIdleChipLabel(i), pad, cy, 80, 36, BS_OWNERDRAW);
+  }
+
+  MkStatic(hwnd, IDC_CARE_FILL_CAPTION, L"IDLE FILL INTENSITY", pad, cy, contentW - 70, 16,
+           g_fontSection);
+  MkStatic(hwnd, IDC_CARE_FILL_VALUE, L"0%", pad + contentW - 64, cy, 64, 22, g_fontValue,
+           SS_RIGHT);
+  HWND careTrack =
+      CreateWindowExW(0, TRACKBAR_CLASSW, L"",
+                      WS_CHILD | WS_VISIBLE | WS_TABSTOP | TBS_HORZ | TBS_NOTICKS, pad - 4, cy,
+                      contentW + 8, 30, hwnd,
+                      reinterpret_cast<HMENU>(static_cast<INT_PTR>(IDC_CARE_FILL)),
+                      ParentInstance(hwnd), nullptr);
+  SendMessageW(careTrack, TBM_SETRANGEMIN, FALSE, 0);
+  SendMessageW(careTrack, TBM_SETRANGEMAX, FALSE, 100);
+  SendMessageW(careTrack, TBM_SETPAGESIZE, 0, 5);
+  SetWindowTheme(careTrack, L"", L"");
+
+  MkStatic(hwnd, IDC_CARE_OPTIONS_CAPTION, L"WHEN IDLE", pad, cy, contentW, 16, g_fontSection);
+  MkButton(hwnd, IDC_CARE_CHROME, L"Dim icons, tray & clock (experimental)", pad, cy, contentW,
+           40, BS_OWNERDRAW);
+  MkButton(hwnd, IDC_CARE_NUDGE, L"Micro-nudge clock (experimental)", pad, cy, contentW, 40,
+           BS_OWNERDRAW);
+  MkButton(hwnd, IDC_CARE_NIGHT, L"Night boost (after 8 PM)", pad, cy, contentW, 40,
+           BS_OWNERDRAW);
+  MkButton(hwnd, IDC_CARE_PAUSE_LOCK, L"Pause themes while locked", pad, cy, contentW, 40,
+           BS_OWNERDRAW);
+
+  MkButton(hwnd, IDC_CARE_PRESET, L"OLED everyday preset", pad, cy, contentW, 40, BS_OWNERDRAW);
+  MkStatic(hwnd, IDC_CARE_HINT,
+           L"Applies only to monitors left on in the Monitors tab.", pad, cy, contentW, 20,
+           g_fontUi);
+
   // --- Monitors tab ---
   const int my = y;
   MkStatic(hwnd, IDC_MONITORS_CAPTION, L"ACTIVE DISPLAYS", pad, my, contentW, 16,
            g_fontSection);
   for (int i = 0; i < static_cast<int>(kMaxMonitorSlots); ++i) {
-    MkButton(hwnd, IDC_MONITOR_BASE + i, L"", pad, my + 28, contentW, 44, BS_OWNERDRAW);
+    MkButton(hwnd, IDC_MONITOR_BASE + i, L"", pad, my + 28, contentW, 40, BS_OWNERDRAW);
   }
-  MkStatic(hwnd, IDC_MONITORS_HINT, L"", pad, kClientH - 100, contentW, 36, g_fontUi);
+  MkStatic(hwnd, IDC_MONITORS_HINT, L"", pad, kClientH - 96, contentW, 32, g_fontUi);
 
   // --- System tab ---
   const int sy = y;
   MkStatic(hwnd, IDC_GENERAL_CAPTION, L"GENERAL", pad, sy, contentW, 16, g_fontSection);
-  int syy = sy + 22;
+  int syy = sy + 28;
   MkButton(hwnd, IDC_AUTOSTART, L"Start with Windows", pad, syy, contentW, 36, BS_OWNERDRAW);
-  syy += 52;
+  syy += 36 + 24;
   MkStatic(hwnd, IDC_RENDER_CAPTION, L"RENDERING", pad, syy, contentW, 16, g_fontSection);
-  syy += 22;
+  syy += 28;
   for (int i = 0; i < 3; ++i) {
     MkButton(hwnd, IDC_RENDER_BASE + i, RenderModeName(RenderModeFromIndex(i)), pad, syy,
-             contentW, 32, BS_OWNERDRAW);
-    syy += 38;
+             contentW, 34, BS_OWNERDRAW);
+    syy += 34 + 8;
   }
-  syy += 10;
+  syy += 16;
   MkStatic(hwnd, IDC_UPDATES_CAPTION, L"UPDATES", pad, syy, contentW, 16, g_fontSection);
-  syy += 22;
+  syy += 28;
   MkStatic(hwnd, IDC_VERSION, L"Installed version", pad, syy, contentW, 18, g_fontUi);
-  syy += 22;
+  syy += 24;
   MkStatic(hwnd, IDC_UPDATE_STATUS, L"", pad, syy, contentW, 18, g_fontSection);
   syy += 28;
   MkButton(hwnd, IDC_CHECK_UPDATES, L"Check for updates", pad, syy, 180, 34, BS_OWNERDRAW);
   MkButton(hwnd, IDC_UPDATE_BTN, L"Update", pad + contentW - 120, syy, 120, 34, BS_OWNERDRAW);
 
-  const int footerY = kClientH - 56;
-  MkButton(hwnd, IDC_CLOSE, L"Close", pad, footerY, 110, 36, BS_OWNERDRAW);
-  MkButton(hwnd, IDC_APPLY, L"Apply", pad + contentW - 130, footerY, 130, 36, BS_OWNERDRAW);
+  const int footerY = kClientH - 52;
+  MkButton(hwnd, IDC_CLOSE, L"Close", pad, footerY, 110, 34, BS_OWNERDRAW);
+  MkButton(hwnd, IDC_APPLY, L"Apply", pad + contentW - 130, footerY, 130, 34, BS_OWNERDRAW);
 
   SyncDraftFromSettings();
   LoadControlsFromDraft(hwnd);
@@ -830,7 +1047,7 @@ void BuildChildren(HWND hwnd) {
 }
 
 void FocusUpdatesSection(HWND hwnd) {
-  ShowTab(hwnd, 2);
+  ShowTab(hwnd, 3);
   HWND updateBtn = GetDlgItem(hwnd, IDC_UPDATE_BTN);
   if (IsWindowEnabled(updateBtn)) {
     SetFocus(updateBtn);
@@ -870,7 +1087,9 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
       if (id == IDC_SUBTITLE || id == IDC_APPEARANCE_CAPTION || id == IDC_UPDATES_CAPTION ||
           id == IDC_INTENSITY_CAPTION || id == IDC_VERSION || id == IDC_PREVIEW_CAPTION ||
           id == IDC_PREVIEW_HINT || id == IDC_GENERAL_CAPTION || id == IDC_RENDER_CAPTION ||
-          id == IDC_SCOPE_CAPTION || id == IDC_MONITORS_CAPTION || id == IDC_MONITORS_HINT) {
+          id == IDC_SCOPE_CAPTION || id == IDC_MONITORS_CAPTION || id == IDC_MONITORS_HINT ||
+          id == IDC_CARE_SUBTITLE || id == IDC_CARE_IDLE_CAPTION ||
+          id == IDC_CARE_FILL_CAPTION || id == IDC_CARE_OPTIONS_CAPTION || id == IDC_CARE_HINT) {
         SetTextColor(hdc, kSoft);
       } else if (id == IDC_UPDATE_STATUS && HasPendingUpdate()) {
         SetTextColor(hdc, kEmber);
@@ -885,12 +1104,16 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
         DrawTabButton(dis, L"Taskbar", g_activeTab == 0);
         return TRUE;
       }
+      if (dis->CtlID == IDC_TAB_CARE) {
+        DrawTabButton(dis, L"OLED Care", g_activeTab == 1);
+        return TRUE;
+      }
       if (dis->CtlID == IDC_TAB_MONITORS) {
-        DrawTabButton(dis, L"Monitors", g_activeTab == 1);
+        DrawTabButton(dis, L"Monitors", g_activeTab == 2);
         return TRUE;
       }
       if (dis->CtlID == IDC_TAB_SYSTEM) {
-        DrawTabButton(dis, L"System", g_activeTab == 2);
+        DrawTabButton(dis, L"System", g_activeTab == 3);
         return TRUE;
       }
       if (dis->CtlID == IDC_PREVIEW) {
@@ -926,16 +1149,42 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
         return TRUE;
       }
       if (dis->CtlID == IDC_AUTOSTART) {
-        DrawCheckRow(dis);
+        DrawCheckRow(dis, L"Start with Windows", g_draftAutostart);
+        return TRUE;
+      }
+      if (dis->CtlID == IDC_CARE_CHROME) {
+        DrawCheckRow(dis, L"Dim icons, tray & clock (experimental)", g_draftCareChromeDim);
+        return TRUE;
+      }
+      if (dis->CtlID == IDC_CARE_NUDGE) {
+        DrawCheckRow(dis, L"Micro-nudge clock (experimental)", g_draftCareClockNudge);
+        return TRUE;
+      }
+      if (dis->CtlID == IDC_CARE_NIGHT) {
+        DrawCheckRow(dis, L"Night boost (after 8 PM)", g_draftCareNightBoost);
+        return TRUE;
+      }
+      if (dis->CtlID == IDC_CARE_PAUSE_LOCK) {
+        DrawCheckRow(dis, L"Pause themes while locked", g_draftPauseWhenLocked);
+        return TRUE;
+      }
+      if (dis->CtlID >= IDC_CARE_IDLE_BASE &&
+          dis->CtlID < IDC_CARE_IDLE_BASE + kCareIdleChipCount) {
+        const int chip = dis->CtlID - IDC_CARE_IDLE_BASE;
+        const bool selected = g_draftCareIdleMinutes == kOledCareIdleChoices[chip];
+        DrawChip(dis, CareIdleChipLabel(chip), selected, false);
         return TRUE;
       }
       if (dis->CtlID >= IDC_RENDER_BASE && dis->CtlID < IDC_RENDER_BASE + 3) {
         DrawRenderRow(dis, dis->CtlID - IDC_RENDER_BASE);
         return TRUE;
       }
-      if (dis->CtlID == IDC_APPLY || dis->CtlID == IDC_UPDATE_BTN) {
-        DrawPrimaryButton(dis, dis->CtlID == IDC_APPLY ? L"Apply" : L"Update",
-                          IsWindowEnabled(dis->hwndItem) != FALSE);
+      if (dis->CtlID == IDC_APPLY || dis->CtlID == IDC_UPDATE_BTN ||
+          dis->CtlID == IDC_CARE_PRESET) {
+        const wchar_t* label = L"Apply";
+        if (dis->CtlID == IDC_UPDATE_BTN) label = L"Update";
+        if (dis->CtlID == IDC_CARE_PRESET) label = L"OLED everyday preset";
+        DrawPrimaryButton(dis, label, IsWindowEnabled(dis->hwndItem) != FALSE);
         return TRUE;
       }
       if (dis->CtlID == IDC_CLOSE || dis->CtlID == IDC_CHECK_UPDATES) {
@@ -946,27 +1195,38 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
       }
       break;
     }
-    case WM_HSCROLL:
-      if (GetDlgCtrlID(reinterpret_cast<HWND>(lParam)) == IDC_INTENSITY) {
+    case WM_HSCROLL: {
+      const int trackId = GetDlgCtrlID(reinterpret_cast<HWND>(lParam));
+      if (trackId == IDC_INTENSITY) {
         g_draftIntensity = static_cast<int>(
             SendDlgItemMessageW(hwnd, IDC_INTENSITY, TBM_GETPOS, 0, 0));
-        g_draftIntensity = (std::max)(0, (std::min)(100, g_draftIntensity));
+        g_draftIntensity = ClampPercent(g_draftIntensity);
         UpdateIntensityValue(hwnd);
         RefreshPreview(hwnd);
+      } else if (trackId == IDC_CARE_FILL) {
+        g_draftCareFillIntensity = static_cast<int>(
+            SendDlgItemMessageW(hwnd, IDC_CARE_FILL, TBM_GETPOS, 0, 0));
+        g_draftCareFillIntensity = ClampPercent(g_draftCareFillIntensity);
+        UpdateCareFillValue(hwnd);
       }
       return 0;
+    }
     case WM_COMMAND: {
       const int id = LOWORD(wParam);
       if (id == IDC_TAB_TASKBAR) {
         ShowTab(hwnd, 0);
         return 0;
       }
-      if (id == IDC_TAB_MONITORS) {
+      if (id == IDC_TAB_CARE) {
         ShowTab(hwnd, 1);
         return 0;
       }
-      if (id == IDC_TAB_SYSTEM) {
+      if (id == IDC_TAB_MONITORS) {
         ShowTab(hwnd, 2);
+        return 0;
+      }
+      if (id == IDC_TAB_SYSTEM) {
+        ShowTab(hwnd, 3);
         return 0;
       }
       if (id >= IDC_SCOPE_BASE && id < IDC_SCOPE_BASE + kMaxScopeChips) {
@@ -1000,6 +1260,35 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
         CheckDlgButton(hwnd, IDC_AUTOSTART,
                        g_draftAutostart ? BST_CHECKED : BST_UNCHECKED);
         InvalidateRect(GetDlgItem(hwnd, IDC_AUTOSTART), nullptr, TRUE);
+        return 0;
+      }
+      if (id >= IDC_CARE_IDLE_BASE && id < IDC_CARE_IDLE_BASE + kCareIdleChipCount) {
+        g_draftCareIdleMinutes = kOledCareIdleChoices[id - IDC_CARE_IDLE_BASE];
+        InvalidateCareIdleChips(hwnd);
+        return 0;
+      }
+      if (id == IDC_CARE_CHROME) {
+        g_draftCareChromeDim = !g_draftCareChromeDim;
+        InvalidateRect(GetDlgItem(hwnd, IDC_CARE_CHROME), nullptr, TRUE);
+        return 0;
+      }
+      if (id == IDC_CARE_NUDGE) {
+        g_draftCareClockNudge = !g_draftCareClockNudge;
+        InvalidateRect(GetDlgItem(hwnd, IDC_CARE_NUDGE), nullptr, TRUE);
+        return 0;
+      }
+      if (id == IDC_CARE_NIGHT) {
+        g_draftCareNightBoost = !g_draftCareNightBoost;
+        InvalidateRect(GetDlgItem(hwnd, IDC_CARE_NIGHT), nullptr, TRUE);
+        return 0;
+      }
+      if (id == IDC_CARE_PAUSE_LOCK) {
+        g_draftPauseWhenLocked = !g_draftPauseWhenLocked;
+        InvalidateRect(GetDlgItem(hwnd, IDC_CARE_PAUSE_LOCK), nullptr, TRUE);
+        return 0;
+      }
+      if (id == IDC_CARE_PRESET) {
+        ApplyOledEverydayPreset(hwnd);
         return 0;
       }
       if (id >= IDC_RENDER_BASE && id < IDC_RENDER_BASE + 3) {

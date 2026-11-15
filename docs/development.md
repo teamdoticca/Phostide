@@ -23,7 +23,7 @@ Host `InjectExplorerTap` finds `Shell_TrayWnd`, loads `ExplorerTAP.dll` via `WH_
 | 3 | Space | Forward cinematic nebula → stars (no rewind / no start fade-in) |
 | 4 | Aurora | Green→teal→violet curtains, standing undulation |
 
-Settings file: `%APPDATA%\Phostide\settings.json` (`theme` / `intensity` fallbacks, app-global `renderMode`, `monitorSettings`, `disabledMonitors`, `enabled`, …). ThemeCommand v4 sends per-monitor paint slots (theme, intensity, enabled) plus a shared `renderMode` to ExplorerTAP.
+Settings file: `%APPDATA%\Phostide\settings.json` (`theme` / `intensity` fallbacks, app-global `renderMode`, OLED Care fields, `monitorSettings`, `disabledMonitors`, `enabled`, …). ThemeCommand **v6** sends per-monitor paint slots (theme, intensity, enabled, `careActive`), shared `renderMode`, and OLED Care opacities/`careFlags`. Idle is per display (cursor / focused window). XAML whitelist for chrome care: [oled-care-xaml.md](oled-care-xaml.md).
 
 Multi-monitor verify: after reinject, `%TEMP%\Phostide\tap.log` should show two `Bound fill … hash=… hwnd=…` lines with **different** hashes, then `slot[0]` / `slot[1]` with matching hashes and distinct theme/intensity when Settings differ per display.
 

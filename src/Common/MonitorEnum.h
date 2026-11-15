@@ -27,6 +27,10 @@ HMONITOR MonitorFromTaskbarRect(const RECT& rc);
 
 bool MonitorDeviceNameFromRect(const RECT& rc, std::wstring& outDeviceName);
 
+bool DeviceHashFromHmonitor(HMONITOR monitor, uint64_t& outHash);
+
+bool DeviceHashFromWindow(HWND hwnd, uint64_t& outHash);
+
 MonitorAppearance ResolveMonitorAppearance(const Settings& settings,
                                            std::wstring_view deviceName);
 

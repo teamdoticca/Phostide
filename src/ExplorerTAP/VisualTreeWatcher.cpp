@@ -1,5 +1,6 @@
 #include "VisualTreeWatcher.h"
 
+#include "ChromeCare.h"
 #include "TaskbarAppearanceService.h"
 #include "../Common/PhostideCommon.h"
 
@@ -46,6 +47,22 @@ void HitTestWindow(IXamlDiagnostics* diag, HWND hwnd,
     onHandle(handles[i]);
   }
   CoTaskMemFree(handles);
+}
+
+std::wstring SafeName(wux::FrameworkElement const& fe) {
+  try {
+    return std::wstring(fe.Name());
+  } catch (...) {
+    return {};
+  }
+}
+
+std::wstring SafeType(winrt::Windows::Foundation::IInspectable const& obj) {
+  try {
+    return std::wstring(winrt::get_class_name(obj));
+  } catch (...) {
+    return {};
+  }
 }
 
 }  // namespace
@@ -106,6 +123,62 @@ VisualTreeWatcher::VisualTreeWatcher(winrt::com_ptr<IUnknown> site, HANDLE ready
   }).detach();
 }
 
+void VisualTreeWatcher::TryRegisterChrome(wux::FrameworkElement const& fe, HWND trayHwnd,
+                                          InstanceHandle diagnosticsHandle) {
+  if (!fe) return;
+  ChromeCareService::Instance().TryRegister(fe, trayHwnd,
+                                            static_cast<uint64_t>(diagnosticsHandle));
+}
+
+void VisualTreeWatcher::ScanChromeTree(wux::FrameworkElement const& root, HWND trayHwnd,
+                                       int depth) {
+  if (!root || depth > 7) return;
+  TryRegisterChrome(root, trayHwnd, 0);
+  int n = 0;
+  try {
+    n = wuxm::VisualTreeHelper::GetChildrenCount(root);
+  } catch (...) {
+    return;
+  }
+  for (int i = 0; i < n; ++i) {
+    try {
+      auto child = wuxm::VisualTreeHelper::GetChild(root, i);
+      if (auto fe = child.try_as<wux::FrameworkElement>()) {
+        ScanChromeTree(fe, trayHwnd, depth + 1);
+      }
+    } catch (...) {
+    }
+  }
+}
+
+void VisualTreeWatcher::FindBackgroundFillTree(wux::FrameworkElement const& root, HWND trayHwnd,
+                                               int depth) {
+  if (!root || depth > 10) return;
+  try {
+    if (root.Name() == L"BackgroundFill") {
+      if (auto shape = root.try_as<wuxs::Shape>()) {
+        TryRegisterShape(shape, trayHwnd, 0);
+      }
+    }
+  } catch (...) {
+  }
+  int n = 0;
+  try {
+    n = wuxm::VisualTreeHelper::GetChildrenCount(root);
+  } catch (...) {
+    return;
+  }
+  for (int i = 0; i < n; ++i) {
+    try {
+      auto child = wuxm::VisualTreeHelper::GetChild(root, i);
+      if (auto fe = child.try_as<wux::FrameworkElement>()) {
+        FindBackgroundFillTree(fe, trayHwnd, depth + 1);
+      }
+    } catch (...) {
+    }
+  }
+}
+
 void VisualTreeWatcher::TryRegisterShape(wuxs::Shape const& shape, HWND trayHwnd,
                                          InstanceHandle diagnosticsHandle) {
   if (!shape) return;
@@ -117,6 +190,26 @@ void VisualTreeWatcher::TryRegisterShape(wuxs::Shape const& shape, HWND trayHwnd
   Log(trayHwnd ? L"Registering BackgroundFill shape (tray-bound)"
                : L"Registering BackgroundFill shape");
   TaskbarAppearanceService::Instance().RegisterBackground(shape, trayHwnd, diagnosticsHandle);
+
+  // From the fill, walk up a few parents then shallow-scan for chrome whitelist.
+  try {
+    wux::DependencyObject cur = shape;
+    wux::FrameworkElement scanRoot{nullptr};
+    for (int i = 0; i < 8 && cur; ++i) {
+      if (auto fe = cur.try_as<wux::FrameworkElement>()) {
+        const auto type = SafeType(fe);
+        const auto name = SafeName(fe);
+        if (type.find(L"TaskbarFrame") != std::wstring::npos || name == L"TaskbarFrame") {
+          scanRoot = fe;
+          break;
+        }
+        scanRoot = fe;
+      }
+      cur = wuxm::VisualTreeHelper::GetParent(cur);
+    }
+    if (scanRoot) ScanChromeTree(scanRoot, trayHwnd, 0);
+  } catch (...) {
+  }
 }
 
 void VisualTreeWatcher::ScanExistingViaHitTest() {
@@ -126,16 +219,18 @@ void VisualTreeWatcher::ScanExistingViaHitTest() {
       auto insp = FromHandle<winrt::Windows::Foundation::IInspectable>(handle);
       if (auto shape = insp.try_as<wuxs::Shape>()) {
         TryRegisterShape(shape, trayHwnd, handle);
-        return;
       }
       if (auto fe = insp.try_as<wux::FrameworkElement>()) {
-        // Shallow walk only — deep recursion previously risked Explorer instability.
+        TryRegisterChrome(fe, trayHwnd, handle);
         if (auto shape = fe.try_as<wuxs::Shape>()) {
           TryRegisterShape(shape, trayHwnd, handle);
         }
         const int n = wuxm::VisualTreeHelper::GetChildrenCount(fe);
         for (int i = 0; i < n; ++i) {
           auto child = wuxm::VisualTreeHelper::GetChild(fe, i);
+          if (auto childFe = child.try_as<wux::FrameworkElement>()) {
+            TryRegisterChrome(childFe, trayHwnd, 0);
+          }
           if (auto shape = child.try_as<wuxs::Shape>()) {
             TryRegisterShape(shape, trayHwnd, 0);
           }
@@ -149,19 +244,32 @@ void VisualTreeWatcher::ScanExistingViaHitTest() {
           } catch (...) {
           }
         }
+        // Climb to TaskbarFrame (or a near ancestor), then DFS for BackgroundFill.
+        // Needed after host Exit→RestoreAll when fills stay in-tree but won't fire Add.
+        wux::FrameworkElement scanRoot = fe;
         auto parent = wuxm::VisualTreeHelper::GetParent(fe);
-        for (int i = 0; i < 6 && parent; ++i) {
+        for (int i = 0; i < 8 && parent; ++i) {
           try {
-            if (auto named = parent.try_as<wux::FrameworkElement>();
-                named && named.Name() == L"BackgroundFill") {
-              if (auto shape = named.try_as<wuxs::Shape>()) {
-                TryRegisterShape(shape, trayHwnd, 0);
+            if (auto named = parent.try_as<wux::FrameworkElement>()) {
+              TryRegisterChrome(named, trayHwnd, 0);
+              if (named.Name() == L"BackgroundFill") {
+                if (auto shape = named.try_as<wuxs::Shape>()) {
+                  TryRegisterShape(shape, trayHwnd, 0);
+                }
               }
+              const auto type = SafeType(named);
+              if (type.find(L"TaskbarFrame") != std::wstring::npos ||
+                  named.Name() == L"TaskbarFrame") {
+                scanRoot = named;
+                break;
+              }
+              scanRoot = named;
             }
           } catch (...) {
           }
           parent = wuxm::VisualTreeHelper::GetParent(parent);
         }
+        FindBackgroundFillTree(scanRoot, trayHwnd, 0);
       }
     } catch (...) {
     }
@@ -202,12 +310,20 @@ HRESULT STDMETHODCALLTYPE VisualTreeWatcher::OnVisualTreeChange(ParentChildRelat
         } catch (...) {
           Log(L"BackgroundFill FromHandle failed");
         }
+      } else if (ChromeNameIsWhitelisted(name) || ChromeTypeIsWhitelisted(type)) {
+        try {
+          if (auto fe = FromHandle<wux::FrameworkElement>(element.Handle)) {
+            TryRegisterChrome(fe, nullptr, element.Handle);
+          }
+        } catch (...) {
+        }
       }
       break;
     }
     case Remove:
       TaskbarAppearanceService::Instance().UnregisterHandle(
           static_cast<uint64_t>(element.Handle));
+      ChromeCareService::Instance().UnregisterHandle(static_cast<uint64_t>(element.Handle));
       break;
   }
 

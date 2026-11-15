@@ -44,11 +44,12 @@ const approaches = [
   },
   {
     name: "Phostide",
-    how: "Standalone app that paints motion into Explorer’s real taskbar BackgroundFill — not a floating window, not a Windhawk mod.",
-    burnIn: "Moves the fill so the background isn’t one fixed bright block. Icons/tray stay Windows-drawn.",
+    how: "Standalone app that paints motion into Explorer’s real taskbar BackgroundFill — not a floating window, not a Windhawk mod. Optional OLED Care idle-dims the fill and can experimentally soften icons/clock.",
+    burnIn:
+      "Moves the fill so the background isn’t one fixed bright block. Idle Care further darkens the fill; optional chrome dim/nudge targets residual static UI.",
     usability:
-      "Bar stays visible; five built-in themes (no editor) from the tray; per-monitor on/off and appearance; Exit restores stock brushes.",
-    fit: "When you want the bar usable and themed, not hidden or covered.",
+      "Bar stays visible; five built-in themes (no editor) from the tray; per-monitor on/off and appearance; Exit restores stock brushes and chrome.",
+    fit: "When you want the bar usable and themed, with optional idle protection — not hidden or covered.",
   },
 ];
 
@@ -209,8 +210,9 @@ export default function ComparePage() {
             <IconDisplay className="h-5 w-5 text-ember" />
             <h3 className="mt-4 font-semibold">OLED‑aware, not a warranty</h3>
             <p className="mt-2 text-sm text-soft">
-              Motion on a dark base reduces how long the same background pixels
-              stay locked bright. Static icons can still age — see{" "}
+              Motion plus optional idle Care reduce how long the same pixels
+              stay locked bright. Residual chrome can still age when Care is
+              off — see{" "}
               <Link href="/docs/oled" className="text-zinc-100 underline-offset-2 hover:underline">
                 OLED notes
               </Link>
