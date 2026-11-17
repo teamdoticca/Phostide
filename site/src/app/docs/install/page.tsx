@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { IconArrowLeft, IconArrowRight, IconDownload } from "@/components/Icons";
 import { LatestDownload } from "@/components/LatestDownload";
+import { SettingsShot } from "@/components/SettingsShot";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { FALLBACK_TAG, resolveReleaseAssets } from "@/lib/releases";
@@ -177,8 +178,8 @@ export default async function InstallPage() {
               </li>
               <li>
                 <span className="text-zinc-100">Settings…</span> — Taskbar
-                (theme/intensity), OLED Care, Monitors (on/off), System
-                (shared rendering, Start with Windows, updates)
+                (theme/intensity), OLED Care, Monitors (on/off + live status),
+                System (shared rendering, Start with Windows, updates)
               </li>
               <li>
                 <span className="text-zinc-100">Exit</span> — quit and restore
@@ -197,13 +198,15 @@ export default async function InstallPage() {
                 <li>
                   <span className="text-zinc-100">Monitors</span> tab — turn
                   individual displays on or off (default: all on). Off displays
-                  keep a stock Windows taskbar
+                  keep a stock Windows taskbar. Each row shows live status:{" "}
+                  painting / fullscreen / locked / off
                 </li>
                 <li>
                   <span className="text-zinc-100">OLED Care</span> tab —
                   hybrid idle fill dim (AFK dims all; unused displays can dim
                   alone while you work); optional experimental chrome/clock
-                  care; night boost;{" "}
+                  care; night boost; pause while locked / in fullscreen (defaults
+                  on — fullscreen freezes the covered display only);{" "}
                   <span className="text-zinc-100">OLED everyday preset</span>{" "}
                   (care-only — does not change theme/intensity)
                 </li>
@@ -223,6 +226,14 @@ export default async function InstallPage() {
                 Enable (soft-pause); Exit restores stock brushes.
               </p>
             </div>
+            <div className="mt-6 grid gap-4 lg:grid-cols-2">
+              <SettingsShot id="oled-care" />
+              <SettingsShot id="monitors" />
+            </div>
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+              <SettingsShot id="taskbar" />
+              <SettingsShot id="system" />
+            </div>
           </section>
 
           <section id="monitors" className="mt-14">
@@ -239,9 +250,10 @@ export default async function InstallPage() {
               </li>
               <li>
                 <span className="text-zinc-100">Monitors</span> — uncheck a
-                display to leave its taskbar alone. Grayed chips on the Taskbar
-                tab mean that display is off here; you can still edit its look
-                for when you turn it back on.
+                display to leave its taskbar alone. Each row shows live status
+                (painting / fullscreen / locked / off). Grayed chips on the
+                Taskbar tab mean that display is off here; you can still edit its
+                look for when you turn it back on.
               </li>
               <li>
                 <span className="text-zinc-100">System › RENDERING</span> is

@@ -62,10 +62,11 @@ Tray left-click / Enable soft-pauses paint (**SoftSuspend** keeps `BackgroundFil
 
 ### Monitors tab
 
-- Per-display **enable/disable** only.
+- Per-display **enable/disable** (default: all on).
 - Unchecked = that display keeps a **stock** Windows taskbar (Phostide does not paint it).
-- Default: all monitors on.
+- Each row shows live paint status: **painting** / **fullscreen** / **locked** / **off** / **paused** (Enable off).
 - Grayed chips on the Taskbar tab mean that display is off here; you can still edit its saved look for when you turn it back on.
+- Screenshots: `/images/settings/settings-monitors.png` (also under `assets/readme/settings/` on GitHub).
 
 ### System tab
 
@@ -101,7 +102,7 @@ Phostide reduces locked-bright time on the taskbar (moving fill while you work +
 
 ## Runtime notes (agents / support)
 
-- ThemeCommand **v6**: per-slot `careActive`; top-level `careActive` is OR of slots.
+- ThemeCommand **v7**: per-slot `careActive` + `pauseActive` (fullscreen cover); top-level `careActive` is OR of slots; global `paused` is session lock.
 - After Explorer bounce for TAP upgrade, wait ~15 s before ixde; `0x80070490` / `ixde gave up` may require another bounce.
 - Force-killing the host without releasing `Local\Phostide.SingleInstance` used to block restart (TAP watch must `ReleaseMutex` after Wait). Prefer tray Exit or `Phostide.exe /exit`.
 - Very low Taskbar intensity (e.g. 5%) can look like “theme not applied” on OLED — check Settings › Taskbar intensity, not only Care.
@@ -117,7 +118,7 @@ Phostide reduces locked-bright time on the taskbar (moving fill while you work +
 
 Path: `%APPDATA%\Phostide\settings.json`
 
-Holds fallback `theme` / `intensity`, app-global `renderMode` (Auto/GPU/CPU), OLED Care fields (`oledCareIdleMinutes`, fill/chrome/clock options), `monitorSettings` (per-display theme/intensity), `disabledMonitors`, Start with Windows flags, and related runtime fields. Delete the file to reset to defaults: Rainbow, 45% intensity, Auto rendering, OLED Care idle Off, all monitors active.
+Holds fallback `theme` / `intensity`, app-global `renderMode` (Auto/GPU/CPU), OLED Care fields (`oledCareIdleMinutes`, fill/chrome/clock options, `pauseWhenLocked`, `pauseWhenFullscreen`), `monitorSettings` (per-display theme/intensity), `disabledMonitors`, Start with Windows flags, and related runtime fields. Delete the file to reset to defaults: Rainbow, 45% intensity, Auto rendering, OLED Care idle Off, pause locked/fullscreen on, all monitors active.
 
 ## Canonical URLs
 

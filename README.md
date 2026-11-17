@@ -31,7 +31,8 @@ Live captures (and longer loops) are on the [site](https://phostide.doticca.com/
 Most OLED taskbar tools **hide** the bar. Phostide keeps it usable and moves the fill so a static strip is less likely to burn in — while looking like a theme, not a workaround.
 
 - Real Explorer background fill (TAP helper + Composition surfaces)
-- Multi-monitor: theme/intensity per display, on/off per display, shared Auto/GPU/CPU rendering
+- Multi-monitor: theme/intensity per display, on/off per display, live paint/pause status, shared Auto/GPU/CPU rendering
+- Fullscreen pause (default on) freezes paint on the covered display so games keep the GPU
 - Signed Setup.exe (per-user, no admin) and portable zip
 - Local only — no account, no telemetry
 - MIT open source
@@ -52,11 +53,29 @@ Tray icon › **Settings…** — four tabs with different jobs:
 | Tab | Controls |
 | --- | --- |
 | **Taskbar** | Apply to **All** or monitor *N*: theme + intensity (preview, then **Apply**) |
-| **OLED Care** | Hybrid idle fill dim (full AFK dims all bars; while you work, unused displays can dim alone); optional experimental chrome/clock care; night boost; pause when locked / in fullscreen (defaults on); **OLED everyday preset** (care-only — does not change theme/intensity) |
-| **Monitors** | Per-display **on/off** (default all on). Off → stock Windows bar. Live status: painting / fullscreen / locked / off |
+| **OLED Care** | Hybrid idle fill dim (full AFK dims all bars; while you work, unused displays can dim alone); optional experimental chrome/clock care; night boost; pause when locked / in fullscreen (defaults on — fullscreen freezes the **covered display only**); **OLED everyday preset** (care-only — does not change theme/intensity) |
+| **Monitors** | Per-display **on/off** (default all on). Off → stock Windows bar. Live status: painting / fullscreen / locked / off / paused |
 | **System** | App-global only: Auto / GPU / CPU rendering, Start with Windows, updates |
 
 Rendering mode is app-global. Care only paints monitors left on. Tray left-click toggles Enable (soft-pause; Exit restores stock brushes). Defaults after reset: Rainbow, 45% intensity, Auto rendering, OLED Care idle Off, all monitors on. Settings file: `%APPDATA%\Phostide\settings.json`.
+
+<p align="center">
+  <img src="assets/readme/settings/settings-oled-care.png" alt="Phostide Settings — OLED Care with pause toggles" width="720" />
+</p>
+<p align="center"><em>OLED Care — pause while locked / in fullscreen (defaults on)</em></p>
+
+<p align="center">
+  <img src="assets/readme/settings/settings-monitors.png" alt="Phostide Settings — Monitors with live paint status" width="720" />
+</p>
+<p align="center"><em>Monitors — on/off plus live painting / fullscreen / locked status</em></p>
+
+<details>
+<summary>Taskbar and System tabs</summary>
+<p align="center">
+  <img src="assets/readme/settings/settings-taskbar.png" alt="Phostide Settings — Taskbar tab" width="720" />
+  <img src="assets/readme/settings/settings-system.png" alt="Phostide Settings — System tab" width="720" />
+</p>
+</details>
 
 ### Multi-monitor OLED
 

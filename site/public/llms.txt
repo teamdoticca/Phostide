@@ -24,7 +24,7 @@ Four tabs — do not confuse them:
 |-----|------------------|
 | **Taskbar** | Scope **All** or monitor *N*, then theme + intensity (0–100%). Live preview; **Apply** commits. |
 | **OLED Care** | Hybrid idle fill dim (Off/1/5/10/30m): full session AFK dims all bars; while you work, unused displays dim alone based on **cursor** monitor. Optional experimental chrome dim / clock micro-nudge (per idle bar only), night boost, pause when locked, pause in fullscreen (default on — per covered monitor). **OLED everyday preset** = care-only (does **not** change Taskbar theme/intensity). Live paint/pause status is on the **Monitors** tab per display. |
-| **Monitors** | Per-display **on/off** only. Off = stock Windows taskbar. Default: all on. |
+| **Monitors** | Per-display **on/off** (default all on). Off = stock Windows taskbar. Live status per row: **painting** / **fullscreen** / **locked** / **off** / **paused** (Enable off). |
 | **System** | App-global: **RENDERING** Auto / GPU / CPU (shared by every bar), Start with Windows, updates. |
 
 Defaults after reset: Rainbow, 45% intensity, Auto rendering, OLED Care idle Off, all monitors active. Settings file: `%APPDATA%\Phostide\settings.json`. Tray left-click toggles Enable (SoftSuspend); Exit restores stock brushes.

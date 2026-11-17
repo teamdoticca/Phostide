@@ -19,10 +19,11 @@ Paint the real Windows 11 taskbar background (`Rectangle#BackgroundFill`) with O
 1. `Phostide.exe` (tray host) injects `ExplorerTAP.dll` into Explorer via a window hook + XAML Diagnostics TAP.
 2. TAP finds each taskbar’s `BackgroundFill` shape and remembers the original brush.
 3. Effect engine renders into a `CompositionDrawingSurface` and assigns a `CompositionSurfaceBrush` as the Fill.
-4. Host polls OLED Care with **hybrid idle**: classic session `GetLastInputInfo` AFK dims every bar; while the session is active, each poll attributes the cursor / focused-window monitor so an unused secondary can idle alone. Idle slots get lower fill intensity and per-slot `careActive` (ThemeCommand v6). Leaving full AFK wakes every bar on the next care poll (~200 ms while dimmed).
-5. Optional `ChromeCareService` dims whitelisted icons/tray/clock (incl. Search pill) and can micro-nudge the clock host — only on idle trays.
-6. Tray Enable / host stop uses **SoftSuspend**: restore stock fills but keep `BackgroundFill` refs so the next host can Bind again. TAP watches `Local\Phostide.SingleInstance` and must `ReleaseMutex` after Wait so a killed host can restart. Full Exit restores brushes + chrome.
-7. Version-stamped TAP upgrades bounce Explorer when `tap.version` disagrees; after bounce the host waits ~15 s for XAML Diagnostics and retries inject if Bound never signals.
+4. Host polls OLED Care with **hybrid idle**: classic session `GetLastInputInfo` AFK dims every bar; while the session is active, each poll attributes the cursor / focused-window monitor so an unused secondary can idle alone. Idle slots get lower fill intensity and per-slot `careActive` (ThemeCommand v6+). Leaving full AFK wakes every bar on the next care poll (~200 ms while dimmed).
+5. Host also polls foreground fullscreen: a window that covers a monitor’s `rcMonitor` sets that slot’s `pauseActive` (ThemeCommand **v7**) so TAP freezes paint on the covered bar only; session lock still sets global `paused`. SoftSuspend (tray Enable) stays separate.
+6. Optional `ChromeCareService` dims whitelisted icons/tray/clock (incl. Search pill) and can micro-nudge the clock host — only on idle trays.
+7. Tray Enable / host stop uses **SoftSuspend**: restore stock fills but keep `BackgroundFill` refs so the next host can Bind again. TAP watches `Local\Phostide.SingleInstance` and must `ReleaseMutex` after Wait so a killed host can restart. Full Exit restores brushes + chrome.
+8. Version-stamped TAP upgrades bounce Explorer when `tap.version` disagrees; after bounce the host waits ~15 s for XAML Diagnostics and retries inject if Bound never signals.
 
 ## Multi-monitor
 
@@ -31,11 +32,11 @@ Settings has four tabs:
 | Tab | Scope |
 |-----|--------|
 | **Taskbar** | Apply to **All** or monitor *N*: theme + intensity (preview, then Apply) |
-| **OLED Care** | Hybrid idle fill dim, optional experimental chrome/clock care, night boost, pause when locked, pause in fullscreen (default on); everyday preset is care-only |
-| **Monitors** | Per-display on/off (default all on). Off → stock Windows bar. Live status: painting / fullscreen / locked / off |
+| **OLED Care** | Hybrid idle fill dim, optional experimental chrome/clock care, night boost, pause when locked, pause in fullscreen (default on — covered display only); everyday preset is care-only |
+| **Monitors** | Per-display on/off (default all on). Off → stock Windows bar. Live status: painting / fullscreen / locked / off / paused |
 | **System** | App-global: Auto/GPU/CPU rendering, Start with Windows, updates |
 
-Host builds ThemeCommand **v6** slots (`deviceHash`, theme, intensity, enabled, `careActive`) plus shared `renderMode` and OLED Care opacities/`careFlags`. Top-level `careActive` is the OR of slots. TAP binds each `BackgroundFill` to its tray HWND (`Shell_TrayWnd` / `Shell_SecondaryTrayWnd`), hashes the monitor device name, and paints or unbinds from the matching slot — so identical resolutions still get distinct looks.
+Host builds ThemeCommand **v7** slots (`deviceHash`, theme, intensity, enabled, `careActive`, `pauseActive`) plus shared `renderMode` and OLED Care opacities/`careFlags`. Top-level `careActive` is the OR of slots; global `paused` is session lock. TAP binds each `BackgroundFill` to its tray HWND (`Shell_TrayWnd` / `Shell_SecondaryTrayWnd`), hashes the monitor device name, and paints or unbinds from the matching slot — so identical resolutions still get distinct looks. Fullscreen-paused slots keep the last frame and drop out of the UI timer when every live slot is paused.
 
 ## Rendering
 

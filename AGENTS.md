@@ -16,8 +16,8 @@ Phostide is a Windows 11 OLED taskbar solution: moving fill + hybrid idle Care +
 - There is **no** end-user theme editor or custom theme import in the shipped app.
 - Settings has four tabs with different jobs:
   - **Taskbar** — Apply to All or monitor *N*: theme + intensity
-  - **OLED Care** — hybrid idle (full AFK dims all; while the session is active, unused displays can dim alone via cursor / focused window); optional experimental chrome/clock care; night boost; pause when locked; pause in fullscreen (default on); **OLED everyday preset is care-only** (does not change theme/intensity)
-  - **Monitors** — per-display on/off; live paint status (painting / fullscreen / locked / off)
+  - **OLED Care** — hybrid idle (full AFK dims all; while the session is active, unused displays can dim alone via cursor / focused window); optional experimental chrome/clock care; night boost; pause when locked; pause in fullscreen (default on — covered display only via ThemeCommand v7 `pauseActive`); **OLED everyday preset is care-only** (does not change theme/intensity)
+  - **Monitors** — per-display on/off; live paint status (`painting` / `fullscreen` / `locked` / `off` / `paused`)
   - **System** — shared Auto/GPU/CPU rendering (not per-monitor), Start with Windows, updates
 - It is **not** an overlay window and **not** Windows auto-hide.
 - Exactly five themes: Rainbow, Sea Waves, Weather, Space, Aurora.

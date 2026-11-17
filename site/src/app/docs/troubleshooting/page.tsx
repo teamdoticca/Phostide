@@ -44,7 +44,7 @@ const fixes = [
       "Prefer GPU: choose Auto or GPU and Apply. Keep Themes.hlsl next to ExplorerTAP.dll.",
       "Auto already falls back to CPU if D3D11 cannot start — you do not need to pick CPU unless you want to force it.",
       "Rendering is app-wide (System tab), not per monitor.",
-      "Games stuttering with Phostide on: OLED Care › Pause themes in fullscreen should be on (default) — paint freezes while a foreground window covers a monitor.",
+      "Games stuttering with Phostide on: OLED Care › Pause themes in fullscreen should be on (default) — paint freezes on the covered display only; Settings › Monitors shows fullscreen on that row.",
     ],
   },
   {
@@ -53,6 +53,7 @@ const fixes = [
     items: [
       "Settings › Taskbar › APPLY TO must be the monitor number you intend — All overwrites every display.",
       "Confirm that display is on under the Monitors tab (off displays stay stock Windows).",
+      "Check the live status on each Monitors row (painting / fullscreen / locked / off) if a bar looks frozen.",
       "Both bars still match after a per-monitor Apply: Exit Phostide, restart it (or restart Explorer then relaunch) so the latest TAP is loaded.",
       "Hot-plug a new display: it starts active and inherits the fallback theme/intensity until you Apply a scope for it.",
     ],

@@ -68,7 +68,8 @@ export default async function Home() {
                 ["What it isn't", "Overlay · auto-hide · Windhawk"],
                 ["While you work", "Moving BackgroundFill"],
                 ["When idle", "OLED Care (hybrid dim)"],
-                ["Monitors", "OLED-only or per-display"],
+                ["Fullscreen", "Pause covered display only"],
+                ["Monitors", "On/off + live paint status"],
                 ["Made by", "Doticca"],
               ].map(([k, v]) => (
                 <div
@@ -131,7 +132,7 @@ export default async function Home() {
             {
               icon: IconGrid,
               title: "Idle Care + per monitor",
-              body: "OLED Care dims when you AFK (and can dim an unused display alone while you work). Theme only the OLED; leave an LCD stock.",
+              body: "OLED Care dims when you AFK (and can dim an unused display alone while you work). Fullscreen pause freezes the covered display so games keep the GPU. Theme only the OLED; leave an LCD stock.",
             },
             {
               icon: IconUndo,

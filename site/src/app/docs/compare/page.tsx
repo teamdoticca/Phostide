@@ -48,7 +48,7 @@ const approaches = [
     burnIn:
       "Reduces locked-bright time on the strip (motion + idle Care). Optional chrome dim/nudge targets residual static UI. Not a burn-in warranty.",
     usability:
-      "Bar stays visible; five built-in themes; OLED Care; per-monitor on/off; SoftSuspend on Enable; Exit restores stock brushes and chrome.",
+      "Bar stays visible; five built-in themes; OLED Care (incl. fullscreen pause on the covered display); per-monitor on/off + live paint status; SoftSuspend on Enable; Exit restores stock brushes and chrome.",
     fit: "When you want a full OLED care package that keeps the bar usable — not hidden or covered.",
   },
 ];

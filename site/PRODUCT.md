@@ -25,8 +25,9 @@ Keep the bar visible. Motion + idle Care reduce how long the same bright taskbar
 ## Capabilities
 
 - Themes: Rainbow, Sea Waves, Weather, Space, Aurora (exactly five; no end-user theme editor)
-- Settings tabs: Taskbar (theme + intensity), OLED Care, Monitors (on/off), System (shared Auto/GPU/CPU rendering, Start with Windows, updates)
-- OLED Care tab: hybrid idle (session AFK dims all; while active, unused displays can dim alone via cursor / focused window); optional experimental chrome dim + clock micro-nudge; night boost; pause when locked; pause in fullscreen (default on); OLED everyday preset is **care-only** (does not change Taskbar theme/intensity); applies only to Monitors-enabled bars
+- Settings tabs: Taskbar (theme + intensity), OLED Care, Monitors (on/off + live paint status), System (shared Auto/GPU/CPU rendering, Start with Windows, updates)
+- OLED Care tab: hybrid idle (session AFK dims all; while active, unused displays can dim alone via cursor / focused window); optional experimental chrome dim + clock micro-nudge; night boost; pause when locked; pause in fullscreen (default on — covered display only); OLED everyday preset is **care-only** (does not change Taskbar theme/intensity); applies only to Monitors-enabled bars
+- Monitors tab shows live status per display: painting / fullscreen / locked / off / paused
 - SoftSuspend on tray Enable / host stop keeps `BackgroundFill` refs so the next host can rebind without a fragile rescan; Exit restores stock brushes
 - Rendering: Auto / GPU / CPU (D3D11 Composition paint when available; CPU pixel fallback). `Themes.hlsl` ships with the app for the GPU path
 - Tray host + ExplorerTAP injection
@@ -45,7 +46,7 @@ Keep the bar visible. Motion + idle Care reduce how long the same bright taskbar
 
 ## Confirmed assets
 
-- `assets/brand/` and `site/public/`: Screen Tide mark (solid screen + white bezel + ember under wavy edge); tray/exe/setup ICOs from `scripts/build-icons.py`; theme preview JPGs under `/themes/*.jpg`; `og-ai.jpg` for Open Graph
+- `assets/brand/` and `site/public/`: Screen Tide mark (solid screen + white bezel + ember under wavy edge); tray/exe/setup ICOs from `scripts/build-icons.py`; theme previews PNG+WebM under `/themes/*`; Settings client crops under `/images/settings/`; `og-ai.jpg` for Open Graph
 - Product name: Phostide
 
 ## Voice

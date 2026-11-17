@@ -8,6 +8,7 @@ import {
   IconUndo,
   IconWave,
 } from "@/components/Icons";
+import { SettingsShot } from "@/components/SettingsShot";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ThemeStrip } from "@/components/ThemeStrip";
@@ -104,15 +105,22 @@ export default function OledPage() {
             Settings › OLED Care: Idle after (Off / 1 / 5 / 10 / 30 minutes), Idle
             fill intensity, optional Dim icons/tray/clock, optional Micro‑nudge
             clock, Night boost, Pause when locked, Pause in fullscreen (default
-            on). Attendance for split‑monitor
+            on — freezes the covered display only so other bars keep moving).
+            Attendance for split‑monitor
             idle follows the <strong className="font-medium text-zinc-100">cursor</strong>
             . Use{" "}
             <strong className="font-medium text-zinc-100">
               OLED everyday preset
             </strong>{" "}
             for a care defaults pack only — it does not change your Taskbar theme
-            or intensity. Care only paints monitors left on in Monitors.
+            or intensity. Care only paints monitors left on in Monitors. The{" "}
+            <strong className="font-medium text-zinc-100">Monitors</strong> tab
+            shows live status (painting / fullscreen / locked / off) per display.
           </p>
+          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            <SettingsShot id="oled-care" />
+            <SettingsShot id="monitors" />
+          </div>
         </div>
 
         <div className="rounded-xl border border-line bg-panel p-8 md:col-span-2">
