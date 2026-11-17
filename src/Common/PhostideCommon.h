@@ -21,7 +21,8 @@ inline constexpr std::wstring_view kTapBoundEvent = L"Local\\Phostide.TAP.Bound"
 inline constexpr std::wstring_view kTapVersionStamp = L"tap.version";
 inline constexpr std::wstring_view kSettingsFileName = L"settings.json";
 // v4: monitor slots. v5: OLED Care fields. v6: per-slot careActive (per-monitor idle).
-inline constexpr int kTapApiVersion = 6;
+// v7: per-slot pauseActive (fullscreen cover on that display).
+inline constexpr int kTapApiVersion = 7;
 inline constexpr uint32_t kMaxMonitorSlots = 8;
 
 // ThemeCommand.careFlags bits (v5).
@@ -106,6 +107,7 @@ struct Settings {
   int intensity = 45;  // 0-100
   bool startWithWindows = false;
   bool pauseWhenLocked = true;
+  bool pauseWhenFullscreen = true;  // stop paint while FG covers a monitor
   // App-global (System tab) — not per-monitor.
   RenderMode renderMode = RenderMode::Auto;
   // OLED Care (dedicated Settings tab). Idle is per display (cursor / focused window).
@@ -133,7 +135,8 @@ struct MonitorPaintSlot {
   uint32_t theme = 0;
   uint32_t intensity = 45;
   uint32_t enabled = 1;
-  uint32_t careActive = 0;  // v6: 1 while this display is OLED-Care idle
+  uint32_t careActive = 0;   // v6: 1 while this display is OLED-Care idle
+  uint32_t pauseActive = 0;  // v7: 1 while FG fullscreen covers this display
 };
 
 struct ThemeCommand {

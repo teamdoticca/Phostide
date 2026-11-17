@@ -52,8 +52,8 @@ Tray icon › **Settings…** — four tabs with different jobs:
 | Tab | Controls |
 | --- | --- |
 | **Taskbar** | Apply to **All** or monitor *N*: theme + intensity (preview, then **Apply**) |
-| **OLED Care** | Hybrid idle fill dim (full AFK dims all bars; while you work, unused displays can dim alone); optional experimental chrome/clock care; night boost; **OLED everyday preset** (care-only — does not change theme/intensity) |
-| **Monitors** | Per-display **on/off** (default all on). Off → stock Windows bar |
+| **OLED Care** | Hybrid idle fill dim (full AFK dims all bars; while you work, unused displays can dim alone); optional experimental chrome/clock care; night boost; pause when locked / in fullscreen (defaults on); **OLED everyday preset** (care-only — does not change theme/intensity) |
+| **Monitors** | Per-display **on/off** (default all on). Off → stock Windows bar. Live status: painting / fullscreen / locked / off |
 | **System** | App-global only: Auto / GPU / CPU rendering, Start with Windows, updates |
 
 Rendering mode is app-global. Care only paints monitors left on. Tray left-click toggles Enable (soft-pause; Exit restores stock brushes). Defaults after reset: Rainbow, 45% intensity, Auto rendering, OLED Care idle Off, all monitors on. Settings file: `%APPDATA%\Phostide\settings.json`.

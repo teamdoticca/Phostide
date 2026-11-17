@@ -23,7 +23,7 @@ Four tabs — do not confuse them:
 | Tab | What it controls |
 |-----|------------------|
 | **Taskbar** | Scope **All** or monitor *N*, then theme + intensity (0–100%). Live preview; **Apply** commits. |
-| **OLED Care** | Hybrid idle fill dim (Off/1/5/10/30m): full session AFK dims all bars; while you work, unused displays dim alone based on **cursor** monitor. Optional experimental chrome dim / clock micro-nudge (per idle bar only), night boost, pause when locked. **OLED everyday preset** = care-only (does **not** change Taskbar theme/intensity). |
+| **OLED Care** | Hybrid idle fill dim (Off/1/5/10/30m): full session AFK dims all bars; while you work, unused displays dim alone based on **cursor** monitor. Optional experimental chrome dim / clock micro-nudge (per idle bar only), night boost, pause when locked, pause in fullscreen (default on — per covered monitor). **OLED everyday preset** = care-only (does **not** change Taskbar theme/intensity). Live paint/pause status is on the **Monitors** tab per display. |
 | **Monitors** | Per-display **on/off** only. Off = stock Windows taskbar. Default: all on. |
 | **System** | App-global: **RENDERING** Auto / GPU / CPU (shared by every bar), Start with Windows, updates. |
 

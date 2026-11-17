@@ -31,7 +31,7 @@ const faqs: { q: string; a: string }[] = [
   },
   {
     q: "How do Settings tabs work?",
-    a: "Tray › Settings… has four tabs. Taskbar: Apply to All or a monitor number, theme and intensity, then Apply. OLED Care: hybrid idle fill dim and optional experimental chrome/clock care (everyday preset is care-only — it does not change your theme). Monitors: turn displays on or off (off keeps a stock Windows taskbar). System: shared Auto/GPU/CPU rendering, Start with Windows, and updates. Rendering mode is app-global; Care only affects monitors left on in Monitors.",
+    a: "Tray › Settings… has four tabs. Taskbar: Apply to All or a monitor number, theme and intensity, then Apply. OLED Care: hybrid idle fill dim, optional experimental chrome/clock care, pause when locked / in fullscreen (everyday preset is care-only — it does not change your theme). Monitors: turn displays on or off (off keeps a stock Windows taskbar). System: shared Auto/GPU/CPU rendering, Start with Windows, and updates. Rendering mode is app-global; Care only affects monitors left on in Monitors.",
   },
   {
     q: "Can I theme only my OLED and leave the other monitor alone?",
@@ -43,7 +43,11 @@ const faqs: { q: string; a: string }[] = [
   },
   {
     q: "What is OLED Care?",
-    a: "A dedicated Settings tab. Idle is hybrid: walk away (no input for Idle after) and every enabled bar dims; while you keep working, leave the cursor on one display and the other can dim alone after Idle after (attendance follows the cursor). Optional experimental toggles dim icons/tray/clock (including Search) or micro-nudge the clock only on that idle bar — not on the one you’re using. Night boost shortens the idle timeout and darkens the fill in the evening. OLED everyday preset applies those care defaults only — it does not change Taskbar theme or intensity. Exit restores stock brushes and chrome.",
+    a: "A dedicated Settings tab. Idle is hybrid: walk away (no input for Idle after) and every enabled bar dims; while you keep working, leave the cursor on one display and the other can dim alone after Idle after (attendance follows the cursor). Optional experimental toggles dim icons/tray/clock (including Search) or micro-nudge the clock only on that idle bar — not on the one you’re using. Night boost shortens the idle timeout and darkens the fill in the evening. Pause themes while locked / in fullscreen (both default on) freeze paint without flipping Enable — fullscreen covers games and other monitor-sized foreground windows. OLED everyday preset applies those care defaults only — it does not change Taskbar theme or intensity. Exit restores stock brushes and chrome.",
+  },
+  {
+    q: "Does Phostide pause during games?",
+    a: "Yes by default. OLED Care › Pause themes in fullscreen freezes paint on the covered display only (other monitors keep moving). Settings › Monitors shows each bar as painting, fullscreen, locked, or off. Turn the Care toggle off if you want themes to keep moving behind a fullscreen app. Tray Enable / SoftSuspend stays separate.",
   },
   {
     q: "Does Phostide prevent OLED burn-in completely?",

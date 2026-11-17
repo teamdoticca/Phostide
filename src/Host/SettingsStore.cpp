@@ -241,6 +241,7 @@ Settings LoadSettings() {
   s.intensity = ParseInt(json, "intensity", 45);
   s.startWithWindows = ParseBool(json, "startWithWindows", IsStartWithWindowsEnabled());
   s.pauseWhenLocked = ParseBool(json, "pauseWhenLocked", true);
+  s.pauseWhenFullscreen = ParseBool(json, "pauseWhenFullscreen", true);
   s.renderMode = RenderModeFromIndex(ParseInt(json, "renderMode", 0));
   s.oledCareIdleMinutes =
       ClampOledCareIdleMinutes(ParseInt(json, "oledCareIdleMinutes", 0));
@@ -270,6 +271,8 @@ void SaveSettings(const Settings& settings) {
       << ",\n"
       << "  \"pauseWhenLocked\": " << (settings.pauseWhenLocked ? "true" : "false")
       << ",\n"
+      << "  \"pauseWhenFullscreen\": "
+      << (settings.pauseWhenFullscreen ? "true" : "false") << ",\n"
       << "  \"renderMode\": " << static_cast<int>(settings.renderMode) << ",\n"
       << "  \"oledCareIdleMinutes\": " << settings.oledCareIdleMinutes << ",\n"
       << "  \"oledCareFillIntensity\": " << settings.oledCareFillIntensity << ",\n"

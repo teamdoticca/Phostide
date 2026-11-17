@@ -319,6 +319,12 @@ bool TaskbarAppearanceService::SlotEnabled(const TaskbarVisual& tv) const {
   return true;
 }
 
+bool TaskbarAppearanceService::SlotPauseActive(const TaskbarVisual& tv) const {
+  if (command_.apiVersion < 7) return false;
+  if (const auto* slot = SlotFor(tv)) return slot->pauseActive != 0;
+  return false;
+}
+
 void TaskbarAppearanceService::AppearanceFor(const TaskbarVisual& tv, ThemeId& theme,
                                              uint32_t& intensity) const {
   if (const auto* slot = SlotFor(tv)) {
@@ -369,10 +375,11 @@ void TaskbarAppearanceService::Apply(const ThemeCommand& cmd) {
     const uint32_t n = (std::min)(cmd.slotCount, kMaxMonitorSlots);
     for (uint32_t i = 0; i < n; ++i) {
       wchar_t slotLine[160];
-      swprintf_s(slotLine, L"  slot[%u] hash=%llu theme=%u intensity=%u enabled=%u care=%u",
+      swprintf_s(slotLine,
+                 L"  slot[%u] hash=%llu theme=%u intensity=%u enabled=%u care=%u pause=%u",
                  i, static_cast<unsigned long long>(cmd.slots[i].deviceHash),
                  cmd.slots[i].theme, cmd.slots[i].intensity, cmd.slots[i].enabled,
-                 cmd.slots[i].careActive);
+                 cmd.slots[i].careActive, cmd.slots[i].pauseActive);
       LogService(slotLine);
     }
   }
@@ -723,7 +730,10 @@ void TaskbarAppearanceService::PaintVisualCpu(TaskbarVisual& tv, float timeSecon
 }
 
 void TaskbarAppearanceService::PaintVisual(TaskbarVisual& tv, float timeSeconds) {
-  if (!tv.bound || !command_.enabled || command_.paused || !SlotEnabled(tv)) return;
+  if (!tv.bound || !command_.enabled || command_.paused || !SlotEnabled(tv) ||
+      SlotPauseActive(tv)) {
+    return;
+  }
 
   ThemeId theme{};
   uint32_t intensity = 45;
@@ -776,10 +786,22 @@ void TaskbarAppearanceService::EnsureUiTimer() {
     StopUiTimer();
     return;
   }
+  // Stop the loop when every live slot is fullscreen-paused (free GPU for the game).
+  bool anyNeedsPaint = false;
+  for (const auto& tv : taskbars_) {
+    if (tv.bound && SlotEnabled(tv) && !SlotPauseActive(tv)) {
+      anyNeedsPaint = true;
+      break;
+    }
+  }
+  if (!anyNeedsPaint) {
+    StopUiTimer();
+    return;
+  }
   // GPU path is cheap — ~55 Hz. CPU keeps slower theme-tuned intervals.
   bool anyGpu = false;
   for (const auto& tv : taskbars_) {
-    if (tv.bound && tv.gpuActive) {
+    if (tv.bound && tv.gpuActive && !SlotPauseActive(tv)) {
       anyGpu = true;
       break;
     }
@@ -829,7 +851,7 @@ void TaskbarAppearanceService::TickUi() {
         }
         continue;
       }
-      if (tv.bound) PaintVisual(tv, t);
+      if (tv.bound && !SlotPauseActive(tv)) PaintVisual(tv, t);
     }
     nudge = command_.careActive != 0 && (command_.careFlags & kCareFlagClockNudge) != 0;
   }

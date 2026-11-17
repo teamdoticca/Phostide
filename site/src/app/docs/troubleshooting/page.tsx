@@ -44,6 +44,7 @@ const fixes = [
       "Prefer GPU: choose Auto or GPU and Apply. Keep Themes.hlsl next to ExplorerTAP.dll.",
       "Auto already falls back to CPU if D3D11 cannot start — you do not need to pick CPU unless you want to force it.",
       "Rendering is app-wide (System tab), not per monitor.",
+      "Games stuttering with Phostide on: OLED Care › Pause themes in fullscreen should be on (default) — paint freezes while a foreground window covers a monitor.",
     ],
   },
   {

@@ -6,7 +6,7 @@
 - Moving fill while you work + hybrid idle Care when you leave + per-monitor control. Themes are the look layer; OLED Care is the idle layer.
 - Exactly five built-in themes (Rainbow, Sea Waves, Weather, Space, Aurora). **No** end-user theme editor in the shipped app.
 - Paints Explorer `BackgroundFill` — not an overlay, not auto-hide. Quit restores stock brushes.
-- Settings: **Taskbar** (theme/intensity), **OLED Care**, **Monitors** (on/off), **System** (shared Auto/GPU/CPU rendering).
+- Settings: **Taskbar** (theme/intensity), **OLED Care**, **Monitors** (on/off + live paint/pause status), **System** (shared Auto/GPU/CPU rendering).
 - Public briefs: [llms.txt](https://phostide.doticca.com/llms.txt), [FAQ](https://phostide.doticca.com/docs/faq).
 - OLED Care XAML whitelist: [oled-care-xaml.md](oled-care-xaml.md).
 
@@ -31,8 +31,8 @@ Settings has four tabs:
 | Tab | Scope |
 |-----|--------|
 | **Taskbar** | Apply to **All** or monitor *N*: theme + intensity (preview, then Apply) |
-| **OLED Care** | Hybrid idle fill dim, optional experimental chrome/clock care, night boost, pause when locked; everyday preset is care-only |
-| **Monitors** | Per-display on/off (default all on). Off → stock Windows bar |
+| **OLED Care** | Hybrid idle fill dim, optional experimental chrome/clock care, night boost, pause when locked, pause in fullscreen (default on); everyday preset is care-only |
+| **Monitors** | Per-display on/off (default all on). Off → stock Windows bar. Live status: painting / fullscreen / locked / off |
 | **System** | App-global: Auto/GPU/CPU rendering, Start with Windows, updates |
 
 Host builds ThemeCommand **v6** slots (`deviceHash`, theme, intensity, enabled, `careActive`) plus shared `renderMode` and OLED Care opacities/`careFlags`. Top-level `careActive` is the OR of slots. TAP binds each `BackgroundFill` to its tray HWND (`Shell_TrayWnd` / `Shell_SecondaryTrayWnd`), hashes the monitor device name, and paints or unbinds from the matching slot — so identical resolutions still get distinct looks.

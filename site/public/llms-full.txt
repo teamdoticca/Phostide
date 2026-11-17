@@ -55,6 +55,7 @@ Controls:
 - Optional **Micro-nudge clock (experimental)** — ±1–2 px shift on the clock host on idle displays.
 - Optional **Night boost** — evenings (20:00–06:59): shorter idle timeout and darker fill.
 - **Pause themes while locked** (surfaces the existing pause-when-locked behavior).
+- **Pause themes in fullscreen** (default on) — when a foreground window covers a monitor (exclusive or borderless games, F11 video, etc.), host sets per-slot `pauseActive` (ThemeCommand v7) so TAP freezes paint on **that** display only; other bars keep moving. Session lock still uses global `paused`. Live status is on the **Monitors** tab (painting / fullscreen / locked / off).
 - **OLED everyday preset** — care-only: 5‑minute idle + low idle fill + chrome dim + clock nudge + night boost. Does **not** change Taskbar theme or intensity.
 
 Tray left-click / Enable soft-pauses paint (**SoftSuspend** keeps `BackgroundFill` refs for rebind). Exit restores stock brushes and chrome.

@@ -103,7 +103,8 @@ export default function OledPage() {
           <p className="mt-3 text-soft">
             Settings › OLED Care: Idle after (Off / 1 / 5 / 10 / 30 minutes), Idle
             fill intensity, optional Dim icons/tray/clock, optional Micro‑nudge
-            clock, Night boost, Pause when locked. Attendance for split‑monitor
+            clock, Night boost, Pause when locked, Pause in fullscreen (default
+            on). Attendance for split‑monitor
             idle follows the <strong className="font-medium text-zinc-100">cursor</strong>
             . Use{" "}
             <strong className="font-medium text-zinc-100">

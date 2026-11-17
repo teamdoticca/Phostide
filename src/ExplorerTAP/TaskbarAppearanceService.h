@@ -75,6 +75,7 @@ class TaskbarAppearanceService {
   bool TryEnableGpuFor(TaskbarVisual& tv);
   const MonitorPaintSlot* SlotFor(const TaskbarVisual& tv) const;
   bool SlotEnabled(const TaskbarVisual& tv) const;
+  bool SlotPauseActive(const TaskbarVisual& tv) const;
   void AppearanceFor(const TaskbarVisual& tv, ThemeId& theme, uint32_t& intensity) const;
   void RefreshDeviceHash(TaskbarVisual& tv);
   void SignalBound();

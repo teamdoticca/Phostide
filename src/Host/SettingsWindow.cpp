@@ -21,7 +21,7 @@ namespace {
 constexpr wchar_t kClassName[] = L"PhostideSettings";
 
 constexpr int kClientW = 720;
-constexpr int kClientH = 700;
+constexpr int kClientH = 752;  // Care pause rows; live pause status lives on Monitors
 constexpr int kPreviewH = 44;
 constexpr UINT_PTR ID_PREVIEW_TIMER = 77;
 constexpr UINT kPreviewIntervalMs = 50;
@@ -69,6 +69,7 @@ constexpr int IDC_CARE_PAUSE_LOCK = 1646;
 constexpr int IDC_CARE_PRESET = 1647;
 constexpr int IDC_CARE_HINT = 1648;
 constexpr int IDC_CARE_OPTIONS_CAPTION = 1649;
+constexpr int IDC_CARE_PAUSE_FS = 1650;
 
 constexpr int kMaxScopeChips = 1 + static_cast<int>(kMaxMonitorSlots);  // All + 8
 constexpr int kCareIdleChipCount = kOledCareIdleChoiceCount;
@@ -96,6 +97,7 @@ bool g_draftCareChromeDim = false;
 bool g_draftCareClockNudge = false;
 bool g_draftCareNightBoost = false;
 bool g_draftPauseWhenLocked = true;
+bool g_draftPauseWhenFullscreen = true;
 // -1 = All monitors; 0..n-1 = attached monitor index.
 int g_scopeIndex = -1;
 int g_activeTab = 0;  // 0 Taskbar, 1 OLED Care, 2 Monitors, 3 System
@@ -178,6 +180,7 @@ void SyncDraftFromScope() {
   g_draftCareClockNudge = g_host.settings->oledCareClockNudge;
   g_draftCareNightBoost = g_host.settings->oledCareNightBoost;
   g_draftPauseWhenLocked = g_host.settings->pauseWhenLocked;
+  g_draftPauseWhenFullscreen = g_host.settings->pauseWhenFullscreen;
   if (g_scopeIndex >= 0 && g_scopeIndex < static_cast<int>(g_monitors.size())) {
     LoadAppearanceDraft(
         ResolveMonitorAppearance(*g_host.settings, g_monitors[g_scopeIndex].deviceName));
@@ -248,7 +251,7 @@ void InvalidateCareIdleChips(HWND hwnd) {
 
 void InvalidateCareChecks(HWND hwnd) {
   for (int id : {IDC_CARE_CHROME, IDC_CARE_NUDGE, IDC_CARE_NIGHT, IDC_CARE_PAUSE_LOCK,
-                 IDC_AUTOSTART}) {
+                 IDC_CARE_PAUSE_FS, IDC_AUTOSTART}) {
     HWND c = GetDlgItem(hwnd, id);
     if (c) InvalidateRect(c, nullptr, TRUE);
   }
@@ -385,6 +388,38 @@ void RefreshUpdateControls(HWND hwnd) {
   InvalidateRect(GetDlgItem(hwnd, IDC_UPDATE_STATUS), nullptr, TRUE);
 }
 
+void UpdateMonitorsHint(HWND hwnd);
+
+bool HostFullscreenOnHash(uint64_t deviceHash) {
+  if (!deviceHash || !g_host.fullscreenHashes || !g_host.fullscreenHashCount) return false;
+  const uint32_t n = *g_host.fullscreenHashCount;
+  for (uint32_t i = 0; i < n && i < kMaxMonitorSlots; ++i) {
+    if (g_host.fullscreenHashes[i] == deviceHash) return true;
+  }
+  return false;
+}
+
+const wchar_t* MonitorPaintStatusLabel(int index, bool draftOn) {
+  if (!draftOn) return L"off";
+  if (!g_host.settings) return L"";
+  if (!g_host.settings->enabled) return L"paused";
+  if (g_host.settings->pauseWhenLocked && g_host.sessionLocked && *g_host.sessionLocked) {
+    return L"locked";
+  }
+  if (index >= 0 && index < static_cast<int>(g_monitors.size()) &&
+      g_host.settings->pauseWhenFullscreen && HostFullscreenOnHash(g_monitors[index].deviceHash)) {
+    return L"fullscreen";
+  }
+  return L"painting";
+}
+
+void RefreshPauseStatus(HWND hwnd) {
+  if (!hwnd) return;
+  // Live pause state is shown per row on the Monitors tab.
+  InvalidateMonitorRows(hwnd);
+  UpdateMonitorsHint(hwnd);
+}
+
 void UpdateMonitorsHint(HWND hwnd) {
   HWND hint = GetDlgItem(hwnd, IDC_MONITORS_HINT);
   if (!hint) return;
@@ -395,8 +430,21 @@ void UpdateMonitorsHint(HWND hwnd) {
       break;
     }
   }
-  SetWindowTextW(hint, anyOn ? L"Turn a display off to leave its taskbar alone."
-                             : L"All displays are off - Phostide will not paint any taskbar.");
+  if (!anyOn) {
+    SetWindowTextW(hint, L"All displays are off - Phostide will not paint any taskbar.");
+    return;
+  }
+  if (g_host.settings && !g_host.settings->enabled) {
+    SetWindowTextW(hint, L"Enable is off — all bars soft-paused (tray left-click resumes).");
+    return;
+  }
+  if (g_host.settings && g_host.settings->pauseWhenLocked && g_host.sessionLocked &&
+      *g_host.sessionLocked) {
+    SetWindowTextW(hint, L"Session locked — themes paused on every display.");
+    return;
+  }
+  SetWindowTextW(hint,
+                 L"On/off per display. Status shows painting, fullscreen pause, or locked.");
 }
 
 void RelayoutCare(HWND hwnd) {
@@ -441,7 +489,8 @@ void RelayoutCare(HWND hwnd) {
   y += 20;
   const int rowH = 38;
   const int rowGap = 8;
-  const int optIds[] = {IDC_CARE_CHROME, IDC_CARE_NUDGE, IDC_CARE_NIGHT, IDC_CARE_PAUSE_LOCK};
+  const int optIds[] = {IDC_CARE_CHROME, IDC_CARE_NUDGE, IDC_CARE_NIGHT, IDC_CARE_PAUSE_LOCK,
+                        IDC_CARE_PAUSE_FS};
   for (int id : optIds) {
     place(id, pad, y, contentW, rowH);
     y += rowH + rowGap;
@@ -450,7 +499,6 @@ void RelayoutCare(HWND hwnd) {
   // Preset + hint always above the footer (never push Close/Apply off-screen).
   const int presetH = 40;
   const int hintH = 18;
-  const int presetGap = 14;
   const int hintGap = 8;
   const int footerClearance = 16;
   int bottomY = footerY - footerClearance - hintH - hintGap - presetH;
@@ -532,6 +580,7 @@ void LoadControlsFromDraft(HWND hwnd) {
   InvalidateCareIdleChips(hwnd);
   InvalidateCareChecks(hwnd);
   RefreshUpdateControls(hwnd);
+  RefreshPauseStatus(hwnd);
   RelayoutScopeAndMonitors(hwnd);
   RefreshPreview(hwnd);
 }
@@ -563,6 +612,7 @@ void ApplyDraft(HWND hwnd) {
   g_host.settings->oledCareClockNudge = g_draftCareClockNudge;
   g_host.settings->oledCareNightBoost = g_draftCareNightBoost;
   g_host.settings->pauseWhenLocked = g_draftPauseWhenLocked;
+  g_host.settings->pauseWhenFullscreen = g_draftPauseWhenFullscreen;
 
   MonitorAppearance appearance;
   appearance.theme = g_draftTheme;
@@ -773,6 +823,11 @@ void DrawMonitorRow(DRAWITEMSTRUCT* dis, int index) {
     DeleteObject(pen);
   }
 
+  const wchar_t* status = MonitorPaintStatusLabel(index, on);
+  const bool statusHot =
+      wcscmp(status, L"fullscreen") == 0 || wcscmp(status, L"locked") == 0 ||
+      wcscmp(status, L"paused") == 0;
+
   wchar_t line[128];
   if (mon.primary) {
     swprintf_s(line, L"Monitor %d  ·  %d×%d  ·  Primary", index + 1, mon.width, mon.height);
@@ -781,11 +836,18 @@ void DrawMonitorRow(DRAWITEMSTRUCT* dis, int index) {
   }
 
   SetBkMode(dis->hDC, TRANSPARENT);
-  SetTextColor(dis->hDC, on ? kInk : kSoft);
   HFONT old = static_cast<HFONT>(SelectObject(dis->hDC, g_fontUi));
   RECT textRc = dis->rcItem;
   textRc.left += 44;
-  DrawTextW(dis->hDC, line, -1, &textRc, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+  textRc.right -= 110;
+  SetTextColor(dis->hDC, on ? kInk : kSoft);
+  DrawTextW(dis->hDC, line, -1, &textRc, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+
+  RECT statusRc = dis->rcItem;
+  statusRc.right -= 16;
+  statusRc.left = statusRc.right - 96;
+  SetTextColor(dis->hDC, statusHot ? kEmber : kSoft);
+  DrawTextW(dis->hDC, status, -1, &statusRc, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
   SelectObject(dis->hDC, old);
 }
 
@@ -843,7 +905,8 @@ void ShowTab(HWND hwnd, int tab) {
   const int careIds[] = {
       IDC_CARE_SUBTITLE,       IDC_CARE_IDLE_CAPTION, IDC_CARE_FILL_CAPTION, IDC_CARE_FILL_VALUE,
       IDC_CARE_FILL,           IDC_CARE_OPTIONS_CAPTION, IDC_CARE_CHROME,    IDC_CARE_NUDGE,
-      IDC_CARE_NIGHT,          IDC_CARE_PAUSE_LOCK,   IDC_CARE_PRESET,       IDC_CARE_HINT,
+      IDC_CARE_NIGHT,          IDC_CARE_PAUSE_LOCK,   IDC_CARE_PAUSE_FS,     IDC_CARE_PRESET,
+      IDC_CARE_HINT,
   };
   for (int id : careIds) {
     HWND c = GetDlgItem(hwnd, id);
@@ -997,6 +1060,8 @@ void BuildChildren(HWND hwnd) {
   MkButton(hwnd, IDC_CARE_NIGHT, L"Night boost (after 8 PM)", pad, cy, contentW, 40,
            BS_OWNERDRAW);
   MkButton(hwnd, IDC_CARE_PAUSE_LOCK, L"Pause themes while locked", pad, cy, contentW, 40,
+           BS_OWNERDRAW);
+  MkButton(hwnd, IDC_CARE_PAUSE_FS, L"Pause themes in fullscreen", pad, cy, contentW, 40,
            BS_OWNERDRAW);
 
   MkButton(hwnd, IDC_CARE_PRESET, L"OLED everyday preset", pad, cy, contentW, 40, BS_OWNERDRAW);
@@ -1167,6 +1232,10 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
         DrawCheckRow(dis, L"Pause themes while locked", g_draftPauseWhenLocked);
         return TRUE;
       }
+      if (dis->CtlID == IDC_CARE_PAUSE_FS) {
+        DrawCheckRow(dis, L"Pause themes in fullscreen", g_draftPauseWhenFullscreen);
+        return TRUE;
+      }
       if (dis->CtlID >= IDC_CARE_IDLE_BASE &&
           dis->CtlID < IDC_CARE_IDLE_BASE + kCareIdleChipCount) {
         const int chip = dis->CtlID - IDC_CARE_IDLE_BASE;
@@ -1286,6 +1355,11 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
         InvalidateRect(GetDlgItem(hwnd, IDC_CARE_PAUSE_LOCK), nullptr, TRUE);
         return 0;
       }
+      if (id == IDC_CARE_PAUSE_FS) {
+        g_draftPauseWhenFullscreen = !g_draftPauseWhenFullscreen;
+        InvalidateRect(GetDlgItem(hwnd, IDC_CARE_PAUSE_FS), nullptr, TRUE);
+        return 0;
+      }
       if (id == IDC_CARE_PRESET) {
         ApplyOledEverydayPreset(hwnd);
         return 0;
@@ -1364,6 +1438,10 @@ HWND SettingsWindowHwnd() { return g_settingsHwnd; }
 
 void SettingsWindowRefreshUpdateUi() {
   if (g_settingsHwnd) RefreshUpdateControls(g_settingsHwnd);
+}
+
+void SettingsWindowRefreshPauseUi() {
+  if (g_settingsHwnd) RefreshPauseStatus(g_settingsHwnd);
 }
 
 void SettingsWindowShow(HWND owner, HINSTANCE instance, SettingsFocus focus) {

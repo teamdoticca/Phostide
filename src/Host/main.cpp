@@ -36,6 +36,9 @@ constexpr UINT kAnimIntervalMs = 33;  // ~30 fps host-side accent animation
 constexpr UINT kReinjectDebounceMs = 1000;
 constexpr UINT kIdlePollMs = 1000;       // while awake — cheap attendance
 constexpr UINT kIdlePollCareMs = 200;    // while any bar is dimmed — snappy wake
+constexpr UINT kFullscreenEnterDwellMs = 750;
+constexpr UINT kFullscreenLeaveDwellMs = 300;
+constexpr LONG kFullscreenCoverTolerancePx = 4;
 
 struct MonitorCareState {
   uint64_t deviceHash = 0;
@@ -53,6 +56,11 @@ bool g_trayAdded = false;
 bool g_trayIconOwned = false;
 UINT g_taskbarCreatedMsg = 0;
 bool g_sessionLocked = false;
+bool g_fullscreenPaused = false;
+bool g_fullscreenRaw = false;
+DWORD g_fullscreenEdgeTick = 0;
+uint64_t g_fullscreenHashes[phostide::kMaxMonitorSlots]{};
+uint32_t g_fullscreenHashCount = 0;
 MonitorCareState g_careMonitors[phostide::kMaxMonitorSlots]{};
 uint32_t g_careMonitorCount = 0;
 DWORD g_careProcessStartTick = 0;
@@ -71,6 +79,7 @@ struct UpdateDonePayload {
 };
 
 void ApplyTheme(bool pushToTap);
+void SyncAnimTimer(HWND hwnd);
 void ShowBalloon(const wchar_t* title, const wchar_t* body);
 
 bool IsNightBoostWindow() {
@@ -117,6 +126,117 @@ void ClearMonitorCareIdle() {
   for (uint32_t i = 0; i < g_careMonitorCount; ++i) {
     g_careMonitors[i].idle = false;
   }
+}
+
+bool IsShellOrOwnWindow(HWND hwnd) {
+  if (!hwnd) return true;
+  if (hwnd == g_hwnd) return true;
+  HWND settings = phostide::SettingsWindowHwnd();
+  if (settings && (hwnd == settings || IsChild(settings, hwnd))) return true;
+  wchar_t cls[64]{};
+  if (GetClassNameW(hwnd, cls, 64) <= 0) return false;
+  return _wcsicmp(cls, L"Progman") == 0 || _wcsicmp(cls, L"WorkerW") == 0 ||
+         _wcsicmp(cls, L"Shell_TrayWnd") == 0 ||
+         _wcsicmp(cls, L"Shell_SecondaryTrayWnd") == 0;
+}
+
+bool WindowCoversMonitor(const RECT& wr, const RECT& mr) {
+  const LONG tol = kFullscreenCoverTolerancePx;
+  return wr.left <= mr.left + tol && wr.top <= mr.top + tol &&
+         wr.right >= mr.right - tol && wr.bottom >= mr.bottom - tol;
+}
+
+uint32_t CollectFullscreenCoveredHashes(uint64_t* outHashes, uint32_t maxHashes) {
+  if (!outHashes || maxHashes == 0) return 0;
+  HWND fg = GetForegroundWindow();
+  if (!fg || !IsWindowVisible(fg) || IsIconic(fg)) return 0;
+  if (IsShellOrOwnWindow(fg)) return 0;
+
+  RECT wr{};
+  if (!GetWindowRect(fg, &wr)) return 0;
+
+  uint32_t count = 0;
+  for (const auto& mon : phostide::EnumerateAttachedMonitors()) {
+    if (count >= maxHashes) break;
+    if (!WindowCoversMonitor(wr, mon.rc)) continue;
+    outHashes[count++] = mon.deviceHash;
+  }
+  return count;
+}
+
+bool FullscreenHashSetsEqual(const uint64_t* a, uint32_t aCount, const uint64_t* b,
+                             uint32_t bCount) {
+  if (aCount != bCount) return false;
+  for (uint32_t i = 0; i < aCount; ++i) {
+    bool found = false;
+    for (uint32_t j = 0; j < bCount; ++j) {
+      if (a[i] == b[j]) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) return false;
+  }
+  return true;
+}
+
+bool IsFullscreenHash(uint64_t deviceHash) {
+  if (!deviceHash) return false;
+  for (uint32_t i = 0; i < g_fullscreenHashCount; ++i) {
+    if (g_fullscreenHashes[i] == deviceHash) return true;
+  }
+  return false;
+}
+
+bool RefreshFullscreenPauseState() {
+  if (!g_settings.pauseWhenFullscreen || !g_settings.enabled) {
+    if (!g_fullscreenPaused && !g_fullscreenRaw && g_fullscreenHashCount == 0) return false;
+    g_fullscreenPaused = false;
+    g_fullscreenRaw = false;
+    g_fullscreenEdgeTick = 0;
+    g_fullscreenHashCount = 0;
+    return true;
+  }
+
+  uint64_t covered[phostide::kMaxMonitorSlots]{};
+  const uint32_t coveredCount =
+      CollectFullscreenCoveredHashes(covered, phostide::kMaxMonitorSlots);
+  const bool raw = coveredCount > 0;
+  const DWORD now = GetTickCount();
+  if (raw != g_fullscreenRaw) {
+    g_fullscreenRaw = raw;
+    g_fullscreenEdgeTick = now;
+  }
+
+  const DWORD dwell = g_fullscreenRaw ? kFullscreenEnterDwellMs : kFullscreenLeaveDwellMs;
+  const bool settled = (now - g_fullscreenEdgeTick) >= dwell;
+  const bool want = settled ? g_fullscreenRaw : g_fullscreenPaused;
+
+  bool changed = false;
+  if (want != g_fullscreenPaused) {
+    g_fullscreenPaused = want;
+    changed = true;
+  }
+
+  if (g_fullscreenPaused) {
+    // While paused, keep the covered-monitor set current (Alt+Tab between games).
+    if (!FullscreenHashSetsEqual(g_fullscreenHashes, g_fullscreenHashCount, covered,
+                                 coveredCount)) {
+      g_fullscreenHashCount = coveredCount;
+      for (uint32_t i = 0; i < coveredCount; ++i) g_fullscreenHashes[i] = covered[i];
+      changed = true;
+    }
+  } else if (g_fullscreenHashCount != 0) {
+    g_fullscreenHashCount = 0;
+    changed = true;
+  }
+  return changed;
+}
+
+bool IsThemePaintPaused() {
+  // Host accent fallback: lock freezes all; fullscreen freezes when any bar is covered.
+  return (g_settings.pauseWhenLocked && g_sessionLocked) ||
+         (g_settings.pauseWhenFullscreen && g_fullscreenPaused);
 }
 
 void TouchCareMonitor(uint64_t deviceHash, DWORD now) {
@@ -237,8 +357,9 @@ phostide::ThemeCommand MakeCommand() {
   cmd.apiVersion = phostide::kTapApiVersion;
   cmd.theme = static_cast<uint32_t>(g_settings.theme);
   cmd.enabled = g_settings.enabled ? 1u : 0u;
+  // Global paused = session lock only. Fullscreen uses per-slot pauseActive (v7).
   cmd.paused =
-      (g_settings.pauseWhenLocked && g_sessionLocked && g_settings.enabled) ? 1u : 0u;
+      (g_settings.enabled && g_settings.pauseWhenLocked && g_sessionLocked) ? 1u : 0u;
   cmd.renderMode = static_cast<uint32_t>(g_settings.renderMode);
   cmd.chromeOpacity =
       static_cast<uint32_t>(phostide::ClampPercent(g_settings.oledCareChromeOpacity));
@@ -264,7 +385,12 @@ phostide::ThemeCommand MakeCommand() {
     slot.intensity = CareScaledIntensity(appearance.intensity, idle);
     slot.enabled =
         phostide::IsMonitorDisabled(g_settings, mon.deviceName) ? 0u : 1u;
-    slot.careActive = (idle && slot.enabled && g_settings.enabled && !g_sessionLocked) ? 1u : 0u;
+    const bool fsPause = g_settings.pauseWhenFullscreen && IsFullscreenHash(mon.deviceHash);
+    slot.pauseActive = (fsPause && slot.enabled && g_settings.enabled) ? 1u : 0u;
+    slot.careActive =
+        (idle && slot.enabled && g_settings.enabled && !g_sessionLocked && !fsPause)
+            ? 1u
+            : 0u;
     if (slot.careActive) anyCare = true;
     if (mon.primary) {
       sawPrimary = true;
@@ -277,26 +403,46 @@ phostide::ThemeCommand MakeCommand() {
 }
 
 void SyncIdleTimer(HWND hwnd) {
-  if (g_settings.oledCareIdleMinutes > 0 && g_settings.enabled) {
-    bool anyIdle = false;
+  const bool careOn = g_settings.oledCareIdleMinutes > 0 && g_settings.enabled;
+  const bool fsOn = g_settings.pauseWhenFullscreen && g_settings.enabled;
+  if (!careOn && !fsOn) {
+    KillTimer(hwnd, ID_IDLE_TIMER);
+    ClearMonitorCareIdle();
+    g_fullscreenPaused = false;
+    g_fullscreenRaw = false;
+    g_fullscreenEdgeTick = 0;
+    g_fullscreenHashCount = 0;
+    return;
+  }
+  if (!careOn) ClearMonitorCareIdle();
+
+  bool anyIdle = false;
+  if (careOn) {
     for (uint32_t i = 0; i < g_careMonitorCount; ++i) {
       if (g_careMonitors[i].idle) {
         anyIdle = true;
         break;
       }
     }
-    SetTimer(hwnd, ID_IDLE_TIMER, anyIdle ? kIdlePollCareMs : kIdlePollMs, nullptr);
-  } else {
-    KillTimer(hwnd, ID_IDLE_TIMER);
-    ClearMonitorCareIdle();
   }
+  // Faster while dimmed or fullscreen-paused — snappy wake / Alt+Tab resume.
+  const bool fast = anyIdle || g_fullscreenPaused;
+  SetTimer(hwnd, ID_IDLE_TIMER, fast ? kIdlePollCareMs : kIdlePollMs, nullptr);
 }
 
 void PollOledCareIdle(HWND hwnd) {
-  const bool changed = RefreshOledCareIdleStates();
-  // Re-arm so wake uses the fast interval while dimmed, slow while awake.
+  bool changed = false;
+  if (g_settings.oledCareIdleMinutes > 0) {
+    changed = RefreshOledCareIdleStates();
+  }
+  if (RefreshFullscreenPauseState()) changed = true;
+  // Re-arm so wake / FS leave uses the fast interval while active.
   SyncIdleTimer(hwnd);
+  if (phostide::SettingsWindowIsOpen()) {
+    phostide::SettingsWindowRefreshPauseUi();
+  }
   if (!changed) return;
+  SyncAnimTimer(hwnd);
   ApplyTheme(true);
 }
 
@@ -351,7 +497,8 @@ void ApplyTheme(bool pushToTap) {
 
 void SyncAnimTimer(HWND hwnd) {
   // Accent animation only while TAP has not bound real BackgroundFill pixels.
-  const bool run = g_settings.enabled && !g_sessionLocked && !RefreshTapBound();
+  const bool run =
+      g_settings.enabled && !IsThemePaintPaused() && !RefreshTapBound();
   if (run) {
     SetTimer(hwnd, ID_ANIM_TIMER, kAnimIntervalMs, nullptr);
   } else {
@@ -401,10 +548,12 @@ void OpenPendingUpdate() {
 void OnApplyAppearanceFromSettings() {
   g_animStart = std::chrono::steady_clock::now();
   phostide::SaveSettings(g_settings);
-  SyncAnimTimer(g_hwnd);
   SyncIdleTimer(g_hwnd);
   RefreshOledCareIdleStates();
+  RefreshFullscreenPauseState();
+  SyncAnimTimer(g_hwnd);
   ApplyTheme(true);
+  phostide::SettingsWindowRefreshPauseUi();
 }
 
 void StartUpdateCheck(bool manual);
@@ -595,7 +744,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         PollOledCareIdle(hwnd);
         return 0;
       }
-      if (wParam == ID_ANIM_TIMER && g_settings.enabled && !g_sessionLocked) {
+      if (wParam == ID_ANIM_TIMER && g_settings.enabled && !IsThemePaintPaused()) {
         if (RefreshTapBound()) {
           SyncAnimTimer(hwnd);
           ApplyTheme(true);
@@ -638,6 +787,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         SyncIdleTimer(hwnd);
         RefreshOledCareIdleStates();
         ApplyTheme(true);
+        phostide::SettingsWindowRefreshPauseUi();
         ShowBalloon(g_settings.enabled ? L"Phostide" : L"Phostide",
                     g_settings.enabled ? L"Themes on." : L"Themes paused. Click again to resume.");
       }
@@ -655,6 +805,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         SyncIdleTimer(hwnd);
         RefreshOledCareIdleStates();
         ApplyTheme(true);
+        phostide::SettingsWindowRefreshPauseUi();
         return 0;
       }
       if (id == ID_SETTINGS) {
@@ -693,12 +844,14 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
           phostide::ClearTaskbarAccent();
           // Stop TAP paint loop inside explorer.exe while the desktop is covered.
           ApplyTheme(true);
+          phostide::SettingsWindowRefreshPauseUi();
         } else if (wParam == WTS_SESSION_UNLOCK) {
           g_sessionLocked = false;
           SyncAnimTimer(hwnd);
           SyncIdleTimer(hwnd);
           RefreshOledCareIdleStates();
           ApplyTheme(true);
+          phostide::SettingsWindowRefreshPauseUi();
         }
       }
       return 0;
@@ -765,6 +918,10 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR cmdLine, int) {
   host.settings = &g_settings;
   host.updateCheckRunning = &g_updateCheckRunning;
   host.updateStatusText = &g_updateStatusText;
+  host.sessionLocked = &g_sessionLocked;
+  host.fullscreenPaused = &g_fullscreenPaused;
+  host.fullscreenHashes = g_fullscreenHashes;
+  host.fullscreenHashCount = &g_fullscreenHashCount;
   host.onApplyAppearance = &OnApplyAppearanceFromSettings;
   host.onRequestUpdateCheck = &OnRequestUpdateCheckFromSettings;
   host.onOpenUpdate = &OpenPendingUpdate;
