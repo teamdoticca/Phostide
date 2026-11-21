@@ -8,6 +8,12 @@
 #include <string>
 
 #include <shellapi.h>
+#include <shlobj.h>
+#include <softpub.h>
+#include <wintrust.h>
+
+#pragma comment(lib, "wintrust.lib")
+#pragma comment(lib, "crypt32.lib")
 
 namespace fs = std::filesystem;
 
@@ -52,10 +58,103 @@ std::wstring ModuleDir() {
   return fs::path(path).parent_path().wstring();
 }
 
+void LogInject(const std::wstring& line);
+
+// Logs and the TAP's tap.version stamp (TAP and Setup read it here too).
 fs::path TapTempDir() {
   wchar_t temp[MAX_PATH]{};
   GetTempPathW(MAX_PATH, temp);
   return fs::path(temp) / L"Phostide";
+}
+
+// Versioned ExplorerTAP copies that Explorer actually loads. Kept out of %TEMP%:
+// DLLs loaded from TEMP look like malware staging to AV heuristics, and temp
+// cleaners should not race a module Explorer may still map.
+fs::path TapCacheDir() {
+  PWSTR local = nullptr;
+  fs::path dir;
+  if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_DEFAULT, nullptr, &local)) &&
+      local) {
+    dir = fs::path(local) / L"Phostide" / L"tap";
+  }
+  CoTaskMemFree(local);
+  return dir.empty() ? TapTempDir() : dir;
+}
+
+// Subject DN of a valid Authenticode signer (timestamped signatures stay valid after
+// the short-lived Trusted Signing cert expires), or empty if unsigned / invalid.
+std::wstring TrustedSignerSubject(const std::wstring& file) {
+  WINTRUST_FILE_INFO fileInfo{};
+  fileInfo.cbStruct = sizeof(fileInfo);
+  fileInfo.pcwszFilePath = file.c_str();
+
+  WINTRUST_DATA data{};
+  data.cbStruct = sizeof(data);
+  data.dwUIChoice = WTD_UI_NONE;
+  data.fdwRevocationChecks = WTD_REVOKE_NONE;
+  data.dwUnionChoice = WTD_CHOICE_FILE;
+  data.pFile = &fileInfo;
+  data.dwStateAction = WTD_STATEACTION_VERIFY;
+  data.dwProvFlags = WTD_CACHE_ONLY_URL_RETRIEVAL;  // never block inject on the network
+
+  GUID action = WINTRUST_ACTION_GENERIC_VERIFY_V2;
+  const HWND noUi = static_cast<HWND>(INVALID_HANDLE_VALUE);
+  std::wstring subject;
+  if (WinVerifyTrust(noUi, &action, &data) == ERROR_SUCCESS) {
+    CRYPT_PROVIDER_DATA* prov = WTHelperProvDataFromStateData(data.hWVTStateData);
+    CRYPT_PROVIDER_SGNR* signer = prov ? WTHelperGetProvSignerFromChain(prov, 0, FALSE, 0) : nullptr;
+    if (signer && signer->csCertChain > 0 && signer->pasCertChain &&
+        signer->pasCertChain[0].pCert) {
+      CERT_NAME_BLOB* name = &signer->pasCertChain[0].pCert->pCertInfo->Subject;
+      const DWORD n = CertNameToStrW(X509_ASN_ENCODING, name, CERT_X500_NAME_STR, nullptr, 0);
+      if (n > 1) {
+        subject.resize(n);
+        CertNameToStrW(X509_ASN_ENCODING, name, CERT_X500_NAME_STR, subject.data(), n);
+        subject.resize(n - 1);
+      }
+    }
+  }
+  data.dwStateAction = WTD_STATEACTION_CLOSE;
+  WinVerifyTrust(noUi, &action, &data);
+  return subject;
+}
+
+// Signed host ⇒ only inject a TAP signed by the same publisher. Unsigned dev
+// builds skip the check (logged) so local iteration keeps working.
+bool VerifyTapTrust(const fs::path& dll, std::wstring* errorOut) {
+  static const std::wstring hostSigner = [] {
+    wchar_t self[MAX_PATH]{};
+    GetModuleFileNameW(nullptr, self, MAX_PATH);
+    return TrustedSignerSubject(self);
+  }();
+  if (hostSigner.empty()) {
+    LogInject(L"host unsigned (dev build); skipping TAP signature check");
+    return true;
+  }
+  const std::wstring tapSigner = TrustedSignerSubject(dll.wstring());
+  if (tapSigner == hostSigner) {
+    LogInject(L"TAP signature ok");
+    return true;
+  }
+  LogInject(tapSigner.empty() ? L"TAP signature missing/invalid; refusing inject"
+                              : L"TAP signer differs from host; refusing inject");
+  if (errorOut) *errorOut = L"ExplorerTAP.dll failed signature verification";
+  return false;
+}
+
+// Best effort: drop ExplorerTAP-<old>.dll copies. Ones still mapped by Explorer
+// are locked and simply stay until the next run after a shell restart.
+void PruneOldTapCopies(const fs::path& dir, const fs::path& keep) {
+  std::error_code ec;
+  for (fs::directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec)) {
+    const fs::path p = it->path();
+    const std::wstring name = p.filename().wstring();
+    if (name.rfind(L"ExplorerTAP-", 0) != 0 || p.extension() != L".dll") continue;
+    std::error_code eq;  // keep may not exist yet; never reuse the iterator's ec
+    if (fs::equivalent(p, keep, eq)) continue;
+    std::error_code rm;
+    fs::remove(p, rm);
+  }
 }
 
 using HookProc = LRESULT(CALLBACK*)(int, WPARAM, LPARAM);
@@ -189,7 +288,7 @@ bool NeedsExplorerBounceForFreshTap() {
   return stamped != kAppVersion;
 }
 
-bool CopyTapToTemp(fs::path& destOut, std::wstring* errorOut) {
+bool CopyTapToCache(fs::path& destOut, std::wstring* errorOut) {
   const auto src = TapDllPath();
   if (!fs::exists(src)) {
     if (errorOut) *errorOut = L"ExplorerTAP.dll not found next to Phostide.exe";
@@ -197,13 +296,16 @@ bool CopyTapToTemp(fs::path& destOut, std::wstring* errorOut) {
     return false;
   }
 
-  const fs::path destDir = TapTempDir();
+  const fs::path destDir = TapCacheDir();
   std::error_code ec;
   fs::create_directories(destDir, ec);
 
-  // Always version the TEMP filename so an upgrade never needs to overwrite a
-  // locked ExplorerTAP.dll from a previous build still mapped in Explorer.
+  // Always version the filename so an upgrade never needs to overwrite a locked
+  // ExplorerTAP.dll from a previous build still mapped in Explorer.
   destOut = destDir / (std::wstring(L"ExplorerTAP-") + std::wstring(kAppVersion) + L".dll");
+  PruneOldTapCopies(destDir, destOut);
+  PruneOldTapCopies(TapTempDir(), destOut);  // pre-0.1.33 copies lived in %TEMP%
+  ec.clear();
   fs::copy_file(src, destOut, fs::copy_options::overwrite_existing, ec);
   // GPU pixel shaders — required next to the loaded TAP module / TEMP fallback.
   {
@@ -223,16 +325,20 @@ bool CopyTapToTemp(fs::path& destOut, std::wstring* errorOut) {
   const auto srcSize = fs::file_size(src, se);
   const auto dstSize = fs::exists(destOut) ? fs::file_size(destOut, se) : static_cast<uintmax_t>(-1);
   if (fs::exists(destOut) && srcSize == dstSize) {
-    LogInject(L"copy locked; reusing versioned temp dll (same size)");
+    LogInject(L"copy locked; reusing versioned cached dll (same size)");
     return true;
   }
 
-  if (errorOut) *errorOut = L"Failed to copy ExplorerTAP.dll to temp";
+  if (errorOut) *errorOut = L"Failed to copy ExplorerTAP.dll to the TAP cache";
   LogInject(L"copy failed");
   return false;
 }
 
 bool HookTapIntoTray(const fs::path& dest, std::wstring* errorOut) {
+  // Last gate before the DLL reaches Explorer (and our own LoadLibrary below).
+  // Fails closed without bouncing the shell — a restart would not fix a bad file.
+  if (!VerifyTapTrust(dest, errorOut)) return false;
+
   HWND tray = nullptr;
   for (int i = 0; i < 40 && !tray; ++i) {
     tray = FindWindowW(L"Shell_TrayWnd", nullptr);
@@ -304,6 +410,10 @@ bool InjectExplorerTap(std::wstring* errorOut, const ThemeCommand* reapply) {
   // the host's startup Apply — a TAP already loaded in this Explorer rebinds on that
   // Apply, the reset wiped its Bound signal, and Exit → relaunch bounced Explorer.
 
+  // Reject an untrusted TAP before anything disruptive (shell bounce). The cached
+  // copy is checked again right before the hook.
+  if (!VerifyTapTrust(TapDllPath(), errorOut)) return false;
+
   // Stale in-Explorer TAP (previous version) cannot be unloaded without a shell
   // bounce — XAML Diagnostics pins the module for Explorer's lifetime.
   if (NeedsExplorerBounceForFreshTap()) {
@@ -315,10 +425,10 @@ bool InjectExplorerTap(std::wstring* errorOut, const ThemeCommand* reapply) {
   }
 
   fs::path dest;
-  if (!CopyTapToTemp(dest, errorOut)) {
+  if (!CopyTapToCache(dest, errorOut)) {
     // Last resort: bounce shell to unlock any leftover mapping, then retry once.
     LogInject(L"copy failed; retry after explorer restart");
-    if (!RestartExplorerShell(/*explainToUser=*/true) || !CopyTapToTemp(dest, errorOut)) {
+    if (!RestartExplorerShell(/*explainToUser=*/true) || !CopyTapToCache(dest, errorOut)) {
       return false;
     }
   }
@@ -344,7 +454,7 @@ bool InjectExplorerTap(std::wstring* errorOut, const ThemeCommand* reapply) {
       if (errorOut) *errorOut = L"ExplorerTAP installed but BackgroundFill never bound";
       return false;
     }
-    if (!CopyTapToTemp(dest, errorOut)) return false;
+    if (!CopyTapToCache(dest, errorOut)) return false;
     if (!HookTapIntoTray(dest, errorOut)) return false;
     if (!BoundEventIsSet()) {
       if (errorOut) *errorOut = L"ExplorerTAP installed but BackgroundFill never bound";

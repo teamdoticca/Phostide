@@ -78,6 +78,10 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChang
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
+; Versioned ExplorerTAP copies the host loads into Explorer (unlocked after the
+; uninstall shell restart). Settings live in %APPDATA% and are kept.
+Type: filesandordirs; Name: "{localappdata}\Phostide\tap"
+Type: dirifempty; Name: "{localappdata}\Phostide"
 
 [Code]
 function PostMessageW(hWnd: HWND; Msg, wParam, lParam: LongInt): BOOL;

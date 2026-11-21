@@ -54,8 +54,8 @@ Use when a new paint landed and Bound must be proven. Prefer this over guessing 
    - Rushing causes `ixde hr=0x80070490` → `ixde gave up` (can stick for that Explorer process lifetime — bounce again).
    - Prefer `Stop-Process` then a clean start, or tray Exit / `Phostide.exe /exit`, so the SingleInstance mutex is released; after Force-kill, confirm the next host actually stays up.
 4. Ensure settings theme/intensity as needed under `%APPDATA%\Phostide\settings.json`.
-5. Copy DLL (must succeed):
-   - `Copy-Item out\Release\ExplorerTAP.dll $env:TEMP\Phostide\ExplorerTAP.dll -Force`
+5. The host copies the DLL itself to `%LOCALAPPDATA%\Phostide\tap\ExplorerTAP-<version>.dll` (+ `Themes.hlsl`). If Explorer still maps that file the copy is reused only when sizes match — bounce Explorer (step 2) after rebuilding the TAP at the same version.
+   - A **signed** `Phostide.exe` refuses to inject a TAP that is not signed by the same publisher (`inject.log`: `TAP signature …`). Unsigned dev builds skip the check.
 6. **Clear** `%TEMP%\Phostide\tap.log` before launch (stale “Bound fill” lines false-positive).
 7. Start `out\Release\Phostide.exe`.
 8. Poll `%TEMP%\Phostide\tap.log` (**Unicode**) for:
@@ -63,7 +63,7 @@ Use when a new paint landed and Bound must be proven. Prefer this over guessing 
    - `Bound fill <W>x<H>` with real size (e.g. `2560x48`, not `8x8` alone)
 9. Confirm event: `Local\Phostide.TAP.Bound` is **SET** (`OpenEvent` + signaled).
 
-Also useful: `%TEMP%\Phostide\inject.log` (`copied dll`, `hook ok`, `ready wait=…`, `copy failed`).
+Also useful: `%TEMP%\Phostide\inject.log` (`copied versioned dll`, `TAP signature ok`, `hook ok`, `ready wait=…`, `copy failed`). Logs and `tap.version` stay under `%TEMP%\Phostide\`; only the loaded DLL copies moved to `%LOCALAPPDATA%`.
 
 ### Log path pitfall
 
