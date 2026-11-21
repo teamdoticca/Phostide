@@ -23,7 +23,17 @@ $msbuild = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere
 & $msbuild "src\Phostide.sln" /p:Configuration=Release /p:Platform=x64 /m:1 /v:minimal
 ```
 
-Outputs land in `out\Release\` (`Phostide.exe`, `ExplorerTAP.dll`, `ThemeLab.exe`, …). Full reinject / log checks are in the [development runbook](docs/development.md).
+Outputs land in `out\Release\` (`Phostide.exe`, `ExplorerTAP.dll`, `ThemeLab.exe`, `PhostideTests.exe`, …). Full reinject / log checks are in the [development runbook](docs/development.md).
+
+### Tests and CI
+
+```powershell
+out\Release\PhostideTests.exe
+```
+
+Unit tests live in `src/Tests/` (no external framework — each test file `#include`s the production `.cpp` it covers). They cover version comparison, the GitHub release JSON helpers, and `settings.json` parsing / round trip in a temp folder (`PHOSTIDE_SETTINGS_DIR`), never your real `%APPDATA%`. GitHub Actions (`.github/workflows/ci.yml`) builds the solution, runs the tests, and lints + builds the site on every push and pull request.
+
+To try the first-run Welcome without touching your own settings, point `PHOSTIDE_SETTINGS_DIR` at an empty folder before starting `Phostide.exe`.
 
 ## Site
 
@@ -36,5 +46,6 @@ npm run dev
 ## Pull requests
 
 - Keep changes focused; match existing style in the area you touch.
+- CI must pass; add or extend a test in `src/Tests/` when you change settings, update, or other non-UI logic.
 - For theme paint changes, note which `ThemeId` you verified and whether ThemeLab and/or live TAP were checked.
 - Do not commit secrets, local absolute paths, or machine-specific ops scrap.

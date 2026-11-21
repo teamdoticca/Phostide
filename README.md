@@ -57,7 +57,7 @@ Tray icon › **Settings…** — four tabs with different jobs:
 | **Monitors** | Per-display **on/off** (default all on). Off → stock Windows bar. Live status: painting / fullscreen / locked / off / paused |
 | **System** | App-global only: Auto / GPU / CPU rendering, Start with Windows, updates |
 
-Rendering mode is app-global. Care only paints monitors left on. Tray left-click toggles Enable (soft-pause; Exit restores stock brushes). Defaults after reset: Rainbow, 45% intensity, Auto rendering, OLED Care idle Off, all monitors on. Settings file: `%APPDATA%\Phostide\settings.json`.
+Rendering mode is app-global. Care only paints monitors left on. Tray left-click toggles Enable (soft-pause; Exit restores stock brushes). Defaults on a fresh install (or after deleting the settings file): Aurora, 35% intensity, Auto rendering, OLED Care idle after 5 minutes, all monitors on. The first run opens a short Welcome in Settings to pick which displays are OLED. Settings file: `%APPDATA%\Phostide\settings.json`.
 
 <p align="center">
   <img src="assets/readme/settings/settings-oled-care.png" alt="Phostide Settings — OLED Care with pause toggles" width="720" />

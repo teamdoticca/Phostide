@@ -118,7 +118,7 @@ Phostide reduces locked-bright time on the taskbar (moving fill while you work +
 
 Path: `%APPDATA%\Phostide\settings.json`
 
-Holds fallback `theme` / `intensity`, app-global `renderMode` (Auto/GPU/CPU), OLED Care fields (`oledCareIdleMinutes`, fill/chrome/clock options, `pauseWhenLocked`, `pauseWhenFullscreen`), `monitorSettings` (per-display theme/intensity), `disabledMonitors`, Start with Windows flags, and related runtime fields. Delete the file to reset to defaults: Rainbow, 45% intensity, Auto rendering, OLED Care idle Off, pause locked/fullscreen on, all monitors active.
+Holds fallback `theme` / `intensity`, app-global `renderMode` (Auto/GPU/CPU), OLED Care fields (`oledCareIdleMinutes`, fill/chrome/clock options, `pauseWhenLocked`, `pauseWhenFullscreen`), `monitorSettings` (per-display theme/intensity), `disabledMonitors`, Start with Windows flags, and related runtime fields. Delete the file to reset to defaults: Aurora, 35% intensity, Auto rendering, OLED Care idle after 5 minutes, pause locked/fullscreen on, all monitors active. With no settings file, the next start shows the first-run Welcome (which displays are OLED).
 
 ## Canonical URLs
 

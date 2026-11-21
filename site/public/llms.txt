@@ -27,7 +27,7 @@ Four tabs — do not confuse them:
 | **Monitors** | Per-display **on/off** (default all on). Off = stock Windows taskbar. Live status per row: **painting** / **fullscreen** / **locked** / **off** / **paused** (Enable off). |
 | **System** | App-global: **RENDERING** Auto / GPU / CPU (shared by every bar), Start with Windows, updates. |
 
-Defaults after reset: Rainbow, 45% intensity, Auto rendering, OLED Care idle Off, all monitors active. Settings file: `%APPDATA%\Phostide\settings.json`. Tray left-click toggles Enable (SoftSuspend); Exit restores stock brushes.
+Defaults on a fresh install / after reset: Aurora, 35% intensity, Auto rendering, OLED Care idle after 5 minutes, all monitors active. First run opens a Welcome step in Settings asking which displays are OLED (unchecked displays keep the stock taskbar). Settings file: `%APPDATA%\Phostide\settings.json`. Tray left-click toggles Enable (SoftSuspend); Exit restores stock brushes.
 
 ## Dual-monitor OLED recipe
 

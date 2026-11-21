@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native:
+    name: Native build + unit tests
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: microsoft/setup-msbuild@v2
+
+      # Unsigned Release build of every project (host, ExplorerTAP, ThemeLab,
+      # ThemePreviewExport, Tests). Signing + Setup stay in scripts/package-release.ps1.
+      - name: Build solution
+        run: msbuild src\Phostide.sln /p:Configuration=Release /p:Platform=x64 /m /v:minimal
+
+      - name: Run unit tests
+        run: out\Release\PhostideTests.exe
+
+  site:
+    name: Site lint + build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build

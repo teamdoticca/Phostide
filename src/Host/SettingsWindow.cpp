@@ -70,6 +70,12 @@ constexpr int IDC_CARE_PRESET = 1647;
 constexpr int IDC_CARE_HINT = 1648;
 constexpr int IDC_CARE_OPTIONS_CAPTION = 1649;
 constexpr int IDC_CARE_PAUSE_FS = 1650;
+constexpr int IDC_WELCOME_INTRO = 1660;
+constexpr int IDC_WELCOME_CAPTION = 1661;
+constexpr int IDC_WELCOME_HINT = 1662;
+
+// Pseudo-tab shown only on first run (no tab button): pick OLED displays.
+constexpr int kTabWelcome = 4;
 
 constexpr int kMaxScopeChips = 1 + static_cast<int>(kMaxMonitorSlots);  // All + 8
 constexpr int kCareIdleChipCount = kOledCareIdleChoiceCount;
@@ -100,7 +106,7 @@ bool g_draftPauseWhenLocked = true;
 bool g_draftPauseWhenFullscreen = true;
 // -1 = All monitors; 0..n-1 = attached monitor index.
 int g_scopeIndex = -1;
-int g_activeTab = 0;  // 0 Taskbar, 1 OLED Care, 2 Monitors, 3 System
+int g_activeTab = 0;  // 0 Taskbar, 1 OLED Care, 2 Monitors, 3 System, 4 Welcome
 float g_previewTime = 3.2f;
 int g_previewW = 480;
 HBITMAP g_previewBmp = nullptr;
@@ -546,9 +552,11 @@ void RelayoutScopeAndMonitors(HWND hwnd) {
     sx += w + chipGap;
   }
 
-  // Monitor activation rows.
+  // Monitor activation rows (Monitors tab, and reused by the first-run Welcome).
+  const bool welcome = g_activeTab == kTabWelcome;
   RECT captionRc{};
-  GetWindowRect(GetDlgItem(hwnd, IDC_MONITORS_CAPTION), &captionRc);
+  GetWindowRect(GetDlgItem(hwnd, welcome ? IDC_WELCOME_CAPTION : IDC_MONITORS_CAPTION),
+                &captionRc);
   POINT capt{captionRc.left, captionRc.bottom};
   ScreenToClient(hwnd, &capt);
   int my = capt.y + 14;
@@ -557,10 +565,13 @@ void RelayoutScopeAndMonitors(HWND hwnd) {
     HWND c = GetDlgItem(hwnd, IDC_MONITOR_BASE + i);
     if (!c) continue;
     const bool show = i < static_cast<int>(g_monitors.size());
-    ShowWindow(c, (g_activeTab == 2 && show) ? SW_SHOW : SW_HIDE);
+    ShowWindow(c, ((g_activeTab == 2 || welcome) && show) ? SW_SHOW : SW_HIDE);
     if (!show) continue;
     SetWindowPos(c, nullptr, pad, my, contentW, rowH, SWP_NOZORDER | SWP_NOACTIVATE);
     my += rowH + 10;
+  }
+  if (HWND hint = GetDlgItem(hwnd, IDC_WELCOME_HINT)) {
+    SetWindowPos(hint, nullptr, pad, my + 6, contentW, 44, SWP_NOZORDER | SWP_NOACTIVATE);
   }
   UpdateMonitorsHint(hwnd);
 }
@@ -889,12 +900,46 @@ void DrawPreview(DRAWITEMSTRUCT* dis) {
   DeleteDC(mem);
 }
 
+void UpdateWelcomeIntro(HWND hwnd) {
+  if (!g_host.settings) return;
+  const int idle = ClampOledCareIdleMinutes(g_host.settings->oledCareIdleMinutes);
+  wchar_t care[96];
+  if (idle > 0) {
+    swprintf_s(care, L"OLED Care dims a bar after %d minute%s without use", idle,
+               idle == 1 ? L"" : L"s");
+  } else {
+    wcsncpy_s(care, L"OLED Care is off", _TRUNCATE);
+  }
+  wchar_t text[320];
+  swprintf_s(text,
+             L"Your taskbar is now painted with %s at %d%%, and %s. "
+             L"Leave checked only the displays that are OLED - unchecked ones keep "
+             L"the normal Windows taskbar.",
+             ThemeName(g_host.settings->theme), ClampPercent(g_host.settings->intensity), care);
+  SetWindowTextW(GetDlgItem(hwnd, IDC_WELCOME_INTRO), text);
+}
+
 void ShowTab(HWND hwnd, int tab) {
   g_activeTab = tab;
   const BOOL taskbar = (tab == 0) ? TRUE : FALSE;
   const BOOL care = (tab == 1) ? TRUE : FALSE;
   const BOOL monitors = (tab == 2) ? TRUE : FALSE;
   const BOOL system = (tab == 3) ? TRUE : FALSE;
+  const BOOL welcome = (tab == kTabWelcome) ? TRUE : FALSE;
+
+  // Welcome replaces the tab row with its own title; footer buttons relabel.
+  for (int id : {IDC_TAB_TASKBAR, IDC_TAB_CARE, IDC_TAB_MONITORS, IDC_TAB_SYSTEM}) {
+    HWND c = GetDlgItem(hwnd, id);
+    if (c) ShowWindow(c, welcome ? SW_HIDE : SW_SHOW);
+  }
+  for (int id : {IDC_WELCOME_INTRO, IDC_WELCOME_CAPTION, IDC_WELCOME_HINT}) {
+    HWND c = GetDlgItem(hwnd, id);
+    if (c) ShowWindow(c, welcome ? SW_SHOW : SW_HIDE);
+  }
+  SetWindowTextW(GetDlgItem(hwnd, IDC_TITLE), welcome ? L"Welcome to Phostide" : L"Settings");
+  if (welcome) UpdateWelcomeIntro(hwnd);
+  InvalidateRect(GetDlgItem(hwnd, IDC_APPLY), nullptr, TRUE);
+  InvalidateRect(GetDlgItem(hwnd, IDC_CLOSE), nullptr, TRUE);
 
   const int taskbarIds[] = {
       IDC_SUBTITLE,          IDC_SCOPE_CAPTION,      IDC_PREVIEW_CAPTION,    IDC_PREVIEW,
@@ -1086,6 +1131,15 @@ void BuildChildren(HWND hwnd) {
   }
   MkStatic(hwnd, IDC_MONITORS_HINT, L"", pad, kClientH - 96, contentW, 32, g_fontUi);
 
+  // --- First-run Welcome (no tab button; tab row hidden while shown) ---
+  MkStatic(hwnd, IDC_WELCOME_INTRO, L"", pad, 70, contentW, 64, g_fontUi);
+  MkStatic(hwnd, IDC_WELCOME_CAPTION, L"WHICH DISPLAYS ARE OLED?", pad, 150, contentW, 16,
+           g_fontSection);
+  MkStatic(hwnd, IDC_WELCOME_HINT,
+           L"Done saves this choice. Customize opens the full Settings (themes, "
+           L"intensity, OLED Care); change displays anytime in Settings › Monitors.",
+           pad, 0, contentW, 44, g_fontUi);
+
   // --- System tab ---
   const int sy = y;
   MkStatic(hwnd, IDC_GENERAL_CAPTION, L"GENERAL", pad, sy, contentW, 16, g_fontSection);
@@ -1161,7 +1215,8 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
           id == IDC_PREVIEW_HINT || id == IDC_GENERAL_CAPTION || id == IDC_RENDER_CAPTION ||
           id == IDC_SCOPE_CAPTION || id == IDC_MONITORS_CAPTION || id == IDC_MONITORS_HINT ||
           id == IDC_CARE_SUBTITLE || id == IDC_CARE_IDLE_CAPTION ||
-          id == IDC_CARE_FILL_CAPTION || id == IDC_CARE_OPTIONS_CAPTION || id == IDC_CARE_HINT) {
+          id == IDC_CARE_FILL_CAPTION || id == IDC_CARE_OPTIONS_CAPTION || id == IDC_CARE_HINT ||
+          id == IDC_WELCOME_CAPTION || id == IDC_WELCOME_HINT) {
         SetTextColor(hdc, kSoft);
       } else if (id == IDC_UPDATE_STATUS && HasPendingUpdate()) {
         SetTextColor(hdc, kEmber);
@@ -1257,15 +1312,16 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
       }
       if (dis->CtlID == IDC_APPLY || dis->CtlID == IDC_UPDATE_BTN ||
           dis->CtlID == IDC_CARE_PRESET) {
-        const wchar_t* label = L"Apply";
+        const wchar_t* label = (g_activeTab == kTabWelcome) ? L"Done" : L"Apply";
         if (dis->CtlID == IDC_UPDATE_BTN) label = L"Update";
         if (dis->CtlID == IDC_CARE_PRESET) label = L"OLED everyday preset";
         DrawPrimaryButton(dis, label, IsWindowEnabled(dis->hwndItem) != FALSE);
         return TRUE;
       }
       if (dis->CtlID == IDC_CLOSE || dis->CtlID == IDC_CHECK_UPDATES) {
+        const wchar_t* closeLabel = (g_activeTab == kTabWelcome) ? L"Customize" : L"Close";
         DrawGhostButton(dis,
-                        dis->CtlID == IDC_CLOSE ? L"Close" : L"Check for updates",
+                        dis->CtlID == IDC_CLOSE ? closeLabel : L"Check for updates",
                         IsWindowEnabled(dis->hwndItem) != FALSE);
         return TRUE;
       }
@@ -1379,6 +1435,14 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
       }
       if (id == IDC_APPLY) {
         ApplyDraft(hwnd);
+        // Welcome "Done": save the display choice and get out of the way.
+        if (g_activeTab == kTabWelcome) DestroyWindow(hwnd);
+        return 0;
+      }
+      if (id == IDC_CLOSE && g_activeTab == kTabWelcome) {
+        // "Customize": keep the display choice, continue in the full Settings.
+        ApplyDraft(hwnd);
+        ShowTab(hwnd, 0);
         return 0;
       }
       if (id == IDC_CLOSE || id == IDCANCEL) {
@@ -1466,6 +1530,8 @@ void SettingsWindowShow(HWND owner, HINSTANCE instance, SettingsFocus focus) {
     LoadControlsFromDraft(g_settingsHwnd);
     if (focus == SettingsFocus::Updates) {
       FocusUpdatesSection(g_settingsHwnd);
+    } else if (focus == SettingsFocus::Welcome) {
+      ShowTab(g_settingsHwnd, kTabWelcome);
     } else {
       ShowTab(g_settingsHwnd, 0);
     }
@@ -1491,6 +1557,7 @@ void SettingsWindowShow(HWND owner, HINSTANCE instance, SettingsFocus focus) {
   UpdateWindow(g_settingsHwnd);
   SetForegroundWindow(g_settingsHwnd);
   if (focus == SettingsFocus::Updates) FocusUpdatesSection(g_settingsHwnd);
+  if (focus == SettingsFocus::Welcome) ShowTab(g_settingsHwnd, kTabWelcome);
 }
 
 }  // namespace phostide

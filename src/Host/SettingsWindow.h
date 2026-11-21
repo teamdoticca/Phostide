@@ -10,6 +10,7 @@ namespace phostide {
 enum class SettingsFocus {
   Normal,
   Updates,
+  Welcome,  // first run: which displays are OLED, then Done / Customize
 };
 
 struct SettingsWindowHost {

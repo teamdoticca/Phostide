@@ -39,9 +39,16 @@ bool ParseBool(const std::string& json, const char* key, bool fallback) {
   if (pos == std::string::npos) return fallback;
   const auto colon = json.find(':', pos);
   if (colon == std::string::npos) return fallback;
-  const auto rest = json.substr(colon + 1);
-  if (rest.find("true") != std::string::npos) return true;
-  if (rest.find("false") != std::string::npos) return false;
+  // Read only this key's value. Searching the rest of the file let any later
+  // `true` flip an earlier `false` (enabled, pause toggles, chrome dim reset on
+  // every restart).
+  size_t i = colon + 1;
+  while (i < json.size() &&
+         (json[i] == ' ' || json[i] == '\t' || json[i] == '\r' || json[i] == '\n')) {
+    ++i;
+  }
+  if (json.compare(i, 4, "true") == 0) return true;
+  if (json.compare(i, 5, "false") == 0) return false;
   return fallback;
 }
 
@@ -215,6 +222,14 @@ void ParseMonitorSettings(const std::string& json, Settings& s) {
 }  // namespace
 
 std::wstring SettingsDirectory() {
+  // Override for tests and isolated dev runs (e.g. first-run Welcome checks)
+  // without touching the user's real %APPDATA%\Phostide.
+  wchar_t overrideDir[MAX_PATH]{};
+  const DWORD n = GetEnvironmentVariableW(L"PHOSTIDE_SETTINGS_DIR", overrideDir, MAX_PATH);
+  if (n > 0 && n < MAX_PATH) {
+    CreateDirectoryW(overrideDir, nullptr);
+    return overrideDir;
+  }
   wchar_t* path = nullptr;
   if (FAILED(SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, nullptr, &path))) {
     return L".";
@@ -223,6 +238,12 @@ std::wstring SettingsDirectory() {
   CoTaskMemFree(path);
   CreateDirectoryW(dir.c_str(), nullptr);
   return dir;
+}
+
+bool SettingsFileExists() {
+  const auto file = Join(SettingsDirectory(), std::wstring(kSettingsFileName));
+  const DWORD attrs = GetFileAttributesW(file.c_str());
+  return attrs != INVALID_FILE_ATTRIBUTES && !(attrs & FILE_ATTRIBUTE_DIRECTORY);
 }
 
 Settings LoadSettings() {

@@ -103,8 +103,10 @@ struct MonitorAppearanceEntry {
 struct Settings {
   bool enabled = true;
   // Fallbacks for brand-new monitors / migration from single-theme settings.
-  ThemeId theme = ThemeId::Rainbow;
-  int intensity = 45;  // 0-100
+  // Fresh installs start OLED-first: a dark theme and idle Care on. Missing JSON
+  // keys in an existing settings.json keep the older fallbacks (SettingsStore).
+  ThemeId theme = ThemeId::Aurora;
+  int intensity = 35;  // 0-100
   bool startWithWindows = false;
   bool pauseWhenLocked = true;
   bool pauseWhenFullscreen = true;  // stop paint while FG covers a monitor
@@ -112,7 +114,7 @@ struct Settings {
   RenderMode renderMode = RenderMode::Auto;
   // OLED Care (dedicated Settings tab). Idle is per display (cursor / focused window).
   // Applies only to monitors that remain enabled on the Monitors tab.
-  int oledCareIdleMinutes = 0;       // 0=Off, else 1/5/10/30
+  int oledCareIdleMinutes = 5;       // 0=Off, else 1/5/10/30
   int oledCareFillIntensity = 8;     // 0-100 while idle
   bool oledCareChromeDim = false;    // experimental — dim icons/tray/clock
   int oledCareChromeOpacity = 35;    // 0-100 when chrome dim active

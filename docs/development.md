@@ -40,7 +40,13 @@ $msbuild = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere
 & $msbuild "src\Phostide.sln" /p:Configuration=Release /p:Platform=x64 /m:1 /v:minimal
 ```
 
-Outputs: `out\Release\ExplorerTAP.dll`, `out\Release\Phostide.exe`, `out\Release\ThemeLab.exe`.
+Outputs: `out\Release\ExplorerTAP.dll`, `out\Release\Phostide.exe`, `out\Release\ThemeLab.exe`, `out\Release\PhostideTests.exe`.
+
+Unit tests: run `out\Release\PhostideTests.exe` (exit code 0 = all pass). CI (`.github/workflows/ci.yml`) runs the same build + tests and the site lint/build.
+
+## First-run Welcome
+
+With no `settings.json`, the host saves the defaults (Aurora 35%, OLED Care idle 5 min) and, once inject finishes, opens Settings on a Welcome page (no tab row): "Which displays are OLED?" reusing the Monitors rows. **Done** applies and closes; **Customize** applies and continues on the Taskbar tab. To test it without losing your own settings, start the host with `PHOSTIDE_SETTINGS_DIR` pointing at an empty folder.
 
 ## Dev reinject ritual (fresh DLL)
 

@@ -330,8 +330,9 @@ export default async function InstallPage() {
               (per‑display theme/intensity),{" "}
               <code className="text-zinc-100">disabledMonitors</code>, Start with
               Windows, and a few runtime flags are saved here. Delete the file to
-              reset to defaults (Rainbow, 45% intensity, Auto rendering, all
-              monitors active).
+              reset to defaults (Aurora, 35% intensity, Auto rendering, OLED Care
+              idle after 5 minutes, all monitors active) and see the first‑run
+              Welcome again.
             </p>
             <div className="mt-4 rounded-lg border border-line bg-panel px-5 py-4 font-mono text-sm">
               %APPDATA%\Phostide\settings.json

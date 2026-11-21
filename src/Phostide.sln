@@ -12,6 +12,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ThemePreviewExport", "Theme
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ThemeLab", "ThemeLab\ThemeLab.vcxproj", "{E5F6A7B8-C9D0-1234-EF01-345678901234}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Tests", "Tests\Tests.vcxproj", "{F6A7B8C9-D0E1-2345-F012-456789012345}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -38,6 +40,10 @@ Global
 		{E5F6A7B8-C9D0-1234-EF01-345678901234}.Debug|x64.Build.0 = Debug|x64
 		{E5F6A7B8-C9D0-1234-EF01-345678901234}.Release|x64.ActiveCfg = Release|x64
 		{E5F6A7B8-C9D0-1234-EF01-345678901234}.Release|x64.Build.0 = Release|x64
+		{F6A7B8C9-D0E1-2345-F012-456789012345}.Debug|x64.ActiveCfg = Debug|x64
+		{F6A7B8C9-D0E1-2345-F012-456789012345}.Debug|x64.Build.0 = Debug|x64
+		{F6A7B8C9-D0E1-2345-F012-456789012345}.Release|x64.ActiveCfg = Release|x64
+		{F6A7B8C9-D0E1-2345-F012-456789012345}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 EndGlobal
 

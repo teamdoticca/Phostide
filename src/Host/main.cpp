@@ -68,6 +68,7 @@ bool g_careWasSystemIdle = false;
 bool g_tapBound = false;
 bool g_clearedAccentForTap = false;
 bool g_updateCheckRunning = false;
+bool g_showWelcomeAfterInject = false;
 std::atomic<bool> g_injectInFlight{false};
 std::wstring g_updateStatusText;
 std::chrono::steady_clock::time_point g_animStart = std::chrono::steady_clock::now();
@@ -766,6 +767,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
       ApplyTheme(true);
       SyncAnimTimer(hwnd);
       SetTimer(hwnd, ID_ANIM_TIMER, kAnimIntervalMs, nullptr);
+      // First run: open Welcome once the taskbar is already painting, so the
+      // user sees the effect while choosing which displays are OLED.
+      if (g_showWelcomeAfterInject) {
+        g_showWelcomeAfterInject = false;
+        phostide::SettingsWindowShow(hwnd, g_instance, phostide::SettingsFocus::Welcome);
+      }
       return 0;
     case WM_UPDATE_DONE:
       HandleUpdateDone(reinterpret_cast<UpdateDonePayload*>(lParam));
@@ -909,7 +916,11 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR cmdLine, int) {
     Sleep(1500);
   }
 
+  // First run (no settings file yet): persist the OLED-first defaults right away so
+  // the Welcome shows once even if it is dismissed, then open it after inject.
+  g_showWelcomeAfterInject = !phostide::SettingsFileExists();
   g_settings = phostide::LoadSettings();
+  if (g_showWelcomeAfterInject) phostide::SaveSettings(g_settings);
   // Drop stale pending update if this build is already >= cached tag.
   if (!g_settings.pendingUpdateTag.empty() &&
       !phostide::IsVersionNewer(g_settings.pendingUpdateTag, phostide::kAppVersion)) {
