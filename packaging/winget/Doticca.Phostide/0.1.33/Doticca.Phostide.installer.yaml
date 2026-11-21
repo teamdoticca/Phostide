@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.10.0.schema.json
+
+PackageIdentifier: Doticca.Phostide
+PackageVersion: 0.1.33
+InstallerLocale: en-US
+InstallerType: inno
+Scope: user
+InstallModes:
+- interactive
+- silent
+- silentWithProgress
+UpgradeBehavior: install
+ReleaseDate: 2026-11-21
+AppsAndFeaturesEntries:
+- DisplayName: Phostide 0.1.33
+  Publisher: Doticca
+  ProductCode: '{A7C3E9F1-4B2D-4E8A-9C1F-6D5E0B8A2F31}_is1'
+Installers:
+- Architecture: x64
+  InstallerUrl: https://github.com/teamdoticca/Phostide/releases/download/v0.1.33/Phostide-Setup-0.1.33-win-x64.exe
+  InstallerSha256: 258A76609CBADDC9A4D955CE9690BC08C2AA7B5BAE88D21094E2A7782324D682
+ManifestType: installer
+ManifestVersion: 1.10.0
