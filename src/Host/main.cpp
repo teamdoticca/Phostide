@@ -466,9 +466,11 @@ void StartInjectWorker() {
   if (!g_injectInFlight.compare_exchange_strong(expected, true)) {
     return;
   }
-  std::thread([] {
+  // Snapshot on the UI thread — MakeCommand reads host globals.
+  const phostide::ThemeCommand reapply = MakeCommand();
+  std::thread([reapply] {
     std::wstring err;
-    phostide::InjectExplorerTap(&err);
+    phostide::InjectExplorerTap(&err, &reapply);
     if (g_hwnd) {
       PostMessageW(g_hwnd, WM_INJECT_DONE, 0, 0);
     } else {
@@ -670,6 +672,8 @@ void ShutdownHost() {
   Sleep(60);
   phostide::ClearTaskbarAccent();
   phostide::DetachExplorerTap();
+  // Exit during a shell bounce must not leave the user without Explorer.
+  phostide::FinishPendingExplorerRestart();
 }
 
 void StartUpdateCheck(bool manual) {

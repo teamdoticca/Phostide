@@ -82,6 +82,43 @@ Type: filesandordirs; Name: "{app}"
 [Code]
 function PostMessageW(hWnd: HWND; Msg, wParam, lParam: LongInt): BOOL;
   external 'PostMessageW@user32.dll stdcall';
+function OpenEventW(dwDesiredAccess: DWORD; bInheritHandle: BOOL; lpName: String): THandle;
+  external 'OpenEventW@kernel32.dll stdcall';
+function CloseHandle(hObject: THandle): BOOL;
+  external 'CloseHandle@kernel32.dll stdcall';
+
+const
+  SYNCHRONIZE = $00100000;
+
+{ ExplorerTAP holds Local\Phostide.TAP.Ready open for Explorer's lifetime, so the
+  event exists only while a TAP is mapped into the running shell (not after a
+  reboot or an earlier shell restart). Keep in sync with kTapReadyEvent. }
+function TapLoadedInExplorer: Boolean;
+var
+  H: THandle;
+begin
+  H := OpenEventW(SYNCHRONIZE, False, 'Local\Phostide.TAP.Ready');
+  Result := H <> 0;
+  if Result then
+    CloseHandle(H);
+end;
+
+{ Version the loaded TAP stamped on bind (%TEMP%\Phostide\tap.version), or ''. }
+function LoadedTapVersion: String;
+var
+  S: AnsiString;
+begin
+  Result := '';
+  if LoadStringFromFile(ExpandConstant('{%TEMP}\Phostide\tap.version'), S) then
+    Result := Trim(String(S));
+end;
+
+{ Install/upgrade: bounce only when Explorer still maps a TAP from another build.
+  Same-version reinstall or no TAP loaded → the new host loads cleanly. }
+function NeedsShellRestartForInstall: Boolean;
+begin
+  Result := TapLoadedInExplorer and (LoadedTapVersion <> '{#MyAppVersion}');
+end;
 
 { Never Exec Phostide.exe here — builds before 0.1.4 ignore /exit and START the app,
   which spawned MessageBoxes behind the Setup wizard. }
@@ -179,6 +216,30 @@ begin
   SetShellRestartStatus('Taskbar ready.');
 end;
 
+{ If closing Phostide interrupted its own shell bounce (or it was force-killed
+  mid-restart), Explorer may be gone. Never finish Setup without a taskbar. }
+procedure EnsureExplorerRunning;
+var
+  I: Integer;
+  ResultCode: Integer;
+begin
+  for I := 1 to 12 do
+  begin
+    if FindWindowByClassName('Shell_TrayWnd') <> 0 then
+      Exit;
+    Sleep(250);
+  end;
+  SetShellRestartStatus('Starting Windows Explorer…');
+  Exec(ExpandConstant('{win}\explorer.exe'), '', '', SW_SHOWNORMAL, ewNoWait,
+       ResultCode);
+  for I := 1 to 80 do
+  begin
+    if FindWindowByClassName('Shell_TrayWnd') <> 0 then
+      Break;
+    Sleep(250);
+  end;
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   Result := '';
@@ -192,8 +253,12 @@ procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then
   begin
-    { Files are on disk; bounce Explorer before [Run] starts Phostide. }
-    RestartExplorerShell(False);
+    { Files are on disk; bounce Explorer before [Run] starts Phostide — only
+      when the running shell still has an older TAP mapped. }
+    if NeedsShellRestartForInstall then
+      RestartExplorerShell(False)
+    else
+      EnsureExplorerRunning;
   end;
 end;
 
@@ -202,7 +267,10 @@ begin
   if CurUninstallStep = usUninstall then
   begin
     CloseRunningPhostide;
-    { Drop the in-shell TAP so uninstall leaves a stock taskbar. }
-    RestartExplorerShell(True);
+    { Drop the in-shell TAP so uninstall leaves a stock taskbar (any version). }
+    if TapLoadedInExplorer then
+      RestartExplorerShell(True)
+    else
+      EnsureExplorerRunning;
   end;
 end;

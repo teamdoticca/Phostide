@@ -23,7 +23,7 @@ Paint the real Windows 11 taskbar background (`Rectangle#BackgroundFill`) with O
 5. Host also polls foreground fullscreen: a window that covers a monitor’s `rcMonitor` sets that slot’s `pauseActive` (ThemeCommand **v7**) so TAP freezes paint on the covered bar only; session lock still sets global `paused`. SoftSuspend (tray Enable) stays separate.
 6. Optional `ChromeCareService` dims whitelisted icons/tray/clock (incl. Search pill) and can micro-nudge the clock host — only on idle trays.
 7. Tray Enable / host stop uses **SoftSuspend**: restore stock fills but keep `BackgroundFill` refs so the next host can Bind again. TAP watches `Local\Phostide.SingleInstance` and must `ReleaseMutex` after Wait so a killed host can restart. Full Exit restores brushes + chrome.
-8. Version-stamped TAP upgrades bounce Explorer when `tap.version` disagrees; after bounce the host waits ~15 s for XAML Diagnostics and retries inject if Bound never signals.
+8. Version-stamped TAP upgrades bounce Explorer only when a TAP is still mapped into the running shell (`Local\Phostide.TAP.Ready` exists — the TAP holds it for Explorer's lifetime) **and** `tap.version` disagrees. Setup (`ssPostInstall` / uninstall) and the host use the same rule, so a fresh shell (first install, after reboot, after Setup's own bounce) is never bounced twice. After a bounce the host waits ~15 s for XAML Diagnostics and retries inject if Bound never signals. Host Exit mid-bounce relaunches Explorer (`FinishPendingExplorerRestart`); Setup also ensures `Shell_TrayWnd` exists before finishing.
 
 ## Multi-monitor
 

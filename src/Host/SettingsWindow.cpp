@@ -658,7 +658,15 @@ void EnableDarkTitleBar(HWND hwnd) {
   DwmSetWindowAttribute(hwnd, 20, &useDark, sizeof(useDark));
 }
 
-void FillRoundRect(HDC hdc, const RECT& rc, COLORREF fill, COLORREF border, int radius) {
+// backdrop: when set, paint the whole rect first so the pixels outside the rounded
+// corners match the window instead of the default (white) button background.
+void FillRoundRect(HDC hdc, const RECT& rc, COLORREF fill, COLORREF border, int radius,
+                   COLORREF backdrop = CLR_INVALID) {
+  if (backdrop != CLR_INVALID) {
+    HBRUSH bg = CreateSolidBrush(backdrop);
+    FillRect(hdc, &rc, bg);
+    DeleteObject(bg);
+  }
   HBRUSH br = CreateSolidBrush(fill);
   HPEN pen = CreatePen(PS_SOLID, 1, border);
   HGDIOBJ oldBr = SelectObject(hdc, br);
@@ -674,23 +682,23 @@ void DrawPrimaryButton(DRAWITEMSTRUCT* dis, const wchar_t* label, bool enabled) 
   const bool pressed = (dis->itemState & ODS_SELECTED) != 0;
   const COLORREF fill = !enabled ? RGB(60, 60, 64) : (pressed ? kEmberHot : kEmber);
   const COLORREF text = !enabled ? kSoft : kVoid;
-  FillRoundRect(dis->hDC, dis->rcItem, fill, fill, 10);
+  FillRoundRect(dis->hDC, dis->rcItem, fill, fill, 10, kScreen);
   SetBkMode(dis->hDC, TRANSPARENT);
   SetTextColor(dis->hDC, text);
   HFONT old = static_cast<HFONT>(SelectObject(dis->hDC, g_fontSection));
   DrawTextW(dis->hDC, label, -1, const_cast<RECT*>(&dis->rcItem),
-            DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+            DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
   SelectObject(dis->hDC, old);
 }
 
 void DrawGhostButton(DRAWITEMSTRUCT* dis, const wchar_t* label, bool enabled) {
   const bool pressed = (dis->itemState & ODS_SELECTED) != 0;
-  FillRoundRect(dis->hDC, dis->rcItem, pressed ? RGB(40, 40, 44) : kPanel, kLine, 10);
+  FillRoundRect(dis->hDC, dis->rcItem, pressed ? RGB(40, 40, 44) : kPanel, kLine, 10, kScreen);
   SetBkMode(dis->hDC, TRANSPARENT);
   SetTextColor(dis->hDC, enabled ? kInk : kSoft);
   HFONT old = static_cast<HFONT>(SelectObject(dis->hDC, g_fontUi));
   DrawTextW(dis->hDC, label, -1, const_cast<RECT*>(&dis->rcItem),
-            DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+            DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
   SelectObject(dis->hDC, old);
 }
 
@@ -698,12 +706,12 @@ void DrawTabButton(DRAWITEMSTRUCT* dis, const wchar_t* label, bool active) {
   const bool pressed = (dis->itemState & ODS_SELECTED) != 0;
   const COLORREF fill = active ? RGB(36, 28, 22) : (pressed ? RGB(34, 34, 36) : kPanel);
   const COLORREF border = active ? kEmber : kLine;
-  FillRoundRect(dis->hDC, dis->rcItem, fill, border, 10);
+  FillRoundRect(dis->hDC, dis->rcItem, fill, border, 10, kScreen);
   SetBkMode(dis->hDC, TRANSPARENT);
   SetTextColor(dis->hDC, active ? kInk : kSoft);
   HFONT old = static_cast<HFONT>(SelectObject(dis->hDC, g_fontSection));
   DrawTextW(dis->hDC, label, -1, const_cast<RECT*>(&dis->rcItem),
-            DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+            DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
   SelectObject(dis->hDC, old);
 }
 
@@ -711,12 +719,12 @@ void DrawChip(DRAWITEMSTRUCT* dis, const wchar_t* label, bool selected, bool dim
   const bool pressed = (dis->itemState & ODS_SELECTED) != 0;
   const COLORREF fill = selected ? RGB(36, 28, 22) : (pressed ? RGB(34, 34, 36) : kPanel);
   const COLORREF border = selected ? kEmber : kLine;
-  FillRoundRect(dis->hDC, dis->rcItem, fill, border, 10);
+  FillRoundRect(dis->hDC, dis->rcItem, fill, border, 10, kScreen);
   SetBkMode(dis->hDC, TRANSPARENT);
   SetTextColor(dis->hDC, dimmed ? RGB(90, 90, 94) : (selected ? kInk : kSoft));
   HFONT old = static_cast<HFONT>(SelectObject(dis->hDC, g_fontSection));
   DrawTextW(dis->hDC, label, -1, const_cast<RECT*>(&dis->rcItem),
-            DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+            DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
   SelectObject(dis->hDC, old);
 }
 
@@ -725,7 +733,7 @@ void DrawThemeRow(DRAWITEMSTRUCT* dis, int themeIndex) {
   const bool pressed = (dis->itemState & ODS_SELECTED) != 0;
   const COLORREF fill = selected ? RGB(36, 28, 22) : (pressed ? RGB(34, 34, 36) : kPanel);
   const COLORREF border = selected ? kEmber : kLine;
-  FillRoundRect(dis->hDC, dis->rcItem, fill, border, 10);
+  FillRoundRect(dis->hDC, dis->rcItem, fill, border, 10, kScreen);
   if (selected) {
     RECT bar = dis->rcItem;
     bar.right = bar.left + 4;
@@ -739,7 +747,7 @@ void DrawThemeRow(DRAWITEMSTRUCT* dis, int themeIndex) {
   RECT textRc = dis->rcItem;
   textRc.left += 14;
   DrawTextW(dis->hDC, ThemeName(ThemeFromIndex(themeIndex)), -1, &textRc,
-            DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+            DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
   SelectObject(dis->hDC, old);
 }
 
@@ -749,7 +757,7 @@ void DrawRenderRow(DRAWITEMSTRUCT* dis, int modeIndex) {
   const bool pressed = (dis->itemState & ODS_SELECTED) != 0;
   const COLORREF fill = selected ? RGB(36, 28, 22) : (pressed ? RGB(34, 34, 36) : kPanel);
   const COLORREF border = selected ? kEmber : kLine;
-  FillRoundRect(dis->hDC, dis->rcItem, fill, border, 10);
+  FillRoundRect(dis->hDC, dis->rcItem, fill, border, 10, kScreen);
   if (selected) {
     RECT bar = dis->rcItem;
     bar.right = bar.left + 4;
@@ -762,13 +770,13 @@ void DrawRenderRow(DRAWITEMSTRUCT* dis, int modeIndex) {
   HFONT old = static_cast<HFONT>(SelectObject(dis->hDC, g_fontUi));
   RECT textRc = dis->rcItem;
   textRc.left += 14;
-  DrawTextW(dis->hDC, RenderModeName(mode), -1, &textRc, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+  DrawTextW(dis->hDC, RenderModeName(mode), -1, &textRc, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
   SelectObject(dis->hDC, old);
 }
 
 void DrawCheckRow(DRAWITEMSTRUCT* dis, const wchar_t* label, bool checked) {
   const bool pressed = (dis->itemState & ODS_SELECTED) != 0;
-  FillRoundRect(dis->hDC, dis->rcItem, pressed ? RGB(34, 34, 36) : kPanel, kLine, 10);
+  FillRoundRect(dis->hDC, dis->rcItem, pressed ? RGB(34, 34, 36) : kPanel, kLine, 10, kScreen);
 
   RECT box = dis->rcItem;
   box.left += 14;
@@ -793,7 +801,7 @@ void DrawCheckRow(DRAWITEMSTRUCT* dis, const wchar_t* label, bool checked) {
   HFONT old = static_cast<HFONT>(SelectObject(dis->hDC, g_fontUi));
   RECT textRc = dis->rcItem;
   textRc.left += 42;
-  DrawTextW(dis->hDC, label, -1, &textRc, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+  DrawTextW(dis->hDC, label, -1, &textRc, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX | DT_END_ELLIPSIS);
   SelectObject(dis->hDC, old);
 }
 
@@ -803,7 +811,7 @@ void DrawMonitorRow(DRAWITEMSTRUCT* dis, int index) {
   const bool on = index < static_cast<int>(g_draftMonitorActive.size()) &&
                   g_draftMonitorActive[index];
   const bool pressed = (dis->itemState & ODS_SELECTED) != 0;
-  FillRoundRect(dis->hDC, dis->rcItem, pressed ? RGB(34, 34, 36) : kPanel, kLine, 10);
+  FillRoundRect(dis->hDC, dis->rcItem, pressed ? RGB(34, 34, 36) : kPanel, kLine, 10, kScreen);
 
   RECT box = dis->rcItem;
   box.left += 14;
@@ -841,13 +849,13 @@ void DrawMonitorRow(DRAWITEMSTRUCT* dis, int index) {
   textRc.left += 44;
   textRc.right -= 110;
   SetTextColor(dis->hDC, on ? kInk : kSoft);
-  DrawTextW(dis->hDC, line, -1, &textRc, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+  DrawTextW(dis->hDC, line, -1, &textRc, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX | DT_END_ELLIPSIS);
 
   RECT statusRc = dis->rcItem;
   statusRc.right -= 16;
   statusRc.left = statusRc.right - 96;
   SetTextColor(dis->hDC, statusHot ? kEmber : kSoft);
-  DrawTextW(dis->hDC, status, -1, &statusRc, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
+  DrawTextW(dis->hDC, status, -1, &statusRc, DT_RIGHT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
   SelectObject(dis->hDC, old);
 }
 

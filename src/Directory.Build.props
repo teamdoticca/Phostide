@@ -6,4 +6,11 @@
     <CppWinRTEnabled>true</CppWinRTEnabled>
     <CppWinRTModernSDK>true</CppWinRTModernSDK>
   </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <!-- Sources are UTF-8 without BOM; without this MSVC reads them in the system
+           ANSI codepage and literals like "·" / "×" / "—" turn into mojibake. -->
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+  </ItemDefinitionGroup>
 </Project>

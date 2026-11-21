@@ -2,6 +2,7 @@
 
 #include "../Common/PhostideCommon.h"
 
+#include <atomic>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -15,6 +16,35 @@ namespace {
 
 HHOOK g_hook = nullptr;
 HMODULE g_tapModule = nullptr;
+
+// Shell bounce state, so a host Exit in the middle of RestartExplorerShell never
+// leaves the user without Explorer (taskkill done, relaunch not yet issued).
+enum ShellPhase : int { kShellIdle = 0, kShellKilling = 1, kShellNeedsLaunch = 2 };
+std::atomic<int> g_shellPhase{kShellIdle};
+
+std::wstring ExplorerPath() {
+  wchar_t win[MAX_PATH]{};
+  GetWindowsDirectoryW(win, MAX_PATH);
+  return std::wstring(win) + L"\\explorer.exe";
+}
+
+// Exactly one caller (restart worker or shutdown) relaunches Explorer.
+bool LaunchExplorerIfPending() {
+  int expected = kShellNeedsLaunch;
+  if (!g_shellPhase.compare_exchange_strong(expected, kShellIdle)) return false;
+  ShellExecuteW(nullptr, L"open", ExplorerPath().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+  return true;
+}
+
+// ExplorerTAP keeps its Ready event handle open for Explorer's lifetime
+// (TapSite::Install), so the named event exists only while a TAP is mapped into
+// the running shell. After a shell restart or reboot it is gone.
+bool TapLoadedInExplorer() {
+  HANDLE ev = OpenEventW(SYNCHRONIZE, FALSE, kTapReadyEvent.data());
+  if (!ev) return false;
+  CloseHandle(ev);
+  return true;
+}
 
 std::wstring ModuleDir() {
   wchar_t path[MAX_PATH]{};
@@ -107,6 +137,7 @@ bool RestartExplorerShell(bool explainToUser) {
   RequestTapRestore();
   ResetBoundEvent();
 
+  g_shellPhase.store(kShellKilling);
   STARTUPINFOW si{sizeof(si)};
   PROCESS_INFORMATION pi{};
   wchar_t cmd[] = L"taskkill.exe /IM explorer.exe /F";
@@ -116,14 +147,11 @@ bool RestartExplorerShell(bool explainToUser) {
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
   }
+  g_shellPhase.store(kShellNeedsLaunch);
   Sleep(1500);
 
-  const std::wstring explorer = [] {
-    wchar_t win[MAX_PATH]{};
-    GetWindowsDirectoryW(win, MAX_PATH);
-    return std::wstring(win) + L"\\explorer.exe";
-  }();
-  ShellExecuteW(nullptr, L"open", explorer.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+  // Shutdown may already have relaunched it (FinishPendingExplorerRestart).
+  LaunchExplorerIfPending();
 
   if (!WaitForTray(30000)) {
     LogInject(L"explorer restart: tray not found");
@@ -138,7 +166,20 @@ bool RestartExplorerShell(bool explainToUser) {
 }
 
 bool NeedsExplorerBounceForFreshTap() {
-  const std::wstring stamped = ReadTapVersionStamp();
+  // No TAP mapped into this Explorer (first run, after reboot, or Setup already
+  // bounced the shell): the new DLL loads fresh — nothing stale to unload. The
+  // stamp file outlives Explorer, so checking it alone caused a second bounce
+  // right after Setup's own restart.
+  if (!TapLoadedInExplorer()) return false;
+  std::wstring stamped = ReadTapVersionStamp();
+  // The TAP rewrites the stamp (CREATE_ALWAYS) on every bind, so a read can land
+  // between truncate and write while Bound is already set — that looked like a
+  // pre-0.1.10 TAP and bounced Explorer. Retry briefly if the file exists.
+  const fs::path stampPath = TapTempDir() / kTapVersionStamp;
+  for (int i = 0; stamped.empty() && i < 10 && fs::exists(stampPath); ++i) {
+    Sleep(50);
+    stamped = ReadTapVersionStamp();
+  }
   // Bounce whenever the on-disk stamp disagrees with this host — even if Bound
   // is clear. Skipping that case left Explorer mapped to an old TAP that held
   // the SingleInstance mutex and blocked host restart after Kill-Process.
@@ -257,9 +298,11 @@ std::wstring TapDllPath() {
 
 void ResetTapBoundEvent() { ResetBoundEvent(); }
 
-bool InjectExplorerTap(std::wstring* errorOut) {
-  // Do not inherit a stale Bound signal from a previous host session.
-  ResetBoundEvent();
+bool InjectExplorerTap(std::wstring* errorOut, const ThemeCommand* reapply) {
+  // No ResetBoundEvent here: callers reset before scheduling inject (host startup,
+  // tray recreate) and RestartExplorerShell resets its own. Resetting again raced
+  // the host's startup Apply — a TAP already loaded in this Explorer rebinds on that
+  // Apply, the reset wiped its Bound signal, and Exit → relaunch bounced Explorer.
 
   // Stale in-Explorer TAP (previous version) cannot be unloaded without a shell
   // bounce — XAML Diagnostics pins the module for Explorer's lifetime.
@@ -282,6 +325,17 @@ bool InjectExplorerTap(std::wstring* errorOut) {
 
   if (!HookTapIntoTray(dest, errorOut)) {
     return false;
+  }
+  // Host relaunch into the same Explorer (Exit → start again): the TAP is still
+  // loaded, so Ready is already set and nothing binds on its own — fills are
+  // soft-suspended until a command arrives. The host's startup Apply may have
+  // rebound them *before* ResetBoundEvent above cleared the signal, so re-send
+  // the command and give the TAP dispatcher a moment before bouncing Explorer.
+  if (!BoundEventIsSet() && reapply && reapply->enabled && !reapply->paused) {
+    LogInject(L"not Bound after hook; reapply command and wait");
+    SendThemeCommand(*reapply);
+    for (int i = 0; i < 30 && !BoundEventIsSet(); ++i) Sleep(100);
+    if (BoundEventIsSet()) LogInject(L"Bound after reapply (no explorer restart)");
   }
   // ready event can fire after ixde gave up (TapSite signals anyway). Require Bound.
   if (!BoundEventIsSet()) {
@@ -327,6 +381,22 @@ void DetachExplorerTap() {
     FreeLibrary(g_tapModule);
     g_tapModule = nullptr;
     LogInject(L"freed tap module");
+  }
+}
+
+void FinishPendingExplorerRestart() {
+  // taskkill may still be running on the inject worker; let it finish (it waits
+  // at most 15 s) so we do not relaunch Explorer just before it gets killed.
+  for (int i = 0; i < 170 && g_shellPhase.load() == kShellKilling; ++i) Sleep(100);
+  if (g_shellPhase.load() == kShellKilling) {
+    // taskkill hung — assume it is done rather than risk no shell at all.
+    int expected = kShellKilling;
+    g_shellPhase.compare_exchange_strong(expected, kShellNeedsLaunch);
+  }
+  if (g_shellPhase.load() != kShellNeedsLaunch) return;
+  Sleep(500);  // let the killed shell finish tearing down its tray
+  if (LaunchExplorerIfPending()) {
+    LogInject(L"shutdown: relaunched explorer interrupted mid-restart");
   }
 }
 
