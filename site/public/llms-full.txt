@@ -46,7 +46,7 @@ Open from the tray icon: right-click › **Settings…**
 Care settings are shared; apply only to monitors left on in the Monitors tab. Idle is **hybrid**:
 
 - Classic session **AFK** (`GetLastInputInfo`): no input for Idle after → **every** enabled bar dims (same as classic care).
-- While the session is **active**, each poll attributes the cursor and focused-window monitors so an unused secondary can reach Idle after alone. Leaving full AFK wakes every bar on the next care poll (~200 ms while dimmed).
+- While the session is **active**, each poll attributes only the cursor monitor (a leftover focused window on another display does not keep that bar awake), so an unused secondary can reach Idle after alone. Leaving full AFK wakes every bar on the next care poll (~200 ms while dimmed).
 
 Controls:
 
@@ -58,7 +58,7 @@ Controls:
 - **Pause themes in fullscreen** (default on) — when a foreground window covers a monitor (exclusive or borderless games, F11 video, etc.), host sets per-slot `pauseActive` (ThemeCommand v7) so TAP freezes paint on **that** display only; other bars keep moving. Session lock still uses global `paused`. Live status is on the **Monitors** tab (painting / fullscreen / locked / off).
 - **OLED everyday preset** — care-only: 5‑minute idle + low idle fill + chrome dim + clock nudge + night boost. Does **not** change Taskbar theme or intensity.
 
-Tray left-click / Enable soft-pauses paint (**SoftSuspend** keeps `BackgroundFill` refs for rebind). Exit restores stock brushes and chrome.
+Tray left-click / Enable soft-pauses paint (**SoftSuspend** keeps `BackgroundFill` refs for rebind). Exit restores stock brushes and chrome. Tray right-click menu: **Pause for 1 hour** (resumes automatically), **Pause until restart** (not saved; the next Phostide start paints again), **Resume now** while either is active, and a **Theme** submenu that sets one theme on all displays (each keeps its intensity). Settings › System › **Copy diagnostics** puts a plain-text report on the clipboard: version, Windows build, displays, settings, TAP state and the last lines of `inject.log` / `tap.log`, with the user profile path replaced by `%USERPROFILE%`.
 
 ### Monitors tab
 

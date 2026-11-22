@@ -42,6 +42,7 @@
     <!-- Each test TU #includes the production .cpp it covers. -->
     <ClCompile Include="UpdateCheckTests.cpp" />
     <ClCompile Include="SettingsStoreTests.cpp" />
+    <ClCompile Include="DiagnosticsTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="TestHarness.h" />

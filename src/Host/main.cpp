@@ -1,3 +1,4 @@
+#include "Diagnostics.h"
 #include "Injector.h"
 #include "SettingsStore.h"
 #include "SettingsWindow.h"
@@ -28,8 +29,14 @@ constexpr UINT WM_UPDATE_DONE = WM_APP + 3;
 constexpr UINT_PTR ID_ANIM_TIMER = 1;
 constexpr UINT_PTR ID_REINJECT_TIMER = 2;
 constexpr UINT_PTR ID_IDLE_TIMER = 3;
+constexpr UINT_PTR ID_RESUME_TIMER = 4;  // checks the "Pause for 1 hour" deadline
 constexpr UINT ID_ENABLE = 100;
 constexpr UINT ID_SETTINGS = 110;
+constexpr UINT ID_PAUSE_HOUR = 120;
+constexpr UINT ID_PAUSE_RESTART = 121;
+constexpr UINT ID_RESUME = 122;
+constexpr UINT ID_PAUSE_INFO = 123;
+constexpr UINT ID_THEME_BASE = 200;  // +ThemeId; tray Theme submenu (all displays)
 constexpr UINT ID_OPEN_UPDATE = 310;
 constexpr UINT ID_EXIT = 399;
 constexpr UINT kAnimIntervalMs = 33;  // ~30 fps host-side accent animation
@@ -39,6 +46,12 @@ constexpr UINT kIdlePollCareMs = 200;    // while any bar is dimmed — snappy w
 constexpr UINT kFullscreenEnterDwellMs = 750;
 constexpr UINT kFullscreenLeaveDwellMs = 300;
 constexpr LONG kFullscreenCoverTolerancePx = 4;
+constexpr ULONGLONG kTimedPauseMs = 60ull * 60ull * 1000ull;
+constexpr UINT kResumeCheckMs = 15000;  // GetTickCount64 counts sleep; WM_TIMER may lag
+
+// Tray quick pause. Never persisted: settings.json keeps enabled=true, so a timed
+// or "until restart" pause ends with the next Phostide start at the latest.
+enum class TempPause { None, Timed, UntilRestart };
 
 struct MonitorCareState {
   uint64_t deviceHash = 0;
@@ -71,6 +84,9 @@ bool g_updateCheckRunning = false;
 bool g_showWelcomeAfterInject = false;
 std::atomic<bool> g_injectInFlight{false};
 std::wstring g_updateStatusText;
+TempPause g_tempPause = TempPause::None;
+ULONGLONG g_tempPauseDeadline = 0;
+std::wstring g_pauseText;  // "Paused until 15:42" / "Paused until Phostide restarts"
 std::chrono::steady_clock::time_point g_animStart = std::chrono::steady_clock::now();
 HANDLE g_boundEvent = nullptr;
 
@@ -82,6 +98,17 @@ struct UpdateDonePayload {
 void ApplyTheme(bool pushToTap);
 void SyncAnimTimer(HWND hwnd);
 void ShowBalloon(const wchar_t* title, const wchar_t* body);
+
+// Every host save goes through here so a temporary tray pause is never written.
+void PersistSettings() {
+  if (g_tempPause == TempPause::None) {
+    phostide::SaveSettings(g_settings);
+    return;
+  }
+  phostide::Settings copy = g_settings;
+  copy.enabled = true;
+  phostide::SaveSettings(copy);
+}
 
 bool IsNightBoostWindow() {
   SYSTEMTIME st{};
@@ -550,7 +577,7 @@ void OpenPendingUpdate() {
 
 void OnApplyAppearanceFromSettings() {
   g_animStart = std::chrono::steady_clock::now();
-  phostide::SaveSettings(g_settings);
+  PersistSettings();
   SyncIdleTimer(g_hwnd);
   RefreshOledCareIdleStates();
   RefreshFullscreenPauseState();
@@ -563,11 +590,159 @@ void StartUpdateCheck(bool manual);
 
 void OnRequestUpdateCheckFromSettings() { StartUpdateCheck(true); }
 
+std::wstring TrayTipText() {
+  if (g_tempPause != TempPause::None) return L"Phostide - " + g_pauseText;
+  return g_settings.enabled ? L"Phostide" : L"Phostide - paused";
+}
+
+void UpdateTrayTip() {
+  if (!g_trayAdded) return;
+  wcsncpy_s(g_nid.szTip, TrayTipText().c_str(), _TRUNCATE);
+  NOTIFYICONDATAW tip = g_nid;
+  tip.uFlags = NIF_TIP | NIF_SHOWTIP | NIF_GUID;
+  tip.guidItem = phostide::kTrayIconGuid;
+  Shell_NotifyIconW(NIM_MODIFY, &tip);
+}
+
+// Everything that has to follow a change of g_settings.enabled.
+void ApplyEnabledChange(HWND hwnd) {
+  PersistSettings();
+  if (!g_settings.enabled) {
+    g_tapBound = false;
+    phostide::ResetTapBoundEvent();
+  }
+  SyncAnimTimer(hwnd);
+  SyncIdleTimer(hwnd);
+  RefreshOledCareIdleStates();
+  ApplyTheme(true);
+  UpdateTrayTip();
+  phostide::SettingsWindowRefreshPauseUi();
+}
+
+void ClearTempPause(HWND hwnd) {
+  g_tempPause = TempPause::None;
+  g_tempPauseDeadline = 0;
+  g_pauseText.clear();
+  KillTimer(hwnd, ID_RESUME_TIMER);
+}
+
+void SetPaintEnabled(HWND hwnd, bool on) {
+  ClearTempPause(hwnd);
+  g_settings.enabled = on;
+  ApplyEnabledChange(hwnd);
+}
+
+std::wstring LocalTimeIn(ULONGLONG fromNowMs) {
+  FILETIME ft{};
+  GetSystemTimeAsFileTime(&ft);
+  ULARGE_INTEGER t{};
+  t.LowPart = ft.dwLowDateTime;
+  t.HighPart = ft.dwHighDateTime;
+  t.QuadPart += fromNowMs * 10000ull;
+  ft.dwLowDateTime = t.LowPart;
+  ft.dwHighDateTime = t.HighPart;
+  SYSTEMTIME utc{};
+  SYSTEMTIME local{};
+  FileTimeToSystemTime(&ft, &utc);
+  SystemTimeToTzSpecificLocalTime(nullptr, &utc, &local);
+  wchar_t buf[64]{};
+  if (!GetTimeFormatEx(LOCALE_NAME_USER_DEFAULT, TIME_NOSECONDS, &local, nullptr, buf, 64)) {
+    swprintf_s(buf, L"%02u:%02u", local.wHour, local.wMinute);
+  }
+  return buf;
+}
+
+void StartTempPause(HWND hwnd, TempPause kind) {
+  ClearTempPause(hwnd);
+  g_tempPause = kind;
+  if (kind == TempPause::Timed) {
+    g_tempPauseDeadline = GetTickCount64() + kTimedPauseMs;
+    g_pauseText = L"Paused until " + LocalTimeIn(kTimedPauseMs);
+    SetTimer(hwnd, ID_RESUME_TIMER, kResumeCheckMs, nullptr);
+  } else {
+    g_pauseText = L"Paused until Phostide restarts";
+  }
+  g_settings.enabled = false;
+  ApplyEnabledChange(hwnd);
+  ShowBalloon(L"Phostide", (g_pauseText + L". Click the tray icon to resume now.").c_str());
+}
+
+void CheckTimedPause(HWND hwnd) {
+  if (g_tempPause != TempPause::Timed) {
+    KillTimer(hwnd, ID_RESUME_TIMER);
+    return;
+  }
+  if (GetTickCount64() < g_tempPauseDeadline) return;
+  SetPaintEnabled(hwnd, true);
+  ShowBalloon(L"Phostide", L"Themes on again.");
+}
+
+// Tray Theme menu: like Taskbar tab "Apply to All", but each display keeps its
+// own intensity.
+void SetThemeForAllDisplays(phostide::ThemeId theme) {
+  g_settings.theme = theme;
+  for (const auto& mon : phostide::EnumerateAttachedMonitors()) {
+    phostide::MonitorAppearance a =
+        phostide::ResolveMonitorAppearance(g_settings, mon.deviceName);
+    a.theme = theme;
+    phostide::UpsertMonitorAppearance(g_settings, mon.deviceName, a);
+  }
+  OnApplyAppearanceFromSettings();
+  phostide::SettingsWindowReloadAppearance();
+}
+
+// Theme to check in the tray menu, or Count when displays use different themes.
+phostide::ThemeId CommonDisplayTheme() {
+  const auto monitors = phostide::EnumerateAttachedMonitors();
+  if (monitors.empty()) return g_settings.theme;
+  phostide::ThemeId common = phostide::ThemeId::Count;
+  for (const auto& mon : monitors) {
+    const auto t = phostide::ResolveMonitorAppearance(g_settings, mon.deviceName).theme;
+    if (common == phostide::ThemeId::Count) {
+      common = t;
+    } else if (common != t) {
+      return phostide::ThemeId::Count;
+    }
+  }
+  return common;
+}
+
+bool CopyDiagnosticsFromSettings(HWND owner) {
+  phostide::DiagnosticsHostState state;
+  state.pauseText = g_pauseText;
+  state.sessionLocked = g_sessionLocked;
+  state.fullscreenPaused = g_fullscreenPaused;
+  state.tapBound = g_tapBound;
+  return phostide::CopyTextToClipboard(owner,
+                                       phostide::BuildDiagnosticsReport(g_settings, state));
+}
+
 void RebuildMenu() {
   if (g_menu) DestroyMenu(g_menu);
   g_menu = CreatePopupMenu();
-  AppendMenuW(g_menu, MF_STRING | (g_settings.enabled ? MF_CHECKED : 0), ID_ENABLE,
-              L"Enable Phostide");
+  if (g_tempPause != TempPause::None) {
+    AppendMenuW(g_menu, MF_STRING | MF_GRAYED, ID_PAUSE_INFO, g_pauseText.c_str());
+    AppendMenuW(g_menu, MF_STRING, ID_RESUME, L"Resume now");
+  } else {
+    AppendMenuW(g_menu, MF_STRING | (g_settings.enabled ? MF_CHECKED : 0), ID_ENABLE,
+                L"Enable Phostide");
+    if (g_settings.enabled) {
+      AppendMenuW(g_menu, MF_STRING, ID_PAUSE_HOUR, L"Pause for 1 hour");
+      AppendMenuW(g_menu, MF_STRING, ID_PAUSE_RESTART, L"Pause until restart");
+    }
+  }
+  HMENU themes = CreatePopupMenu();
+  for (int i = 0; i < static_cast<int>(phostide::ThemeId::Count); ++i) {
+    AppendMenuW(themes, MF_STRING, ID_THEME_BASE + i,
+                phostide::ThemeName(phostide::ThemeFromIndex(i)));
+  }
+  const phostide::ThemeId current = CommonDisplayTheme();
+  if (current != phostide::ThemeId::Count) {
+    CheckMenuRadioItem(themes, ID_THEME_BASE,
+                       ID_THEME_BASE + static_cast<UINT>(phostide::ThemeId::Count) - 1,
+                       ID_THEME_BASE + static_cast<UINT>(current), MF_BYCOMMAND);
+  }
+  AppendMenuW(g_menu, MF_POPUP, reinterpret_cast<UINT_PTR>(themes), L"Theme (all displays)");
   AppendMenuW(g_menu, MF_SEPARATOR, 0, nullptr);
   AppendMenuW(g_menu, MF_STRING, ID_SETTINGS, L"Settings...");
   if (HasPendingUpdate()) {
@@ -625,7 +800,7 @@ void AddTrayIcon(HWND hwnd, HINSTANCE hi, bool force = false) {
   if (!g_nid.hIcon) {
     g_nid.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
   }
-  wcsncpy_s(g_nid.szTip, L"Phostide", _TRUNCATE);
+  wcsncpy_s(g_nid.szTip, TrayTipText().c_str(), _TRUNCATE);
   g_nid.uVersion = NOTIFYICON_VERSION_4;
 
   if (Shell_NotifyIconW(NIM_ADD, &g_nid)) {
@@ -707,7 +882,7 @@ void HandleUpdateDone(UpdateDonePayload* payload) {
       g_settings.pendingUpdateTag = r.latestTag;
       g_settings.pendingSetupUrl =
           !r.setupUrl.empty() ? r.setupUrl : r.releasePageUrl;
-      phostide::SaveSettings(g_settings);
+      PersistSettings();
       if (!owned->manual) {
         ShowBalloon(L"Phostide update",
                     L"A newer version is available. Open Settings from the tray to update.");
@@ -715,7 +890,7 @@ void HandleUpdateDone(UpdateDonePayload* payload) {
     } else {
       g_settings.pendingUpdateTag.clear();
       g_settings.pendingSetupUrl.clear();
-      phostide::SaveSettings(g_settings);
+      PersistSettings();
     }
   } else if (owned->manual) {
     g_updateStatusText =
@@ -747,6 +922,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
       }
       if (wParam == ID_IDLE_TIMER) {
         PollOledCareIdle(hwnd);
+        return 0;
+      }
+      if (wParam == ID_RESUME_TIMER) {
+        CheckTimedPause(hwnd);
         return 0;
       }
       if (wParam == ID_ANIM_TIMER && g_settings.enabled && !IsThemePaintPaused()) {
@@ -788,35 +967,33 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
       } else if (LOWORD(lParam) == WM_LBUTTONUP || lParam == WM_LBUTTONUP) {
         // Left-click toggles Enable (same as tray menu). Soft-suspend in TAP keeps
         // fill refs so the next click can rebind without a full Explorer rescan.
-        g_settings.enabled = !g_settings.enabled;
-        phostide::SaveSettings(g_settings);
-        if (!g_settings.enabled) {
-          g_tapBound = false;
-          phostide::ResetTapBoundEvent();
-        }
-        SyncAnimTimer(hwnd);
-        SyncIdleTimer(hwnd);
-        RefreshOledCareIdleStates();
-        ApplyTheme(true);
-        phostide::SettingsWindowRefreshPauseUi();
-        ShowBalloon(g_settings.enabled ? L"Phostide" : L"Phostide",
+        // During a timed / until-restart pause this resumes.
+        SetPaintEnabled(hwnd, !g_settings.enabled);
+        ShowBalloon(L"Phostide",
                     g_settings.enabled ? L"Themes on." : L"Themes paused. Click again to resume.");
       }
       return 0;
     case WM_COMMAND: {
       const int id = LOWORD(wParam);
       if (id == ID_ENABLE) {
-        g_settings.enabled = !g_settings.enabled;
-        phostide::SaveSettings(g_settings);
-        if (!g_settings.enabled) {
-          g_tapBound = false;
-          phostide::ResetTapBoundEvent();
-        }
-        SyncAnimTimer(hwnd);
-        SyncIdleTimer(hwnd);
-        RefreshOledCareIdleStates();
-        ApplyTheme(true);
-        phostide::SettingsWindowRefreshPauseUi();
+        SetPaintEnabled(hwnd, !g_settings.enabled);
+        return 0;
+      }
+      if (id == ID_RESUME) {
+        SetPaintEnabled(hwnd, true);
+        return 0;
+      }
+      if (id == ID_PAUSE_HOUR) {
+        StartTempPause(hwnd, TempPause::Timed);
+        return 0;
+      }
+      if (id == ID_PAUSE_RESTART) {
+        StartTempPause(hwnd, TempPause::UntilRestart);
+        return 0;
+      }
+      if (id >= static_cast<int>(ID_THEME_BASE) &&
+          id < static_cast<int>(ID_THEME_BASE) + static_cast<int>(phostide::ThemeId::Count)) {
+        SetThemeForAllDisplays(phostide::ThemeFromIndex(id - static_cast<int>(ID_THEME_BASE)));
         return 0;
       }
       if (id == ID_SETTINGS) {
@@ -920,13 +1097,13 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR cmdLine, int) {
   // the Welcome shows once even if it is dismissed, then open it after inject.
   g_showWelcomeAfterInject = !phostide::SettingsFileExists();
   g_settings = phostide::LoadSettings();
-  if (g_showWelcomeAfterInject) phostide::SaveSettings(g_settings);
+  if (g_showWelcomeAfterInject) PersistSettings();
   // Drop stale pending update if this build is already >= cached tag.
   if (!g_settings.pendingUpdateTag.empty() &&
       !phostide::IsVersionNewer(g_settings.pendingUpdateTag, phostide::kAppVersion)) {
     g_settings.pendingUpdateTag.clear();
     g_settings.pendingSetupUrl.clear();
-    phostide::SaveSettings(g_settings);
+    PersistSettings();
   }
 
   phostide::SettingsWindowHost host{};
@@ -940,6 +1117,8 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR cmdLine, int) {
   host.onApplyAppearance = &OnApplyAppearanceFromSettings;
   host.onRequestUpdateCheck = &OnRequestUpdateCheckFromSettings;
   host.onOpenUpdate = &OpenPendingUpdate;
+  host.pauseText = &g_pauseText;
+  host.onCopyDiagnostics = &CopyDiagnosticsFromSettings;
   phostide::SettingsWindowBind(host);
 
   // Named manual-reset event can still be signaled from a previous session's TAP

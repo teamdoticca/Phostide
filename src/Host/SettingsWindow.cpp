@@ -34,6 +34,9 @@ constexpr int IDC_VERSION = 1300;
 constexpr int IDC_UPDATE_STATUS = 1301;
 constexpr int IDC_CHECK_UPDATES = 1302;
 constexpr int IDC_UPDATE_BTN = 1303;
+constexpr int IDC_DIAG_CAPTION = 1310;
+constexpr int IDC_COPY_DIAG = 1311;
+constexpr int IDC_DIAG_STATUS = 1312;
 constexpr int IDC_APPLY = 1400;
 constexpr int IDC_CLOSE = 1401;
 constexpr int IDC_SUBTITLE = 1502;
@@ -441,7 +444,12 @@ void UpdateMonitorsHint(HWND hwnd) {
     return;
   }
   if (g_host.settings && !g_host.settings->enabled) {
-    SetWindowTextW(hint, L"Enable is off — all bars soft-paused (tray left-click resumes).");
+    if (g_host.pauseText && !g_host.pauseText->empty()) {
+      const std::wstring text = *g_host.pauseText + L" — all bars soft-paused (tray left-click resumes).";
+      SetWindowTextW(hint, text.c_str());
+    } else {
+      SetWindowTextW(hint, L"Enable is off — all bars soft-paused (tray left-click resumes).");
+    }
     return;
   }
   if (g_host.settings && g_host.settings->pauseWhenLocked && g_host.sessionLocked &&
@@ -979,7 +987,8 @@ void ShowTab(HWND hwnd, int tab) {
   const int systemIds[] = {
       IDC_GENERAL_CAPTION, IDC_AUTOSTART,      IDC_RENDER_CAPTION,  IDC_RENDER_BASE,
       IDC_RENDER_BASE + 1, IDC_RENDER_BASE + 2, IDC_UPDATES_CAPTION, IDC_VERSION,
-      IDC_UPDATE_STATUS,  IDC_CHECK_UPDATES, IDC_UPDATE_BTN,
+      IDC_UPDATE_STATUS,  IDC_CHECK_UPDATES, IDC_UPDATE_BTN,   IDC_DIAG_CAPTION,
+      IDC_COPY_DIAG,      IDC_DIAG_STATUS,
   };
   for (int id : systemIds) {
     HWND c = GetDlgItem(hwnd, id);
@@ -1082,7 +1091,7 @@ void BuildChildren(HWND hwnd) {
   // --- OLED Care tab (single column — use full height, not a cramped top cluster) ---
   const int cy = y;
   MkStatic(hwnd, IDC_CARE_SUBTITLE,
-           L"Per-display idle on recent input (cursor / focus). Optional chrome care is experimental.",
+           L"Per-display idle follows the cursor. Optional chrome care is experimental.",
            pad, cy, contentW, 20, g_fontUi);
 
   MkStatic(hwnd, IDC_CARE_IDLE_CAPTION, L"IDLE AFTER", pad, cy, contentW, 16, g_fontSection);
@@ -1110,7 +1119,7 @@ void BuildChildren(HWND hwnd) {
            40, BS_OWNERDRAW);
   MkButton(hwnd, IDC_CARE_NUDGE, L"Micro-nudge clock (experimental)", pad, cy, contentW, 40,
            BS_OWNERDRAW);
-  MkButton(hwnd, IDC_CARE_NIGHT, L"Night boost (after 8 PM)", pad, cy, contentW, 40,
+  MkButton(hwnd, IDC_CARE_NIGHT, L"Night boost (8 PM - 7 AM)", pad, cy, contentW, 40,
            BS_OWNERDRAW);
   MkButton(hwnd, IDC_CARE_PAUSE_LOCK, L"Pause themes while locked", pad, cy, contentW, 40,
            BS_OWNERDRAW);
@@ -1162,6 +1171,13 @@ void BuildChildren(HWND hwnd) {
   syy += 28;
   MkButton(hwnd, IDC_CHECK_UPDATES, L"Check for updates", pad, syy, 180, 34, BS_OWNERDRAW);
   MkButton(hwnd, IDC_UPDATE_BTN, L"Update", pad + contentW - 120, syy, 120, 34, BS_OWNERDRAW);
+  syy += 34 + 24;
+  MkStatic(hwnd, IDC_DIAG_CAPTION, L"TROUBLESHOOTING", pad, syy, contentW, 16, g_fontSection);
+  syy += 28;
+  MkButton(hwnd, IDC_COPY_DIAG, L"Copy diagnostics", pad, syy, 180, 34, BS_OWNERDRAW);
+  MkStatic(hwnd, IDC_DIAG_STATUS,
+           L"Version, Windows build, displays, settings and recent logs - paste into a GitHub issue.",
+           pad + 196, syy, contentW - 196, 36, g_fontUi);
 
   const int footerY = kClientH - 52;
   MkButton(hwnd, IDC_CLOSE, L"Close", pad, footerY, 110, 34, BS_OWNERDRAW);
@@ -1216,7 +1232,8 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
           id == IDC_SCOPE_CAPTION || id == IDC_MONITORS_CAPTION || id == IDC_MONITORS_HINT ||
           id == IDC_CARE_SUBTITLE || id == IDC_CARE_IDLE_CAPTION ||
           id == IDC_CARE_FILL_CAPTION || id == IDC_CARE_OPTIONS_CAPTION || id == IDC_CARE_HINT ||
-          id == IDC_WELCOME_CAPTION || id == IDC_WELCOME_HINT) {
+          id == IDC_WELCOME_CAPTION || id == IDC_WELCOME_HINT || id == IDC_DIAG_CAPTION ||
+          id == IDC_DIAG_STATUS) {
         SetTextColor(hdc, kSoft);
       } else if (id == IDC_UPDATE_STATUS && HasPendingUpdate()) {
         SetTextColor(hdc, kEmber);
@@ -1288,7 +1305,7 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
         return TRUE;
       }
       if (dis->CtlID == IDC_CARE_NIGHT) {
-        DrawCheckRow(dis, L"Night boost (after 8 PM)", g_draftCareNightBoost);
+        DrawCheckRow(dis, L"Night boost (8 PM - 7 AM)", g_draftCareNightBoost);
         return TRUE;
       }
       if (dis->CtlID == IDC_CARE_PAUSE_LOCK) {
@@ -1318,11 +1335,12 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
         DrawPrimaryButton(dis, label, IsWindowEnabled(dis->hwndItem) != FALSE);
         return TRUE;
       }
-      if (dis->CtlID == IDC_CLOSE || dis->CtlID == IDC_CHECK_UPDATES) {
-        const wchar_t* closeLabel = (g_activeTab == kTabWelcome) ? L"Customize" : L"Close";
-        DrawGhostButton(dis,
-                        dis->CtlID == IDC_CLOSE ? closeLabel : L"Check for updates",
-                        IsWindowEnabled(dis->hwndItem) != FALSE);
+      if (dis->CtlID == IDC_CLOSE || dis->CtlID == IDC_CHECK_UPDATES ||
+          dis->CtlID == IDC_COPY_DIAG) {
+        const wchar_t* label = (g_activeTab == kTabWelcome) ? L"Customize" : L"Close";
+        if (dis->CtlID == IDC_CHECK_UPDATES) label = L"Check for updates";
+        if (dis->CtlID == IDC_COPY_DIAG) label = L"Copy diagnostics";
+        DrawGhostButton(dis, label, IsWindowEnabled(dis->hwndItem) != FALSE);
         return TRUE;
       }
       break;
@@ -1458,6 +1476,14 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
         if (g_host.onOpenUpdate) g_host.onOpenUpdate();
         return 0;
       }
+      if (id == IDC_COPY_DIAG) {
+        const bool ok = g_host.onCopyDiagnostics && g_host.onCopyDiagnostics(hwnd);
+        SetWindowTextW(GetDlgItem(hwnd, IDC_DIAG_STATUS),
+                       ok ? L"Copied to the clipboard. Paste it into a GitHub issue "
+                            L"(your user folder is shown as %USERPROFILE%)."
+                          : L"Could not open the clipboard - try again.");
+        return 0;
+      }
       return 0;
     }
     case WM_CLOSE:
@@ -1510,6 +1536,26 @@ HWND SettingsWindowHwnd() { return g_settingsHwnd; }
 
 void SettingsWindowRefreshUpdateUi() {
   if (g_settingsHwnd) RefreshUpdateControls(g_settingsHwnd);
+}
+
+void SettingsWindowReloadAppearance() {
+  if (!g_settingsHwnd || !g_host.settings) return;
+  // Keep other unsaved drafts (Care, System); only the look changed under us.
+  if (g_scopeIndex >= 0 && g_scopeIndex < static_cast<int>(g_monitors.size())) {
+    LoadAppearanceDraft(
+        ResolveMonitorAppearance(*g_host.settings, g_monitors[g_scopeIndex].deviceName));
+  } else {
+    MonitorAppearance a;
+    a.theme = g_host.settings->theme;
+    a.intensity = g_host.settings->intensity;
+    LoadAppearanceDraft(a);
+  }
+  SendDlgItemMessageW(g_settingsHwnd, IDC_INTENSITY, TBM_SETPOS, TRUE,
+                      static_cast<LPARAM>(g_draftIntensity));
+  UpdateIntensityValue(g_settingsHwnd);
+  InvalidateThemeRows(g_settingsHwnd);
+  RefreshPreview(g_settingsHwnd);
+  if (g_activeTab == kTabWelcome) UpdateWelcomeIntro(g_settingsHwnd);
 }
 
 void SettingsWindowRefreshPauseUi() {

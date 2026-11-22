@@ -32,7 +32,7 @@ const faqs: { q: string; a: string }[] = [
   },
   {
     q: "How do Settings tabs work?",
-    a: "Tray › Settings… has four tabs. Taskbar: Apply to All or a monitor number, theme and intensity, then Apply. OLED Care: hybrid idle fill dim, optional experimental chrome/clock care, pause when locked / in fullscreen (both default on; fullscreen freezes the covered display only; everyday preset is care-only — it does not change your theme). Monitors: turn displays on or off and see live status (painting / fullscreen / locked / off). System: shared Auto/GPU/CPU rendering, Start with Windows, and updates. Rendering mode is app-global; Care only affects monitors left on in Monitors.",
+    a: "Tray › Settings… has four tabs. Taskbar: Apply to All or a monitor number, theme and intensity, then Apply. OLED Care: hybrid idle fill dim, optional experimental chrome/clock care, pause when locked / in fullscreen (both default on; fullscreen freezes the covered display only; everyday preset is care-only — it does not change your theme). Monitors: turn displays on or off and see live status (painting / fullscreen / locked / off). System: shared Auto/GPU/CPU rendering, Start with Windows, updates, and Copy diagnostics. Rendering mode is app-global; Care only affects monitors left on in Monitors.",
   },
   {
     q: "Can I theme only my OLED and leave the other monitor alone?",
@@ -51,12 +51,20 @@ const faqs: { q: string; a: string }[] = [
     a: "Yes by default. OLED Care › Pause themes in fullscreen freezes paint on the covered display only (other monitors keep moving). Settings › Monitors shows each bar as painting, fullscreen, locked, or off. Turn the Care toggle off if you want themes to keep moving behind a fullscreen app. Tray Enable / SoftSuspend stays separate.",
   },
   {
+    q: "How do I pause the taskbar for a presentation or screen recording?",
+    a: "Right-click the tray icon › Pause for 1 hour (resumes on its own) or Pause until restart (the next Phostide start paints again). Left-click the tray icon, or choose Resume now, to resume early. The same menu has a Theme submenu that sets one theme on all displays without opening Settings.",
+  },
+  {
     q: "Does Phostide prevent OLED burn-in completely?",
     a: "No. Phostide reduces locked-bright time on the taskbar (moving fill + idle Care); it is not a burn-in warranty or pixel-shift replacement. Themes move the fill; residual Windows chrome stays static unless you enable experimental chrome dim / clock nudge (may no-op after Explorer XAML renames). Windows tips: show clock seconds; hide the date if you do not need it.",
   },
   {
     q: "Does it collect data or need an account?",
     a: "No account and no telemetry. Themes work offline. An optional GitHub update check is the only network use. Settings live in %APPDATA%\\Phostide\\settings.json.",
+  },
+  {
+    q: "How do I report a problem?",
+    a: "Settings › System › Copy diagnostics puts a plain-text report on the clipboard: version, Windows build, displays, settings and the last lines of Phostide's logs, with your user folder shown as %USERPROFILE%. Nothing is sent anywhere; paste it into a GitHub issue on teamdoticca/Phostide.",
   },
   {
     q: "Where do I download it?",

@@ -42,6 +42,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Diagnostics.h" />
     <ClInclude Include="Injector.h" />
     <ClInclude Include="SettingsStore.h" />
     <ClInclude Include="SettingsWindow.h" />
@@ -53,6 +54,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Diagnostics.cpp" />
     <ClCompile Include="Injector.cpp" />
     <ClCompile Include="SettingsStore.cpp" />
     <ClCompile Include="SettingsWindow.cpp" />
