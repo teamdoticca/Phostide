@@ -378,8 +378,9 @@ void RefreshUpdateControls(HWND hwnd) {
   SetWindowTextW(GetDlgItem(hwnd, IDC_VERSION), version);
 
   const bool checking = g_host.updateCheckRunning && *g_host.updateCheckRunning;
+  const bool installing = g_host.updateInstallRunning && *g_host.updateInstallRunning;
   wchar_t status[128];
-  if (checking) {
+  if (checking && !installing) {
     wcsncpy_s(status, L"Checking for updates...", _TRUNCATE);
   } else if (g_host.updateStatusText && !g_host.updateStatusText->empty()) {
     wcsncpy_s(status, g_host.updateStatusText->c_str(), _TRUNCATE);
@@ -390,9 +391,9 @@ void RefreshUpdateControls(HWND hwnd) {
   }
   SetWindowTextW(GetDlgItem(hwnd, IDC_UPDATE_STATUS), status);
 
-  EnableWindow(GetDlgItem(hwnd, IDC_CHECK_UPDATES), checking ? FALSE : TRUE);
+  EnableWindow(GetDlgItem(hwnd, IDC_CHECK_UPDATES), (checking || installing) ? FALSE : TRUE);
   EnableWindow(GetDlgItem(hwnd, IDC_UPDATE_BTN),
-               (!checking && HasPendingUpdate()) ? TRUE : FALSE);
+               (!checking && !installing && HasPendingUpdate()) ? TRUE : FALSE);
   InvalidateRect(GetDlgItem(hwnd, IDC_UPDATE_BTN), nullptr, TRUE);
   InvalidateRect(GetDlgItem(hwnd, IDC_UPDATE_STATUS), nullptr, TRUE);
 }
@@ -1170,7 +1171,8 @@ void BuildChildren(HWND hwnd) {
   MkStatic(hwnd, IDC_UPDATE_STATUS, L"", pad, syy, contentW, 18, g_fontSection);
   syy += 28;
   MkButton(hwnd, IDC_CHECK_UPDATES, L"Check for updates", pad, syy, 180, 34, BS_OWNERDRAW);
-  MkButton(hwnd, IDC_UPDATE_BTN, L"Update", pad + contentW - 120, syy, 120, 34, BS_OWNERDRAW);
+  MkButton(hwnd, IDC_UPDATE_BTN, L"Update now", pad + contentW - 140, syy, 140, 34,
+           BS_OWNERDRAW);
   syy += 34 + 24;
   MkStatic(hwnd, IDC_DIAG_CAPTION, L"TROUBLESHOOTING", pad, syy, contentW, 16, g_fontSection);
   syy += 28;
@@ -1330,7 +1332,7 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
       if (dis->CtlID == IDC_APPLY || dis->CtlID == IDC_UPDATE_BTN ||
           dis->CtlID == IDC_CARE_PRESET) {
         const wchar_t* label = (g_activeTab == kTabWelcome) ? L"Done" : L"Apply";
-        if (dis->CtlID == IDC_UPDATE_BTN) label = L"Update";
+        if (dis->CtlID == IDC_UPDATE_BTN) label = L"Update now";
         if (dis->CtlID == IDC_CARE_PRESET) label = L"OLED everyday preset";
         DrawPrimaryButton(dis, label, IsWindowEnabled(dis->hwndItem) != FALSE);
         return TRUE;

@@ -16,6 +16,8 @@ enum class SettingsFocus {
 struct SettingsWindowHost {
   Settings* settings = nullptr;
   bool* updateCheckRunning = nullptr;
+  // True while "Update now" downloads / verifies / starts Setup.
+  bool* updateInstallRunning = nullptr;
   // Optional last check message (errors); empty uses default status text.
   std::wstring* updateStatusText = nullptr;
   // Live host pause flags (applied settings + session / fullscreen detectors).

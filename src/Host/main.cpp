@@ -3,6 +3,7 @@
 #include "SettingsStore.h"
 #include "SettingsWindow.h"
 #include "UpdateCheck.h"
+#include "UpdateInstall.h"
 #include "resource.h"
 #include "../Common/PhostideCommon.h"
 #include "../Common/MonitorEnum.h"
@@ -26,6 +27,8 @@ namespace {
 constexpr UINT WM_TRAY = WM_APP + 1;
 constexpr UINT WM_INJECT_DONE = WM_APP + 2;
 constexpr UINT WM_UPDATE_DONE = WM_APP + 3;
+constexpr UINT WM_UPDATE_PROGRESS = WM_APP + 4;  // wParam = percent + 1 (0 = unknown)
+constexpr UINT WM_UPDATE_READY = WM_APP + 5;     // lParam = SetupDownloadResult*
 constexpr UINT_PTR ID_ANIM_TIMER = 1;
 constexpr UINT_PTR ID_REINJECT_TIMER = 2;
 constexpr UINT_PTR ID_IDLE_TIMER = 3;
@@ -81,6 +84,7 @@ bool g_careWasSystemIdle = false;
 bool g_tapBound = false;
 bool g_clearedAccentForTap = false;
 bool g_updateCheckRunning = false;
+bool g_updateInstallRunning = false;
 bool g_showWelcomeAfterInject = false;
 std::atomic<bool> g_injectInFlight{false};
 std::wstring g_updateStatusText;
@@ -565,15 +569,76 @@ void ShowBalloon(const wchar_t* title, const wchar_t* body) {
   Shell_NotifyIconW(NIM_MODIFY, &tip);
 }
 
-void OpenPendingUpdate() {
-  const wchar_t* url = nullptr;
-  if (!g_settings.pendingSetupUrl.empty()) {
-    url = g_settings.pendingSetupUrl.c_str();
-  } else {
-    url = L"https://github.com/teamdoticca/Phostide/releases/latest";
+void OpenReleasePageInBrowser() {
+  const wchar_t* url = L"https://github.com/teamdoticca/Phostide/releases/latest";
+  if (!g_settings.pendingSetupUrl.empty() &&
+      !phostide::IsTrustedSetupUrl(g_settings.pendingSetupUrl)) {
+    url = g_settings.pendingSetupUrl.c_str();  // release page from the API
   }
   ShellExecuteW(nullptr, L"open", url, nullptr, nullptr, SW_SHOWNORMAL);
 }
+
+void ReportUpdateProgress(void*, int percent) {
+  if (g_hwnd) PostMessageW(g_hwnd, WM_UPDATE_PROGRESS, static_cast<WPARAM>(percent + 1), 0);
+}
+
+// Settings › System › "Update now": download the signed Setup, verify it, run it
+// silently and exit. Setup restarts Explorer if the TAP changed and relaunches us.
+void StartUpdateInstall() {
+  if (g_updateInstallRunning) return;
+  if (!HasPendingUpdate() || !phostide::IsTrustedSetupUrl(g_settings.pendingSetupUrl)) {
+    OpenReleasePageInBrowser();
+    return;
+  }
+  g_updateInstallRunning = true;
+  g_updateStatusText = L"Downloading " + g_settings.pendingUpdateTag + L"...";
+  phostide::SettingsWindowRefreshUpdateUi();
+  const std::wstring url = g_settings.pendingSetupUrl;
+  std::thread([url] {
+    auto* result = new phostide::SetupDownloadResult(
+        phostide::DownloadAndVerifySetup(url, &ReportUpdateProgress, nullptr));
+    if (g_hwnd) {
+      PostMessageW(g_hwnd, WM_UPDATE_READY, 0, reinterpret_cast<LPARAM>(result));
+    } else {
+      delete result;
+    }
+  }).detach();
+}
+
+void HandleUpdateProgress(int percent) {
+  if (!g_updateInstallRunning) return;
+  wchar_t text[128];
+  if (percent >= 0) {
+    swprintf_s(text, L"Downloading %s... %d%%", g_settings.pendingUpdateTag.c_str(), percent);
+  } else {
+    swprintf_s(text, L"Downloading %s...", g_settings.pendingUpdateTag.c_str());
+  }
+  g_updateStatusText = text;
+  phostide::SettingsWindowRefreshUpdateUi();
+}
+
+void HandleUpdateReady(HWND hwnd, phostide::SetupDownloadResult* raw) {
+  std::unique_ptr<phostide::SetupDownloadResult> r(raw);
+  std::wstring error;
+  if (r && r->ok) {
+    g_updateStatusText = L"Installing - Phostide will close and start again.";
+    phostide::SettingsWindowRefreshUpdateUi();
+    if (phostide::LaunchSetupForUpdate(r->setupPath, &error)) {
+      // Exit now (restores stock brushes, drops the hook) so Setup can replace files.
+      DestroyWindow(hwnd);
+      return;
+    }
+  } else if (r) {
+    error = r->error;
+  }
+  g_updateInstallRunning = false;
+  g_updateStatusText = (error.empty() ? L"Update failed." : error) +
+                       L" Opened the release page instead.";
+  phostide::SettingsWindowRefreshUpdateUi();
+  OpenReleasePageInBrowser();
+}
+
+void OpenPendingUpdate() { StartUpdateInstall(); }
 
 void OnApplyAppearanceFromSettings() {
   g_animStart = std::chrono::steady_clock::now();
@@ -855,7 +920,7 @@ void ShutdownHost() {
 void StartUpdateCheck(bool manual) {
   if (g_updateCheckRunning) return;
   g_updateCheckRunning = true;
-  g_updateStatusText.clear();
+  if (!g_updateInstallRunning) g_updateStatusText.clear();
   phostide::SettingsWindowRefreshUpdateUi();
   std::thread([manual] {
     auto* payload = new UpdateDonePayload();
@@ -875,7 +940,7 @@ void HandleUpdateDone(UpdateDonePayload* payload) {
   if (!owned) return;
 
   const auto& r = owned->result;
-  g_updateStatusText.clear();
+  if (!g_updateInstallRunning) g_updateStatusText.clear();
   if (r.ok) {
     g_settings.lastUpdateCheckUtc = phostide::UtcNowUnixSeconds();
     if (r.updateAvailable) {
@@ -885,7 +950,7 @@ void HandleUpdateDone(UpdateDonePayload* payload) {
       PersistSettings();
       if (!owned->manual) {
         ShowBalloon(L"Phostide update",
-                    L"A newer version is available. Open Settings from the tray to update.");
+                    L"A newer version is available. Settings > System > Update now installs it.");
       }
     } else {
       g_settings.pendingUpdateTag.clear();
@@ -955,6 +1020,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
       return 0;
     case WM_UPDATE_DONE:
       HandleUpdateDone(reinterpret_cast<UpdateDonePayload*>(lParam));
+      return 0;
+    case WM_UPDATE_PROGRESS:
+      HandleUpdateProgress(static_cast<int>(wParam) - 1);
+      return 0;
+    case WM_UPDATE_READY:
+      HandleUpdateReady(hwnd, reinterpret_cast<phostide::SetupDownloadResult*>(lParam));
       return 0;
     case WM_TRAY:
       if (LOWORD(lParam) == NIN_BALLOONUSERCLICK) {
@@ -1109,6 +1180,7 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR cmdLine, int) {
   phostide::SettingsWindowHost host{};
   host.settings = &g_settings;
   host.updateCheckRunning = &g_updateCheckRunning;
+  host.updateInstallRunning = &g_updateInstallRunning;
   host.updateStatusText = &g_updateStatusText;
   host.sessionLocked = &g_sessionLocked;
   host.fullscreenPaused = &g_fullscreenPaused;

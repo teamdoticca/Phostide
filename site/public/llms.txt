@@ -13,7 +13,7 @@ Full agent brief: https://phostide.doticca.com/llms-full.txt
 - Standalone: does **not** require Windhawk, TranslucentTB, RainbowTaskbar, or any separate taskbar overlay.
 - Mechanism: tray host injects ExplorerTAP into Explorer; paints each taskbar's own `BackgroundFill`. Icons, Start, tray, and clock stay on top. Quitting restores the normal Windows brushes. Does not modify system files.
 - Themes: exactly five built-in — Rainbow, Sea Waves, Weather, Space, Aurora. There is **no theme editor** and no custom theme upload.
-- Privacy: local by default — no account, no telemetry; themes work offline; optional GitHub update check only.
+- Privacy: local by default — no account, no telemetry; themes work offline; optional GitHub update check and in-app Update now (downloads the signed Setup) only.
 - Distribution: signed Setup.exe and portable zip via GitHub Releases (also linked from the site).
 
 ## Settings (tray › Settings…)
@@ -25,7 +25,7 @@ Four tabs — do not confuse them:
 | **Taskbar** | Scope **All** or monitor *N*, then theme + intensity (0–100%). Live preview; **Apply** commits. |
 | **OLED Care** | Hybrid idle fill dim (Off/1/5/10/30m): full session AFK dims all bars; while you work, unused displays dim alone based on **cursor** monitor. Optional experimental chrome dim / clock micro-nudge (per idle bar only), night boost, pause when locked, pause in fullscreen (default on — per covered monitor). **OLED everyday preset** = care-only (does **not** change Taskbar theme/intensity). Live paint/pause status is on the **Monitors** tab per display. |
 | **Monitors** | Per-display **on/off** (default all on). Off = stock Windows taskbar. Live status per row: **painting** / **fullscreen** / **locked** / **off** / **paused** (Enable off). |
-| **System** | App-global: **RENDERING** Auto / GPU / CPU (shared by every bar), Start with Windows, updates. |
+| **System** | App-global: **RENDERING** Auto / GPU / CPU (shared by every bar), Start with Windows, updates (**Update now**: downloads the signed Setup from this repo’s GitHub release, checks the Doticca signature and that it is newer, installs silently, Phostide restarts), Copy diagnostics. |
 
 Defaults on a fresh install / after reset: Aurora, 35% intensity, Auto rendering, OLED Care idle after 5 minutes, all monitors active. First run opens a Welcome step in Settings asking which displays are OLED (unchecked displays keep the stock taskbar). Settings file: `%APPDATA%\Phostide\settings.json`. Tray left-click toggles Enable (SoftSuspend); Exit restores stock brushes. Tray right-click menu: Pause for 1 hour, Pause until restart (never saved — the next start paints again), Theme submenu for all displays. Settings › System › Copy diagnostics copies a redacted report (version, Windows build, displays, settings, recent logs) for bug reports.
 

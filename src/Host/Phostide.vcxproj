@@ -44,6 +44,8 @@
   <ItemGroup>
     <ClInclude Include="Diagnostics.h" />
     <ClInclude Include="Injector.h" />
+    <ClInclude Include="Signing.h" />
+    <ClInclude Include="UpdateInstall.h" />
     <ClInclude Include="SettingsStore.h" />
     <ClInclude Include="SettingsWindow.h" />
     <ClInclude Include="UpdateCheck.h" />
@@ -56,6 +58,8 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Diagnostics.cpp" />
     <ClCompile Include="Injector.cpp" />
+    <ClCompile Include="Signing.cpp" />
+    <ClCompile Include="UpdateInstall.cpp" />
     <ClCompile Include="SettingsStore.cpp" />
     <ClCompile Include="SettingsWindow.cpp" />
     <ClCompile Include="UpdateCheck.cpp" />

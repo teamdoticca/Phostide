@@ -55,7 +55,7 @@ Tray icon › **Settings…** — four tabs with different jobs:
 | **Taskbar** | Apply to **All** or monitor *N*: theme + intensity (preview, then **Apply**) |
 | **OLED Care** | Hybrid idle fill dim (full AFK dims all bars; while you work, unused displays can dim alone); optional experimental chrome/clock care; night boost; pause when locked / in fullscreen (defaults on — fullscreen freezes the **covered display only**); **OLED everyday preset** (care-only — does not change theme/intensity) |
 | **Monitors** | Per-display **on/off** (default all on). Off → stock Windows bar. Live status: painting / fullscreen / locked / off / paused |
-| **System** | App-global only: Auto / GPU / CPU rendering, Start with Windows, updates |
+| **System** | App-global only: Auto / GPU / CPU rendering, Start with Windows, updates (**Update now** downloads the signed Setup from GitHub, verifies it, installs silently and starts Phostide again), Copy diagnostics |
 
 Rendering mode is app-global. Care only paints monitors left on. Tray left-click toggles Enable (soft-pause; Exit restores stock brushes). The tray right-click menu also has **Pause for 1 hour**, **Pause until restart** and a **Theme** submenu (all displays). Settings › System › **Copy diagnostics** copies version, Windows build, displays, settings and recent logs for a bug report (your user folder appears as `%USERPROFILE%`). Defaults on a fresh install (or after deleting the settings file): Aurora, 35% intensity, Auto rendering, OLED Care idle after 5 minutes, all monitors on. The first run opens a short Welcome in Settings to pick which displays are OLED. Settings file: `%APPDATA%\Phostide\settings.json`.
 

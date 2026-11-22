@@ -48,6 +48,12 @@ Unit tests: run `out\Release\PhostideTests.exe` (exit code 0 = all pass). CI (`.
 
 With no `settings.json`, the host saves the defaults (Aurora 35%, OLED Care idle 5 min) and, once inject finishes, opens Settings on a Welcome page (no tab row): "Which displays are OLED?" reusing the Monitors rows. **Done** applies and closes; **Customize** applies and continues on the Taskbar tab. To test it without losing your own settings, start the host with `PHOSTIDE_SETTINGS_DIR` pointing at an empty folder.
 
+## In-app Update now
+
+Settings › System › **Update now** (`UpdateInstall.cpp`) only downloads `Phostide-Setup-*.exe` from `https://github.com/teamdoticca/Phostide/releases/download/`, into `%TEMP%\Phostide\update`. It accepts the file only if its Authenticode signer equals the host's (an unsigned dev host requires `CN=Doticca SRL`) and its file version is newer than `kAppVersion`. Then it runs Setup with `/SILENT /SUPPRESSMSGBOXES /NORESTART /RELAUNCH=1 /LOG="%TEMP%\Phostide\setup.log"` and the host exits. `/RELAUNCH=1` makes Setup start Phostide at `ssDone` (silent mode skips the postinstall `[Run]` entry). Any failure opens the release page. Testing the download against a real release from a dev build needs a build that reports an older version than that release.
+
+`scripts/package-release.ps1 -InstallerOnly` rebuilds and signs just Setup from the existing signed stage (installer script fixes).
+
 ## Dev reinject ritual (fresh DLL)
 
 Use when a new paint landed and Bound must be proven. Prefer this over guessing from a stale session.

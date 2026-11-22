@@ -1,0 +1,39 @@
+#pragma once
+
+#include <cstdint>
+#include <string>
+#include <string_view>
+
+namespace phostide {
+
+// Only Setup assets from this repo's GitHub releases are downloaded in-app;
+// anything else falls back to opening the page in the browser.
+bool IsTrustedSetupUrl(std::wstring_view url);
+
+// "Phostide-Setup-0.1.37-win-x64.exe" from a release download URL, or empty when
+// the last path segment is not a plain *.exe file name.
+std::wstring SetupFileNameFromUrl(std::wstring_view url);
+
+// Signature rule for a downloaded Setup: a signed host requires the exact same
+// signer; an unsigned dev host requires the Doticca publisher.
+bool IsAcceptedSetupSigner(std::wstring_view setupSigner, std::wstring_view hostSigner);
+
+struct SetupDownloadResult {
+  bool ok = false;
+  std::wstring setupPath;
+  std::wstring error;  // short, user-facing
+};
+
+// percent: 0-100, or -1 while the size is unknown.
+using DownloadProgressFn = void (*)(void* context, int percent);
+
+// Download to %TEMP%\Phostide\update, then verify the Authenticode signer and that
+// the Setup's file version is newer than this build. Blocking; call off the UI thread.
+SetupDownloadResult DownloadAndVerifySetup(const std::wstring& url,
+                                           DownloadProgressFn progress, void* context);
+
+// Start the verified Setup silently. It closes Phostide (if still running),
+// installs, restarts Explorer when the TAP changed, then starts Phostide again.
+bool LaunchSetupForUpdate(const std::wstring& setupPath, std::wstring* error);
+
+}  // namespace phostide

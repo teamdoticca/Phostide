@@ -265,8 +265,23 @@ begin
     WizardForm.BringToFront;
 end;
 
-procedure CurStepChanged(CurStep: TSetupStep);
+{ In-app "Update now" runs Setup with /SILENT /RELAUNCH=1. Silent mode skips the
+  postinstall [Run] entry, so start Phostide here once Setup is done. }
+function RelaunchRequested: Boolean;
 begin
+  Result := ExpandConstant('{param:RELAUNCH|0}') = '1';
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  ResultCode: Integer;
+begin
+  if (CurStep = ssDone) and RelaunchRequested then
+  begin
+    ExecAsOriginalUser(ExpandConstant('{app}\{#MyAppExeName}'), '', '', SW_SHOWNORMAL,
+                       ewNoWait, ResultCode);
+    Exit;
+  end;
   if CurStep = ssPostInstall then
   begin
     { Files are on disk; bounce Explorer before [Run] starts Phostide — only

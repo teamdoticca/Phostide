@@ -75,7 +75,7 @@ Tray left-click / Enable soft-pauses paint (**SoftSuspend** keeps `BackgroundFil
   - GPU: smoother when D3D11 works.
   - CPU: safe fallback.
 - Start with Windows (optional).
-- Check for updates (optional GitHub query).
+- Check for updates (optional GitHub query). **Update now** downloads the Setup asset of the latest GitHub release to `%TEMP%\Phostide\update`, refuses it unless it carries the same Authenticode signer as the app (Doticca SRL) and a newer file version, then runs it silently (`/SILENT /RELAUNCH=1`): Phostide exits, Setup installs (restarting Explorer once if the taskbar component changed) and starts Phostide again. Any failure opens the release page instead.
 
 ## Dual-monitor / OLED-only recipe
 
@@ -91,7 +91,7 @@ You may also leave both monitors on and set different themes/intensities per dis
 ## Safety and privacy
 
 - No account, no cloud login, no telemetry.
-- Themes paint offline; network is optional (update check only).
+- Themes paint offline; network is optional (update check and Update now download only).
 - Does not modify Windows system files.
 - Tray › Exit (or crash recovery) restores original taskbar brushes and any chrome opacity/transform changes from OLED Care.
 - License: MIT.

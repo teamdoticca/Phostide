@@ -78,10 +78,11 @@ const fixes = [
   },
   {
     id: "fix-update",
-    title: "Update check fails",
+    title: "Update check or Update now fails",
     items: [
       "Checking for updates contacts api.github.com — needs network briefly.",
       "Themes keep working offline; only the update check needs GitHub.",
+      "Update now downloads the signed Setup from GitHub Releases; if the download or signature check fails, Phostide opens the release page instead.",
       "You can always install the latest Setup.exe from the site or Releases page.",
     ],
   },
