@@ -102,3 +102,29 @@ body {
     @apply text-sm font-medium text-ember;
   }
 }
+
+/* Home hero: OLED desktop frame; the taskbar keeps the real 1920x48 ratio
+   (width / 40) and never gets thinner than a tappable bar on phones. */
+.hero-display {
+  container-type: inline-size;
+  aspect-ratio: 2 / 1;
+}
+@media (min-width: 640px) {
+  .hero-display {
+    aspect-ratio: 16 / 8;
+  }
+}
+@media (min-width: 1024px) {
+  .hero-display {
+    aspect-ratio: 24 / 7;
+  }
+}
+/* Short laptop screens: keep the whole hero, controls included, on screen one. */
+@media (min-width: 1024px) and (max-height: 820px) {
+  .hero-display {
+    aspect-ratio: 32 / 7;
+  }
+}
+.hero-taskbar {
+  height: max(26px, 2.5cqw);
+}

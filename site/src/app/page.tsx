@@ -10,6 +10,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { LatestDownload } from "@/components/LatestDownload";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
+import { HeroDisplay } from "@/components/HeroDisplay";
 import { ThemeStrip } from "@/components/ThemeStrip";
 import { FALLBACK_TAG, resolveReleaseAssets } from "@/lib/releases";
 import { pageMetadata, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from "@/lib/seo";
@@ -32,55 +33,46 @@ export default async function Home() {
       <SiteHeader />
 
       <section className="border-b border-line">
-        <div className="mx-auto grid w-full max-w-site gap-10 px-6 py-16 sm:px-10 sm:py-24 lg:grid-cols-12">
-          <div className="lg:col-span-7">
-            <span className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1 text-xs text-soft">
-              <span className="h-1.5 w-1.5 rounded-full bg-ember" />
-              {tag} · Free · MIT · Windows 11
-            </span>
-            <h1 className="mt-7 text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
-              OLED care for the
-              <br />
-              real Windows taskbar.
-            </h1>
-            <p className="mt-6 max-w-xl text-base leading-relaxed text-soft sm:text-lg">
-              Keep the bar usable. Moving fill while you work, hybrid idle Care
-              when you step away, per‑monitor control — painted into Explorer’s
-              own background, not a floating overlay. Quit, and Windows comes
-              back.
-            </p>
-            <div className="mt-9 flex flex-wrap items-center gap-3">
-              <LatestDownload className="btn-ember">
-                Download Setup.exe
-              </LatestDownload>
-              <LatestDownload kind="zip" className="btn-ghost">
-                Portable zip
-              </LatestDownload>
+        <div className="mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-site flex-col justify-center px-6 py-10 sm:px-10 sm:py-10">
+          <div className="grid gap-8 lg:grid-cols-12 lg:items-end lg:gap-10">
+            <div className="lg:col-span-7">
+              <span className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1 text-xs text-soft">
+                <span className="h-1.5 w-1.5 rounded-full bg-ember" />
+                {tag} · Free · MIT · Windows 11
+              </span>
+              <h1 className="mt-6 text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
+                Burn-in care for the Windows 11 taskbar on OLED screens.
+              </h1>
             </div>
-            <p className="mt-4 text-xs text-soft">
-              Signed per‑user installer · no admin, no account, no telemetry
-            </p>
+            <div className="lg:col-span-5">
+              <p className="max-w-xl text-base leading-relaxed text-soft sm:text-lg">
+                <span className="sm:hidden">
+                  Phostide keeps the taskbar background slowly moving while you
+                  work and dims it when you step away.
+                </span>
+                <span className="hidden sm:inline">
+                  The taskbar never leaves your screen. Phostide keeps its
+                  background slowly moving while you work and dims it when you
+                  step away, so it never sits bright and still for hours. Your
+                  icons stay put, and quitting brings back the normal bar.
+                </span>
+              </p>
+              <div className="mt-6 flex flex-col gap-3 sm:mt-7 sm:flex-row sm:flex-wrap sm:items-center">
+                <LatestDownload className="btn-ember">
+                  Download Setup.exe
+                </LatestDownload>
+                <LatestDownload kind="zip" className="btn-ghost">
+                  Portable zip
+                </LatestDownload>
+              </div>
+              <p className="mt-3 text-xs text-soft sm:mt-4">
+                Dims after 5 idle minutes by default · signed installer, no
+                admin rights, no account
+              </p>
+            </div>
           </div>
-          <div className="lg:col-span-5 lg:pt-14">
-            <div className="divide-y divide-line rounded-2xl border border-line bg-panel text-sm">
-              {[
-                ["What it is", "OLED taskbar care + themes"],
-                ["What it isn't", "Overlay · auto-hide · Windhawk"],
-                ["While you work", "Moving BackgroundFill"],
-                ["When idle", "OLED Care (hybrid dim)"],
-                ["Fullscreen", "Pause covered display only"],
-                ["Monitors", "On/off + live paint status"],
-                ["Made by", "Doticca"],
-              ].map(([k, v]) => (
-                <div
-                  key={k}
-                  className="flex justify-between gap-4 px-6 py-4"
-                >
-                  <span className="text-soft">{k}</span>
-                  <span className="text-right">{v}</span>
-                </div>
-              ))}
-            </div>
+          <div className="mt-7 sm:mt-10">
+            <HeroDisplay themes={themes} />
           </div>
         </div>
       </section>
