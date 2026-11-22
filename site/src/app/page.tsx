@@ -11,7 +11,6 @@ import { LatestDownload } from "@/components/LatestDownload";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { HeroDisplay } from "@/components/HeroDisplay";
-import { ThemeStrip } from "@/components/ThemeStrip";
 import { FALLBACK_TAG, resolveReleaseAssets } from "@/lib/releases";
 import { pageMetadata, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from "@/lib/seo";
 import { themes } from "@/lib/themes";
@@ -77,37 +76,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <section id="themes" className="mx-auto max-w-site px-6 py-20 sm:px-10 sm:py-28">
-        <div className="mb-12 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="eyebrow">Themes</p>
-            <h2 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-              Five dark looks for everyday OLED use.
-            </h2>
-          </div>
-          <p className="max-w-sm text-sm leading-relaxed text-soft">
-            Real taskbar captures. Themes keep the fill moving while you work;
-            pair with OLED Care for idle. Space and Aurora stay the quietest.
-          </p>
-        </div>
-        <div className="space-y-4">
-          {themes.map((theme, i) => (
-            <div
-              key={theme.id}
-              id={`theme-${theme.id}`}
-              className="rounded-xl border border-line bg-panel p-5"
-            >
-              <div className="mb-4 flex justify-between text-sm">
-                <span className="font-medium">{theme.name}</span>
-                <span className="text-soft">{String(i + 1).padStart(2, "0")}</span>
-              </div>
-              <ThemeStrip theme={theme} rounded />
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="border-y border-line bg-panel">
+      <section className="border-b border-line bg-panel">
         <div className="mx-auto grid max-w-site gap-6 px-6 py-20 sm:px-10 sm:py-24 lg:grid-cols-3">
           <div className="mb-2 lg:col-span-3">
             <p className="eyebrow">How it works</p>

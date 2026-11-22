@@ -24,7 +24,7 @@ Five built-in looks. Switch from the tray. There is **no theme editor** and no c
 | **Space** — mostly black with slow scattered stars | ![Space](assets/readme/space.gif) |
 | **Aurora** — magenta curtains over black | ![Aurora](assets/readme/aurora.gif) |
 
-Live captures (and longer loops) are on the [site](https://phostide.doticca.com/#themes). Space and Aurora are the darkest everyday OLED choices.
+Live captures (and longer loops) are on the [site](https://phostide.doticca.com/docs/themes). Space and Aurora are the darkest everyday OLED choices.
 
 ## Why this exists
 
