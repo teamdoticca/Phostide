@@ -11,7 +11,7 @@ namespace phostide {
 
 inline constexpr std::wstring_view kAppName = L"Phostide";
 // Keep in sync with scripts/package-release.ps1 -Version default and GitHub release tags (vX.Y.Z).
-inline constexpr std::wstring_view kAppVersion = L"0.1.35";
+inline constexpr std::wstring_view kAppVersion = L"0.1.36";
 // Stable across installs/updates so Windows taskbar / Start treat us as the same app.
 inline constexpr std::wstring_view kAppUserModelId = L"Doticca.Phostide";
 inline constexpr std::wstring_view kMutexName = L"Local\\Phostide.SingleInstance";
@@ -112,7 +112,7 @@ struct Settings {
   bool pauseWhenFullscreen = true;  // stop paint while FG covers a monitor
   // App-global (System tab) — not per-monitor.
   RenderMode renderMode = RenderMode::Auto;
-  // OLED Care (dedicated Settings tab). Idle is per display (cursor / focused window).
+  // OLED Care (dedicated Settings tab). Idle is per display (cursor monitor only).
   // Applies only to monitors that remain enabled on the Monitors tab.
   int oledCareIdleMinutes = 5;       // 0=Off, else 1/5/10/30
   int oledCareFillIntensity = 8;     // 0-100 while idle
