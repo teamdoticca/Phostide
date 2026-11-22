@@ -146,3 +146,31 @@ TEST(Load_ClampsOutOfRangeCareValues) {
   CHECK(s.oledCareFillIntensity == 100);
   CHECK(static_cast<int>(s.theme) < static_cast<int>(ThemeId::Count));
 }
+
+namespace {
+
+// Current HKCU Run\Phostide value, or "<absent>".
+std::wstring RunEntry() {
+  wchar_t buf[1024]{};
+  DWORD cb = sizeof(buf);
+  if (RegGetValueW(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+                   L"Phostide", RRF_RT_REG_SZ, nullptr, buf, &cb) != ERROR_SUCCESS) {
+    return L"<absent>";
+  }
+  return buf;
+}
+
+}  // namespace
+
+TEST(Save_WithSettingsDirOverride_LeavesAutostartAlone) {
+  // Regression: these tests used to delete the developer's real autostart entry.
+  UseTempSettingsDir(L"autostart");
+  const std::wstring before = RunEntry();
+  Settings s;
+  s.startWithWindows = false;
+  SaveSettings(s);
+  CHECK(RunEntry() == before);
+  s.startWithWindows = true;
+  SaveSettings(s);
+  CHECK(RunEntry() == before);
+}

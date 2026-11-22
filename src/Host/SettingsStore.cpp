@@ -52,6 +52,14 @@ bool ParseBool(const std::string& json, const char* key, bool fallback) {
   return fallback;
 }
 
+// PHOSTIDE_SETTINGS_DIR = tests / isolated dev runs. Those must never rewrite or
+// delete the user's real autostart entry (unit tests used to remove it).
+bool IsolatedSettingsDir() {
+  wchar_t buf[MAX_PATH]{};
+  const DWORD n = GetEnvironmentVariableW(L"PHOSTIDE_SETTINGS_DIR", buf, MAX_PATH);
+  return n > 0 && n < MAX_PATH;
+}
+
 std::wstring Utf8ToWide(const std::string& utf8) {
   if (utf8.empty()) return {};
   const int n = MultiByteToWideChar(CP_UTF8, 0, utf8.data(),
@@ -327,7 +335,7 @@ void SaveSettings(const Settings& settings) {
   if (!settings.monitorSettings.empty()) out << "\n";
   out << "  }\n"
       << "}\n";
-  SetStartWithWindows(settings.startWithWindows);
+  if (!IsolatedSettingsDir()) SetStartWithWindows(settings.startWithWindows);
 }
 
 void SetStartWithWindows(bool enabled) {
