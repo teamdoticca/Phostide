@@ -47,12 +47,13 @@ export const metadata: Metadata = {
   category: "technology",
   keywords: [
     "Phostide",
+    "OLED burn-in taskbar",
+    "OLED taskbar burn-in",
+    "Windows 11 OLED burn-in",
+    "hide taskbar OLED",
+    "dim taskbar OLED",
+    "OLED care",
     "Windows 11 taskbar themes",
-    "OLED taskbar",
-    "animated taskbar",
-    "taskbar background",
-    "Explorer BackgroundFill",
-    "burn-in",
     "Doticca",
   ],
   alternates: {

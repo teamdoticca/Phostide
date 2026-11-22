@@ -152,32 +152,26 @@ def write_svg_copies() -> None:
 
 
 def compose_og(path: Path) -> None:
-    """1200×630 social card: brand-first mark + copy + theme strip."""
+    """1200×630 social card: the promise first, brand small, real theme strip."""
     w, h = 1200, 630
     card = Image.new("RGB", (w, h), (0, 0, 0))
     draw = ImageDraw.Draw(card)
 
-    mark = make_mark(160)
-    card.paste(mark, (72, 180), mark)
+    mark = make_mark(56)
+    card.paste(mark, (80, 72), mark)
+    draw.text((152, 82), "Phostide", font=_font(34), fill=(244, 244, 245))
 
-    title_font = _font(84)
-    sub_font = _font(30, bold=False)
-    draw.text((280, 198), "Phostide", font=title_font, fill=(244, 244, 245))
+    title_font = _font(88)
+    draw.text((80, 190), "Keep your taskbar.", font=title_font, fill=(244, 244, 245))
+    draw.text((80, 292), "Spare your OLED.", font=title_font, fill=(244, 244, 245))
     draw.text(
-        (280, 310),
-        "Animated themes, painted into your real taskbar.",
-        font=sub_font,
-        fill=(138, 138, 147),
+        (80, 420),
+        "OLED burn-in care for Windows 11 · Free & open source",
+        font=_font(30, bold=False),
+        fill=(160, 160, 168),
     )
-    draw.text(
-        (280, 360),
-        "Free · MIT · Windows 11",
-        font=_font(24, bold=False),
-        fill=(138, 138, 147),
-    )
-    draw.rounded_rectangle((280, 420, 420, 426), radius=3, fill=(255, 138, 61))
 
-    strip_h = 48
+    strip_h = 64
     if THEME_STRIP.exists():
         strip = Image.open(THEME_STRIP).convert("RGB")
         strip = ImageOps.fit(strip, (w, strip_h), method=Image.Resampling.LANCZOS)

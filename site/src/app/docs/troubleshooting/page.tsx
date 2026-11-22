@@ -21,7 +21,7 @@ const fixes = [
       "Make sure ExplorerTAP.dll sits next to Phostide.exe.",
       "Tray › Enable Phostide must be checked (left-click toggles soft-pause).",
       "Open Settings…, pick a theme, then click Apply (preview alone does not paint the live bar).",
-      "Raise Taskbar intensity if the bar looks almost black — default is 45%. Very low values (~5%) look like no theme on OLED.",
+      "Raise Taskbar intensity if the bar looks almost black — default is 35% on a fresh install. Very low values (~5%) look like no theme on OLED.",
       "Prefer tray Exit (or Phostide.exe /exit) before relaunching — Force-kill can leave the host unable to start until Explorer is restarted.",
       "Exit from the tray and start Phostide again.",
     ],
@@ -53,7 +53,7 @@ const fixes = [
     items: [
       "Settings › Taskbar › APPLY TO must be the monitor number you intend — All overwrites every display.",
       "Confirm that display is on under the Monitors tab (off displays stay stock Windows).",
-      "Check the live status on each Monitors row (painting / fullscreen / locked / off) if a bar looks frozen.",
+      "Check the live status on each Monitors row (painting / fullscreen / locked / off / paused) if a bar looks frozen.",
       "Both bars still match after a per-monitor Apply: Exit Phostide, restart it (or restart Explorer then relaunch) so the latest TAP is loaded.",
       "Hot-plug a new display: it starts active and inherits the fallback theme/intensity until you Apply a scope for it.",
     ],
@@ -100,7 +100,7 @@ const fixes = [
 export default function TroubleshootingPage() {
   return (
     <div className="min-h-screen bg-void text-zinc-100">
-      <SiteHeader active="/docs/troubleshooting" />
+      <SiteHeader active="/docs" />
 
       <section className="mx-auto max-w-site px-6 py-16 sm:px-10 sm:py-20">
         <Link

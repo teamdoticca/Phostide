@@ -2,17 +2,20 @@ import type { Metadata } from "next";
 
 export const SITE_URL = "https://phostide.doticca.com";
 export const SITE_NAME = "Phostide";
-export const SITE_TAGLINE = "OLED care for the real Windows taskbar";
+export const SITE_TAGLINE = "OLED burn-in care for the Windows 11 taskbar";
+/** Home `<title>`: leads with the search phrase owners actually use. */
+export const HOME_TITLE =
+  "Phostide: OLED taskbar burn-in care for Windows 11 (free)";
 export const SITE_DESCRIPTION =
-  "Phostide keeps OLED taskbars usable: moving fill while you work, hybrid idle Care when you step away, per-monitor control — painted into Explorer’s real BackgroundFill. Free, MIT, signed installer for Windows 11.";
+  "Keep your Windows 11 taskbar visible and spare your OLED. Phostide slowly moves the taskbar background while you work, dims it when you step away and pauses it for fullscreen games. Free, open source, signed installer.";
 export const SITE_OG_DESCRIPTION =
-  "OLED taskbar care without hiding the bar — moving fill, idle dim, per-monitor control. Free · MIT · Windows 11.";
+  "Keep your taskbar. Spare your OLED. A slowly moving taskbar background, idle dimming and per-monitor control for Windows 11. Free and open source.";
 
 export const OG_IMAGE = {
   url: "/og.png",
   width: 1200,
   height: 630,
-  alt: "Phostide — OLED care for the real Windows taskbar",
+  alt: "Phostide — Keep your taskbar. Spare your OLED. OLED burn-in care for Windows 11.",
 } as const;
 
 export const GITHUB_REPO = "https://github.com/teamdoticca/Phostide";

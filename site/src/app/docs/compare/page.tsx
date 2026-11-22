@@ -88,7 +88,7 @@ const rows: { label: string; values: string[] }[] = [
 export default function ComparePage() {
   return (
     <div className="min-h-screen bg-void text-zinc-100">
-      <SiteHeader active="/docs/oled" />
+      <SiteHeader active="/docs/compare" />
 
       <main className="mx-auto max-w-site px-6 py-16 sm:px-10 sm:py-20">
         <Link

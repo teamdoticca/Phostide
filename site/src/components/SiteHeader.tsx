@@ -1,15 +1,11 @@
 import Link from "next/link";
 
 const nav = [
-  { href: "/docs", label: "Docs", match: "/docs" },
   { href: "/docs/install", label: "Install", match: "/docs/install" },
   { href: "/docs/themes", label: "Themes", match: "/docs/themes" },
   { href: "/docs/oled", label: "OLED notes", match: "/docs/oled" },
-  {
-    href: "/docs/troubleshooting",
-    label: "Help & Privacy",
-    match: "/docs/troubleshooting",
-  },
+  { href: "/docs/compare", label: "Compare", match: "/docs/compare" },
+  { href: "/docs", label: "Docs", match: "/docs" },
 ];
 
 export function SiteHeader({ active }: { active?: string }) {
@@ -31,9 +27,7 @@ export function SiteHeader({ active }: { active?: string }) {
         </Link>
         <nav aria-label="Primary" className="hidden items-center gap-5 whitespace-nowrap text-sm text-soft md:flex lg:gap-8">
           {nav.map((item) => {
-            const isActive =
-              active === item.match ||
-              (item.match === "/docs" && active === "/docs");
+            const isActive = active === item.match;
             return (
               <Link
                 key={item.href}

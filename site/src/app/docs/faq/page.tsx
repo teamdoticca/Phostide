@@ -32,7 +32,7 @@ const faqs: { q: string; a: string }[] = [
   },
   {
     q: "How do Settings tabs work?",
-    a: "Tray › Settings… has four tabs. Taskbar: Apply to All or a monitor number, theme and intensity, then Apply. OLED Care: hybrid idle fill dim, optional experimental chrome/clock care, pause when locked / in fullscreen (both default on; fullscreen freezes the covered display only; everyday preset is care-only — it does not change your theme). Monitors: turn displays on or off and see live status (painting / fullscreen / locked / off). System: shared Auto/GPU/CPU rendering, Start with Windows, updates, and Copy diagnostics. Rendering mode is app-global; Care only affects monitors left on in Monitors.",
+    a: "Tray › Settings… has four tabs. Taskbar: Apply to All or a monitor number, theme and intensity, then Apply. OLED Care: hybrid idle fill dim, optional experimental chrome/clock care, pause when locked / in fullscreen (both default on; fullscreen freezes the covered display only; everyday preset is care-only — it does not change your theme). Monitors: turn displays on or off and see live status (painting / fullscreen / locked / off / paused). System: shared Auto/GPU/CPU rendering, Start with Windows, updates, and Copy diagnostics. Rendering mode is app-global; Care only affects monitors left on in Monitors.",
   },
   {
     q: "Can I theme only my OLED and leave the other monitor alone?",
@@ -40,7 +40,7 @@ const faqs: { q: string; a: string }[] = [
   },
   {
     q: "Which theme should I use on an OLED panel?",
-    a: "Start with Space or Aurora — they stay darkest. Keep intensity modest (default is 45%). Weather and Sea Waves are busier; dial intensity down if you want calmer motion. OLED Care › OLED everyday preset sets idle care only (5m idle, low fill, chrome/clock care, night boost) — it does not change your Taskbar theme or intensity.",
+    a: "Start with Space or Aurora — they stay darkest. Keep intensity modest (default is 35% on a fresh install). Weather and Sea Waves are busier; dial intensity down if you want calmer motion. OLED Care › OLED everyday preset sets idle care only (5m idle, low fill, chrome/clock care, night boost) — it does not change your Taskbar theme or intensity.",
   },
   {
     q: "What is OLED Care?",
@@ -48,7 +48,7 @@ const faqs: { q: string; a: string }[] = [
   },
   {
     q: "Does Phostide pause during games?",
-    a: "Yes by default. OLED Care › Pause themes in fullscreen freezes paint on the covered display only (other monitors keep moving). Settings › Monitors shows each bar as painting, fullscreen, locked, or off. Turn the Care toggle off if you want themes to keep moving behind a fullscreen app. Tray Enable / SoftSuspend stays separate.",
+    a: "Yes by default. OLED Care › Pause themes in fullscreen freezes paint on the covered display only (other monitors keep moving). Settings › Monitors shows each bar as painting, fullscreen, locked, off, or paused. Turn the Care toggle off if you want themes to keep moving behind a fullscreen app. Tray Enable / SoftSuspend stays separate.",
   },
   {
     q: "How do I pause the taskbar for a presentation or screen recording?",
@@ -115,7 +115,7 @@ export default function FaqPage() {
         </Link>
         <p className="mt-6 eyebrow">FAQ</p>
         <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl">
-          Short answers agents (and humans) need.
+          Short answers to common questions.
         </h1>
         <p className="mt-5 max-w-2xl text-lg text-soft">
           Canonical facts about mechanism, Settings tabs, dual‑monitor OLED,

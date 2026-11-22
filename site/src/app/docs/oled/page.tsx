@@ -115,7 +115,7 @@ export default function OledPage() {
             for a care defaults pack only — it does not change your Taskbar theme
             or intensity. Care only paints monitors left on in Monitors. The{" "}
             <strong className="font-medium text-zinc-100">Monitors</strong> tab
-            shows live status (painting / fullscreen / locked / off) per display.
+            shows live status (painting / fullscreen / locked / off / paused) per display.
           </p>
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
             <SettingsShot id="oled-care" />

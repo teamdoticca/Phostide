@@ -56,7 +56,7 @@ export default function ThemesPage() {
             <li>Click Apply — the live bar(s) update immediately.</li>
           </ol>
           <p className="mt-4 text-soft">
-            Default intensity is 45%. Lower keeps OLED quieter; higher makes
+            Default intensity is 35% on a fresh install. Lower keeps OLED quieter; higher makes
             motion and color stronger. All five themes use the same GPU or CPU
             painter (System › RENDERING) — the look matches; GPU is smoother and
             lighter on the CPU.

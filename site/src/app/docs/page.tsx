@@ -93,15 +93,7 @@ export default async function DocsPage() {
             </h1>
             <p className="mt-5 max-w-xl text-lg text-soft">
               Short pages. Install it, set OLED Care and themes from the tray
-              (all displays or one), fix the odd hiccup. Agent briefs:{" "}
-              <a href="/llms.txt" className="text-ember hover:underline">
-                llms.txt
-              </a>{" "}
-              ·{" "}
-              <a href="/llms-full.txt" className="text-ember hover:underline">
-                llms-full.txt
-              </a>
-              .
+              (all displays or one), fix the odd hiccup.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <LatestDownload className="btn-ember">

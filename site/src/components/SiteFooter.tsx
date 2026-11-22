@@ -12,12 +12,15 @@ export function SiteFooter() {
           <Link href="/docs/faq" className="hover:text-white">
             FAQ
           </Link>
-          <Link href="/docs/compare" className="hover:text-white">
-            Compare
+          <Link href="/docs/troubleshooting" className="hover:text-white">
+            Troubleshooting
           </Link>
           <Link href="/docs/privacy" className="hover:text-white">
             Privacy
           </Link>
+          <a href="/llms.txt" className="hover:text-white">
+            llms.txt
+          </a>
           <a
             href="https://github.com/teamdoticca/Phostide"
             className="hover:text-white"

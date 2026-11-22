@@ -199,7 +199,7 @@ export default async function InstallPage() {
                   <span className="text-zinc-100">Monitors</span> tab — turn
                   individual displays on or off (default: all on). Off displays
                   keep a stock Windows taskbar. Each row shows live status:{" "}
-                  painting / fullscreen / locked / off
+                  painting / fullscreen / locked / off / paused
                 </li>
                 <li>
                   <span className="text-zinc-100">OLED Care</span> tab —
@@ -251,7 +251,7 @@ export default async function InstallPage() {
               <li>
                 <span className="text-zinc-100">Monitors</span> — uncheck a
                 display to leave its taskbar alone. Each row shows live status
-                (painting / fullscreen / locked / off). Grayed chips on the
+                (painting / fullscreen / locked / off / paused). Grayed chips on the
                 Taskbar tab mean that display is off here; you can still edit its
                 look for when you turn it back on.
               </li>

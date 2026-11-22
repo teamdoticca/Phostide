@@ -107,24 +107,76 @@ body {
    (width / 40) and never gets thinner than a tappable bar on phones. */
 .hero-display {
   container-type: inline-size;
-  aspect-ratio: 2 / 1;
+  aspect-ratio: 16 / 11;
 }
 @media (min-width: 640px) {
   .hero-display {
-    aspect-ratio: 16 / 8;
+    aspect-ratio: 16 / 9;
   }
 }
 @media (min-width: 1024px) {
   .hero-display {
-    aspect-ratio: 24 / 7;
+    aspect-ratio: 24 / 8;
   }
 }
 /* Short laptop screens: keep the whole hero, controls included, on screen one. */
 @media (min-width: 1024px) and (max-height: 820px) {
   .hero-display {
-    aspect-ratio: 32 / 7;
+    aspect-ratio: 32 / 8;
   }
 }
 .hero-taskbar {
   height: max(26px, 2.5cqw);
+}
+.hero-window {
+  bottom: calc(max(26px, 2.5cqw) + 6%);
+  font-size: clamp(7px, 1.15cqw, 14px);
+}
+@media (min-width: 1024px) and (max-height: 820px) {
+  .hero-window {
+    font-size: clamp(7px, 0.95cqw, 13px);
+  }
+}
+@container (max-width: 560px) {
+  .hero-sidebar {
+    display: none;
+  }
+}
+@container (max-width: 760px) {
+  .hero-terminal {
+    display: none;
+  }
+}
+/* The last code line types itself in, then the caret blinks. */
+.hero-typing {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  white-space: pre;
+  width: 0;
+  animation: hero-type 2.8s steps(49, end) 0.5s forwards;
+}
+@keyframes hero-type {
+  to {
+    width: 49ch;
+  }
+}
+.hero-caret {
+  animation: hero-caret 1.05s steps(1, end) infinite;
+}
+@keyframes hero-caret {
+  50% {
+    opacity: 0;
+  }
+}
+.hero-progress {
+  width: 0;
+  animation-name: hero-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+@keyframes hero-progress {
+  to {
+    width: 100%;
+  }
 }
