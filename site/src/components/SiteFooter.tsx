@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 
 export function SiteFooter() {
@@ -27,16 +26,6 @@ export function SiteFooter() {
             GitHub
           </a>
         </nav>
-      </div>
-      <div className="strip">
-        <Image
-          src="/themes/rainbow.png"
-          alt=""
-          width={1920}
-          height={48}
-          className="h-auto w-full"
-          unoptimized
-        />
       </div>
     </footer>
   );

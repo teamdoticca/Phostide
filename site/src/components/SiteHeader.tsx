@@ -18,7 +18,7 @@ export function SiteHeader({ active }: { active?: string }) {
       <div className="mx-auto flex h-16 max-w-site items-center justify-between px-6 sm:px-10">
         <Link
           href="/"
-          className="flex items-center gap-3 text-[15px] font-semibold text-zinc-100"
+          className="flex shrink-0 items-center gap-3 text-[15px] font-semibold text-zinc-100"
         >
           <img
             src="/phostide-mark.svg"
@@ -29,7 +29,7 @@ export function SiteHeader({ active }: { active?: string }) {
           />
           Phostide
         </Link>
-        <nav aria-label="Primary" className="hidden items-center gap-8 text-sm text-soft md:flex">
+        <nav aria-label="Primary" className="hidden items-center gap-5 whitespace-nowrap text-sm text-soft md:flex lg:gap-8">
           {nav.map((item) => {
             const isActive =
               active === item.match ||
@@ -47,10 +47,10 @@ export function SiteHeader({ active }: { active?: string }) {
             );
           })}
         </nav>
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <a
             href="https://github.com/teamdoticca/Phostide"
-            className="hidden px-3 py-2 text-sm text-soft transition-colors hover:text-white sm:inline"
+            className="hidden px-3 py-2 text-sm text-soft transition-colors hover:text-white lg:inline"
             rel="noreferrer"
           >
             GitHub
