@@ -47,8 +47,8 @@ CloseApplications=force
 RestartApplications=no
 ; Same folder + AppId on upgrade so Windows keeps treating this as one app.
 UsePreviousAppDir=yes
-; Do not prefix Local\ — Inno tries Local\ and Global\ itself.
-AppMutex=Phostide.SingleInstance
+; No AppMutex: Inno's check only tells the user to close Phostide by hand (OK/Cancel).
+; Setup closes it itself in PrepareToInstall / usUninstall (CloseRunningPhostide).
 VersionInfoVersion={#MyAppVersion}.0
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoProductName={#MyAppName}
@@ -126,30 +126,6 @@ end;
 
 { Never Exec Phostide.exe here — builds before 0.1.4 ignore /exit and START the app,
   which spawned MessageBoxes behind the Setup wizard. }
-procedure CloseRunningPhostide;
-var
-  Wnd: HWND;
-  I: Integer;
-  ResultCode: Integer;
-begin
-  Wnd := FindWindowByClassName('PhostideTray');
-  if Wnd <> 0 then
-  begin
-    PostMessageW(Wnd, 16, 0, 0); { WM_CLOSE }
-    for I := 1 to 50 do
-    begin
-      if FindWindowByClassName('PhostideTray') = 0 then
-        Break;
-      Sleep(100);
-    end;
-  end;
-
-  { Last resort if the tray ignored WM_CLOSE. }
-  if FindWindowByClassName('PhostideTray') <> 0 then
-    Exec('taskkill.exe', '/IM Phostide.exe /F', '', SW_HIDE,
-         ewWaitUntilTerminated, ResultCode);
-end;
-
 { Never MsgBox here — it can sit behind the wizard and look like a hang.
   Use the wizard/uninstall status line only (always visible in-window). }
 procedure SetShellRestartStatus(const Msg: String);
@@ -166,6 +142,42 @@ begin
     UninstallProgressForm.StatusLabel.Update;
     UninstallProgressForm.BringToFront;
   end;
+end;
+
+{ Host single-instance mutex (Local\Phostide.SingleInstance; CheckForMutexes
+  tries Local\ and Global\ itself). Held until the host process exits. }
+function PhostideRunning: Boolean;
+begin
+  Result := (FindWindowByClassName('PhostideTray') <> 0) or
+            CheckForMutexes('Phostide.SingleInstance');
+end;
+
+procedure CloseRunningPhostide;
+var
+  Wnd: HWND;
+  I: Integer;
+  ResultCode: Integer;
+begin
+  if not PhostideRunning then
+    Exit;
+  SetShellRestartStatus('Closing Phostide…');
+  Wnd := FindWindowByClassName('PhostideTray');
+  if Wnd <> 0 then
+    PostMessageW(Wnd, 16, 0, 0); { WM_CLOSE — normal Exit, restores stock fill }
+
+  { Wait for the process to really end (mutex released), not just the window:
+    the host may be finishing an Explorer restart before it exits. }
+  for I := 1 to 150 do
+  begin
+    if not PhostideRunning then
+      Break;
+    Sleep(100);
+  end;
+
+  { Last resort if the tray ignored WM_CLOSE. }
+  if PhostideRunning then
+    Exec('taskkill.exe', '/IM Phostide.exe /F', '', SW_HIDE,
+         ewWaitUntilTerminated, ResultCode);
 end;
 
 procedure SleepWithStatus(TotalMs: Integer; const Msg: String);

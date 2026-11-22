@@ -5,6 +5,8 @@
   [switch]$SkipBuild,
   [switch]$SkipCodeSign,
   [switch]$SkipInno,
+  # Rebuild + sign only Setup from the existing signed stage (installer script fixes).
+  [switch]$InstallerOnly,
   [string]$TrustedSigningMetadata = ""
 )
 
@@ -144,7 +146,11 @@ function Resolve-IsccPath {
   throw "ISCC.exe not found — install Inno Setup 6+"
 }
 
-if (-not $SkipBuild -or -not (Test-Path (Join-Path $outDir "Phostide.exe"))) {
+if ($InstallerOnly -and -not (Test-Path (Join-Path $stage "Phostide.exe"))) {
+  throw "-InstallerOnly needs an existing stage: $stage"
+}
+
+if (-not $InstallerOnly -and (-not $SkipBuild -or -not (Test-Path (Join-Path $outDir "Phostide.exe")))) {
   Write-Host "Building native solution..."
   $msbuild = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
     -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe |
@@ -154,20 +160,24 @@ if (-not $SkipBuild -or -not (Test-Path (Join-Path $outDir "Phostide.exe"))) {
   if ($LASTEXITCODE -ne 0) { throw "MSBuild failed ($LASTEXITCODE)" }
 }
 
-if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
-New-Item -ItemType Directory -Force -Path $stage | Out-Null
-Copy-Item (Join-Path $outDir "Phostide.exe") $stage -Force
-Copy-Item (Join-Path $outDir "ExplorerTAP.dll") $stage -Force
-Copy-Item (Join-Path $outDir "Themes.hlsl") $stage -Force
-Copy-Item (Join-Path $root "README.md") $stage -Force
-Copy-Item (Join-Path $root "LICENSE") $stage -Force
+if (-not $InstallerOnly) {
+  if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
+  New-Item -ItemType Directory -Force -Path $stage | Out-Null
+  Copy-Item (Join-Path $outDir "Phostide.exe") $stage -Force
+  Copy-Item (Join-Path $outDir "ExplorerTAP.dll") $stage -Force
+  Copy-Item (Join-Path $outDir "Themes.hlsl") $stage -Force
+  Copy-Item (Join-Path $root "README.md") $stage -Force
+  Copy-Item (Join-Path $root "LICENSE") $stage -Force
+}
 
 $metadataPath = $null
 if (-not $SkipCodeSign) {
   $metadataPath = Resolve-TrustedSigningMetadataPath -Override $TrustedSigningMetadata
   Ensure-AzTrustedSigningAuth
-  Invoke-TrustedSignFile -FilePath (Join-Path $stage "Phostide.exe") -MetadataPath $metadataPath
-  Invoke-TrustedSignFile -FilePath (Join-Path $stage "ExplorerTAP.dll") -MetadataPath $metadataPath
+  if (-not $InstallerOnly) {
+    Invoke-TrustedSignFile -FilePath (Join-Path $stage "Phostide.exe") -MetadataPath $metadataPath
+    Invoke-TrustedSignFile -FilePath (Join-Path $stage "ExplorerTAP.dll") -MetadataPath $metadataPath
+  }
 }
 
 if (-not $SkipInno) {
@@ -190,9 +200,11 @@ if (-not $SkipInno) {
   Write-Host "Installer: $setup"
 }
 
-if (Test-Path $zip) { Remove-Item $zip -Force }
-Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $zip
-Write-Host "Packed $zip"
+if (-not $InstallerOnly) {
+  if (Test-Path $zip) { Remove-Item $zip -Force }
+  Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $zip
+  Write-Host "Packed $zip"
+}
 
 Write-Host @"
 Publish with:
