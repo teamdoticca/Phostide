@@ -50,6 +50,9 @@ DWORD WINAPI PipeThread(LPVOID) {
 }
 
 DWORD WINAPI InitThread(LPVOID) {
+  // Announce this build right away (before any bind) so a host started while
+  // paint is paused can tell the mapped TAP is current and not bounce Explorer.
+  phostide::WriteTapVersionStamp();
   // Pipe + host-death watch first (safe, no XAML).
   CreateThread(nullptr, 0, PipeThread, nullptr, 0, nullptr);
   phostide::TaskbarAppearanceService::Instance().WatchHostMutex();

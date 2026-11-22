@@ -33,6 +33,12 @@ void SetBoundEvent() {
     SetEvent(ev);
     CloseHandle(ev);
   }
+  WriteTapVersionStamp();
+}
+
+}  // namespace
+
+void WriteTapVersionStamp() {
   // Stamp the running TAP build so the host can detect a stale in-Explorer DLL
   // after an upgrade (XAML Diagnostics pins the module until Explorer restarts).
   wchar_t temp[MAX_PATH]{};
@@ -56,6 +62,8 @@ void SetBoundEvent() {
     CloseHandle(f);
   }
 }
+
+namespace {
 
 void ClearBoundEvent() {
   if (HANDLE ev = OpenEventW(EVENT_MODIFY_STATE, FALSE, kTapBoundEvent.data())) {
@@ -176,8 +184,14 @@ void TaskbarAppearanceService::RegisterBackground(wuxs::Shape const& shape, HWND
   TaskbarVisual* target = nullptr;
   bool trayCorrected = false;
   bool needsBind = false;
+  bool isNew = false;
+  bool mayPaint = false;
   {
     std::lock_guard lock(mutex_);
+    // Bind only once the host told us what to paint, and never while paint is
+    // off: Explorer re-registers BackgroundFill every few minutes, which used to
+    // repaint a soft-paused bar, and a fresh TAP flashed its Rainbow default.
+    mayPaint = haveHostCommand_.load() && command_.enabled != 0 && !suspended_.load();
     for (auto& tv : taskbars_) {
       if (tv.background == shape) {
         // Hit-test registration knows the real tray HWND; prefer it over size guess.
@@ -206,7 +220,29 @@ void TaskbarAppearanceService::RegisterBackground(wuxs::Shape const& shape, HWND
       taskbars_.push_back(std::move(tv));
       target = &taskbars_.back();
       needsBind = true;
+      isNew = true;
     }
+  }
+
+  // Track size for every registered shape (once), even if it binds later via Apply.
+  if (isNew && target) {
+    try {
+      target->background.SizeChanged([this, shape](auto&&, auto&&) {
+        std::lock_guard lock(mutex_);
+        for (auto& tv : taskbars_) {
+          if (tv.background == shape && tv.bound) {
+            RefreshGeomAndBitmap(tv);
+          }
+        }
+      });
+    } catch (...) {
+    }
+  }
+
+  if (needsBind && !mayPaint) {
+    LogService(haveHostCommand_.load() ? L"Registered fill; paint off - not binding"
+                                       : L"Registered fill; waiting for host command");
+    return;
   }
 
   if (trayCorrected && target && !needsBind) {
@@ -221,17 +257,6 @@ void TaskbarAppearanceService::RegisterBackground(wuxs::Shape const& shape, HWND
   }
 
   if (target && needsBind && BindVisual(*target)) {
-    try {
-      target->background.SizeChanged([this, shape](auto&&, auto&&) {
-        std::lock_guard lock(mutex_);
-        for (auto& tv : taskbars_) {
-          if (tv.background == shape && tv.bound) {
-            RefreshGeomAndBitmap(tv);
-          }
-        }
-      });
-    } catch (...) {
-    }
     boundCount_.fetch_add(1);
     SignalBound();
     EnsureUiTimer();
@@ -343,6 +368,9 @@ void TaskbarAppearanceService::Apply(const ThemeCommand& cmd) {
     const auto prevMode = static_cast<RenderMode>(prev.renderMode);
     const bool wasLive = prev.enabled != 0 && prev.paused == 0;
     command_ = cmd;
+    // From here on registered fills may bind (the live path below binds the
+    // ones that registered while we were waiting).
+    haveHostCommand_.store(true);
     const auto mode = static_cast<RenderMode>(command_.renderMode);
     if (mode != prevMode && mode != RenderMode::Cpu) {
       gpuFailedThisSession_ = false;

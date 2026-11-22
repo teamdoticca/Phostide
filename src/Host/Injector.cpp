@@ -433,22 +433,30 @@ bool InjectExplorerTap(std::wstring* errorOut, const ThemeCommand* reapply) {
     }
   }
 
+  // A fresh TAP binds nothing until the host's first command (so it never flashes
+  // its built-in Rainbow default), and a TAP left loaded by a previous host is
+  // soft-suspended. Either way: hand it the current command, then decide.
+  const auto handOffAndCheckBound = [&]() -> bool {
+    if (!reapply) return BoundEventIsSet();
+    bool sent = false;
+    for (int i = 0; i < 10 && !(sent = SendThemeCommand(*reapply)); ++i) Sleep(100);
+    if (!sent) LogInject(L"could not deliver command to TAP pipe");
+    if (!reapply->enabled || reapply->paused) {
+      // Nothing is supposed to paint (tray pause / locked): Bound never comes,
+      // and that is not an inject failure — do not bounce Explorer for it.
+      LogInject(L"paint off or paused; TAP ready, not waiting for Bound");
+      return true;
+    }
+    // First bind can include D3D11 device creation (~5 s observed).
+    for (int i = 0; i < 150 && !BoundEventIsSet(); ++i) Sleep(100);
+    return BoundEventIsSet();
+  };
+
   if (!HookTapIntoTray(dest, errorOut)) {
     return false;
   }
-  // Host relaunch into the same Explorer (Exit → start again): the TAP is still
-  // loaded, so Ready is already set and nothing binds on its own — fills are
-  // soft-suspended until a command arrives. The host's startup Apply may have
-  // rebound them *before* ResetBoundEvent above cleared the signal, so re-send
-  // the command and give the TAP dispatcher a moment before bouncing Explorer.
-  if (!BoundEventIsSet() && reapply && reapply->enabled && !reapply->paused) {
-    LogInject(L"not Bound after hook; reapply command and wait");
-    SendThemeCommand(*reapply);
-    for (int i = 0; i < 30 && !BoundEventIsSet(); ++i) Sleep(100);
-    if (BoundEventIsSet()) LogInject(L"Bound after reapply (no explorer restart)");
-  }
   // ready event can fire after ixde gave up (TapSite signals anyway). Require Bound.
-  if (!BoundEventIsSet()) {
+  if (!handOffAndCheckBound()) {
     LogInject(L"TAP ready but not Bound — retry after explorer restart");
     if (!RestartExplorerShell(/*explainToUser=*/false)) {
       if (errorOut) *errorOut = L"ExplorerTAP installed but BackgroundFill never bound";
@@ -456,7 +464,7 @@ bool InjectExplorerTap(std::wstring* errorOut, const ThemeCommand* reapply) {
     }
     if (!CopyTapToCache(dest, errorOut)) return false;
     if (!HookTapIntoTray(dest, errorOut)) return false;
-    if (!BoundEventIsSet()) {
+    if (!handOffAndCheckBound()) {
       if (errorOut) *errorOut = L"ExplorerTAP installed but BackgroundFill never bound";
       return false;
     }

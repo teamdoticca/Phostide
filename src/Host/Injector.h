@@ -8,8 +8,9 @@ namespace phostide {
 
 // Copies ExplorerTAP.dll next to a writable temp path and loads it into the
 // taskbar thread via WH_CALLWNDPROC (same family of technique as TranslucentTB).
-// reapply: current host command, re-sent if a TAP already loaded in this Explorer
-// has not signaled Bound — avoids an Explorer restart on host relaunch.
+// reapply: current host command, handed to the TAP right after the hook (a fresh
+// TAP binds nothing until it arrives). With paint off / paused, Bound is not
+// required, so starting paused never restarts Explorer.
 bool InjectExplorerTap(std::wstring* errorOut = nullptr,
                        const struct ThemeCommand* reapply = nullptr);
 // Tell TAP to restore the stock taskbar fill (enabled=0).

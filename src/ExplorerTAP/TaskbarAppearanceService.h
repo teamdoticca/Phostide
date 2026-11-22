@@ -39,6 +39,11 @@ struct TaskbarVisual {
   bool gpuActive = false;
 };
 
+// Write %TEMP%\Phostide\tap.version for this TAP build. Called as soon as the TAP
+// loads (not only on bind): a TAP loaded while paint is paused never binds, and a
+// missing/old stamp made the next host think a stale TAP was mapped and bounce.
+void WriteTapVersionStamp();
+
 class TaskbarAppearanceService {
  public:
   static TaskbarAppearanceService& Instance();
@@ -85,6 +90,9 @@ class TaskbarAppearanceService {
   ThemeCommand command_{};
   std::atomic<bool> running_{false};
   std::atomic<bool> suspended_{false};  // tray Enable off — keep fill refs across Unbind
+  // False until the host's first ThemeCommand arrives. A fresh TAP must not paint
+  // its built-in defaults (Rainbow 45%) before it knows the user's theme / pause.
+  std::atomic<bool> haveHostCommand_{false};
   std::atomic<int> boundCount_{0};
   unsigned paintFrame_{0};
   std::thread watchThread_;
