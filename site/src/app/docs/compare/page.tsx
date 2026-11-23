@@ -288,6 +288,32 @@ export default function ComparePage() {
           </div>
         </section>
 
+        <section className="mt-12 grid gap-4 sm:grid-cols-2">
+          {[
+            {
+              href: "/docs/compare/monitor-taskbar-detection",
+              title: "Phostide with your monitor’s OLED Care",
+              body: "How Taskbar Detection and Phostide work together.",
+            },
+            {
+              href: "/docs/compare/auto-hide",
+              title: "Auto-hide or keep the taskbar?",
+              body: "What hiding protects, what it costs, and when it’s the right call.",
+            },
+          ].map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className="group rounded-xl border border-line p-6 transition-colors hover:border-zinc-600"
+            >
+              <span className="inline-flex items-center gap-2 font-semibold group-hover:text-ember">
+                {l.title} <IconArrowRight />
+              </span>
+              <span className="mt-1 block text-sm text-soft">{l.body}</span>
+            </Link>
+          ))}
+        </section>
+
         <section className="mt-16 grid gap-5 md:grid-cols-3">
           <div className="rounded-xl border border-line bg-panel p-6">
             <IconLayers className="h-5 w-5 text-ember" />
@@ -333,7 +359,7 @@ export default function ComparePage() {
             Install the signed Setup.exe (per‑user, no admin) and open Settings
             from the tray. Pick a theme on the Taskbar tab, set OLED Care (or
             use the everyday preset), and turn off any LCD on the Monitors tab.
-            Space and Aurora at a modest intensity are the quietest everyday
+            Aurora at a modest intensity is the quietest everyday
             look.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">

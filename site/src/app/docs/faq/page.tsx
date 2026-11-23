@@ -36,11 +36,11 @@ const faqs: { q: string; a: string }[] = [
   },
   {
     q: "Can I theme only my OLED and leave the other monitor alone?",
-    a: "Yes. Open Settings › Monitors and uncheck the non-OLED display. Then on the Taskbar tab, Apply to the OLED monitor number, pick Space or Aurora at a modest intensity, and Apply. You can also leave both on and set different themes per display. OLED Care follows the same on/off list.",
+    a: "Yes. Open Settings › Monitors and uncheck the non-OLED display. Then on the Taskbar tab, Apply to the OLED monitor number, pick Aurora (or Space) at a modest intensity, and Apply. You can also leave both on and set different themes per display. OLED Care follows the same on/off list.",
   },
   {
     q: "Which theme should I use on an OLED panel?",
-    a: "Start with Space or Aurora — they stay darkest. Keep intensity modest (default is 35% on a fresh install). Weather and Sea Waves are busier; dial intensity down if you want calmer motion. OLED Care › OLED everyday preset sets idle care only (5m idle, low fill, chrome/clock care, night boost) — it does not change your Taskbar theme or intensity.",
+    a: "Start with Aurora — it is the darkest on average and the fresh-install default. Space is near-black most of the time but brightens for a nebula pass in each 35-second loop. Keep intensity modest (default is 35% on a fresh install). Weather and Sea Waves are busier; dial intensity down if you want calmer motion. OLED Care › OLED everyday preset sets idle care only (5m idle, low fill, chrome/clock care, night boost) — it does not change your Taskbar theme or intensity.",
   },
   {
     q: "Does it work with my monitor’s own OLED Care or Taskbar Detection?",

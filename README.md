@@ -24,7 +24,7 @@ Five built-in looks. Switch from the tray. There is **no theme editor** and no c
 | **Space** — mostly black with slow scattered stars | ![Space](assets/readme/space.gif) |
 | **Aurora** — magenta curtains over black | ![Aurora](assets/readme/aurora.gif) |
 
-Live captures (and longer loops) are on the [site](https://phostide.doticca.com/docs/themes). Space and Aurora are the darkest everyday OLED choices.
+Live captures (and longer loops) are on the [site](https://phostide.doticca.com/docs/themes). Aurora is the darkest on average and the best everyday OLED choice; Space is near-black most of the time but brightens for a nebula pass in each 35-second loop.
 
 ## Why this exists
 
@@ -79,7 +79,7 @@ Rendering mode is app-global. Care only paints monitors left on. Tray left-click
 
 ### Multi-monitor OLED
 
-On an OLED + LCD setup you can theme only the OLED: **Monitors** → uncheck the LCD; **Taskbar** → Apply to the OLED monitor → **Space** or **Aurora** at modest intensity → **Apply**. Optionally enable **OLED Care** or click **OLED everyday preset** (idle care only — your Taskbar theme stays put). Residual static chrome can still contribute to burn-in when Care is off.
+On an OLED + LCD setup you can theme only the OLED: **Monitors** → uncheck the LCD; **Taskbar** → Apply to the OLED monitor → **Aurora** (or **Space**) at modest intensity → **Apply**. Optionally enable **OLED Care** or click **OLED everyday preset** (idle care only — your Taskbar theme stays put). Residual static chrome can still contribute to burn-in when Care is off.
 
 ## Requirements
 

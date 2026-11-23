@@ -40,8 +40,14 @@ const cards = [
   {
     href: "/docs/oled",
     icon: IconDisplay,
-    title: "OLED notes",
-    body: "Full OLED taskbar solution: moving fill, idle Care, per-monitor, honest limits.",
+    title: "Reduce OLED burn-in",
+    body: "Windows settings, your monitor’s care, the taskbar, and where Phostide fits.",
+  },
+  {
+    href: "/docs/oled-laptops",
+    icon: IconDisplay,
+    title: "OLED laptops",
+    body: "Taskbar care on a laptop screen without monitor menus.",
   },
   {
     href: "/docs/themes",
@@ -53,7 +59,13 @@ const cards = [
     href: "/docs/compare",
     icon: IconLayers,
     title: "Compare approaches",
-    body: "Auto-hide, overlays, idle fade mods vs usable bar + Care.",
+    body: "Auto-hide, monitor Taskbar Detection, overlays and idle mods vs Phostide.",
+  },
+  {
+    href: "/docs/compare/monitor-taskbar-detection",
+    icon: IconLayers,
+    title: "With your monitor’s OLED Care",
+    body: "Run Phostide alongside ASUS, MSI or Philips taskbar dimming.",
   },
   {
     href: "/docs/troubleshooting",

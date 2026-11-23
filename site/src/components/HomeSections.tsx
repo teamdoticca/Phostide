@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { IconArrowRight } from "@/components/Icons";
 import { SettingsShot } from "@/components/SettingsShot";
+import { SettingsViewer } from "@/components/SettingsViewer";
 import { HOME_FAQ } from "@/lib/homeFaq";
 import { SITE_NAME, absoluteUrl } from "@/lib/seo";
 
@@ -294,6 +295,28 @@ export function MultiMonitorSection() {
             </dl>
           </div>
           <SettingsShot id="monitors" />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* S7 · Inside the app                                                  */
+/* ------------------------------------------------------------------ */
+
+export function InsideAppSection() {
+  return (
+    <section className={SECTION}>
+      <div className={INNER}>
+        <h2 className={H2}>A small app with four clear tabs.</h2>
+        <p className={LEDE}>
+          Everything lives in one Settings window, opened from the tray. On
+          first run it asks which displays are OLED and starts with Aurora at
+          35% and OLED Care after 5 idle minutes.
+        </p>
+        <div className="mt-16">
+          <SettingsViewer />
         </div>
       </div>
     </section>

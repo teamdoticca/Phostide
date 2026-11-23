@@ -77,6 +77,13 @@ export const SITE_ROUTES = [
   { path: "/docs/oled", priority: 0.85, changeFrequency: "monthly" as const },
   { path: "/docs/compare", priority: 0.8, changeFrequency: "monthly" as const },
   {
+    path: "/docs/compare/monitor-taskbar-detection",
+    priority: 0.7,
+    changeFrequency: "monthly" as const,
+  },
+  { path: "/docs/compare/auto-hide", priority: 0.7, changeFrequency: "monthly" as const },
+  { path: "/docs/oled-laptops", priority: 0.75, changeFrequency: "monthly" as const },
+  {
     path: "/docs/troubleshooting",
     priority: 0.7,
     changeFrequency: "monthly" as const,

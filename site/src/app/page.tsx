@@ -3,6 +3,7 @@ import Link from "next/link";
 import { IconDownload } from "@/components/Icons";
 import {
   HomeFaqSection,
+  InsideAppSection,
   MultiMonitorSection,
   ProblemSection,
   TradeOffSection,
@@ -10,6 +11,7 @@ import {
 } from "@/components/HomeSections";
 import { JsonLd } from "@/components/JsonLd";
 import { LatestDownload } from "@/components/LatestDownload";
+import { NextSteps } from "@/components/NextSteps";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { HeroDisplay } from "@/components/HeroDisplay";
@@ -79,6 +81,7 @@ export default async function Home() {
       <ProblemSection />
       <TradeOffSection />
       <MultiMonitorSection />
+      <InsideAppSection />
       <TrustSection />
       <HomeFaqSection />
 
@@ -129,7 +132,11 @@ export default async function Home() {
               </LatestDownload>
             </div>
           </div>
-          <p className="mt-6 text-xs text-soft">
+          <div className="mt-10">
+            <p className="font-medium text-zinc-100">After you download</p>
+            <NextSteps className="mt-4" />
+          </div>
+          <p className="mt-8 text-xs text-soft">
             Both are published on GitHub Releases. Free forever under the MIT
             License.{" "}
             <Link href="/docs" className="text-ember hover:underline">

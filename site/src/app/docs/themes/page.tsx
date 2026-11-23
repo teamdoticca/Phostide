@@ -14,6 +14,23 @@ export const metadata: Metadata = pageMetadata({
   path: "/docs/themes",
 });
 
+function Meter({ label, value }: { label: string; value: number }) {
+  return (
+    <>
+      <dt className="text-soft">{label}</dt>
+      <dd className="flex items-center gap-1" aria-label={`${label}: ${value} of 5`}>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <span
+            key={n}
+            aria-hidden="true"
+            className={`h-2 w-5 rounded-full ${n <= value ? "bg-zinc-200" : "bg-white/10"}`}
+          />
+        ))}
+      </dd>
+    </>
+  );
+}
+
 export default function ThemesPage() {
   return (
     <div className="min-h-screen bg-void text-zinc-100">
@@ -65,22 +82,36 @@ export default function ThemesPage() {
       </section>
 
       <section className="mx-auto max-w-site space-y-5 px-6 pb-20 sm:px-10 sm:pb-24">
+        <p className="max-w-3xl text-sm leading-relaxed text-soft">
+          Hover a strip to play it. The meters compare the five themes with
+          each other, measured from these captures at 100% intensity: average
+          brightness over every pixel and frame, and how much the picture
+          changes from one frame to the next. A lower intensity makes every
+          theme dimmer.
+        </p>
         {themes.map((theme, i) => (
           <div
             key={theme.id}
             id={`t-${theme.id}`}
             className="rounded-xl border border-line bg-panel p-6"
           >
-            <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+            <div className="mb-4 grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
               <div>
-                <span className="text-lg font-semibold">{theme.name}</span>
-                <span className="ml-0 mt-1 block text-sm text-soft sm:ml-4 sm:mt-0 sm:inline">
-                  {theme.detail}
-                </span>
+                <p className="flex items-baseline gap-3">
+                  <span className="text-sm tabular-nums text-soft">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span className="text-lg font-semibold">{theme.name}</span>
+                </p>
+                <p className="mt-1 text-sm text-soft">{theme.detail}</p>
+                {theme.note ? (
+                  <p className="mt-2 max-w-xl text-sm text-zinc-300">{theme.note}</p>
+                ) : null}
               </div>
-              <span className="text-sm text-soft">
-                {String(i + 1).padStart(2, "0")}
-              </span>
+              <dl className="grid grid-cols-[auto_auto] items-center gap-x-4 gap-y-2 text-sm">
+                <Meter label="Brightness" value={theme.brightness} />
+                <Meter label="Motion" value={theme.movement} />
+              </dl>
             </div>
             <ThemeStrip theme={theme} rounded />
           </div>
@@ -90,7 +121,9 @@ export default function ThemesPage() {
           <p className="font-medium text-zinc-100">Tips</p>
           <ul className="mt-3 list-disc space-y-2 pl-5">
             <li>
-              Space and Aurora stay darkest — good everyday OLED choices.
+              Aurora is the darkest on average and the best everyday OLED
+              choice. Space is near-black most of the time but brightens for
+              its nebula pass.
             </li>
             <li>
               Weather and Sea Waves are busier; dial intensity down if you want

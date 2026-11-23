@@ -62,7 +62,7 @@ function InstallHowToJsonLd() {
       {
         "@type": "HowToStep",
         name: "Optional multi-monitor OLED",
-        text: "On Monitors, uncheck displays you want stock. On Taskbar, Apply Space or Aurora to the OLED monitor only. On System, leave RENDERING on Auto.",
+        text: "On Monitors, uncheck displays you want stock. On Taskbar, Apply Aurora (or Space) to the OLED monitor only. On System, leave RENDERING on Auto.",
         url: absoluteUrl("/docs/install#oled-dual"),
       },
     ],

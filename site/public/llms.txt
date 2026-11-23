@@ -33,7 +33,7 @@ Defaults on a fresh install / after reset: Aurora, 35% intensity, Auto rendering
 
 1. Install Setup.exe (or run portable `Phostide.exe`).
 2. Tray › Settings… › **Monitors** — leave the OLED on; uncheck the LCD (or other) display if you want it stock.
-3. **Taskbar** › Apply to the OLED monitor number › pick **Space** or **Aurora** › modest intensity › **Apply**.
+3. **Taskbar** › Apply to the OLED monitor number › pick **Aurora** (darkest on average; or **Space**) › modest intensity › **Apply**.
 4. **OLED Care** › optionally **OLED everyday preset** (care defaults only) or set Idle after + care toggles › Apply. **System** › RENDERING **Auto**; optionally Start with Windows › Apply.
 
 Honest limits: Phostide reduces locked-bright time (moving fill + idle Care); it is not a burn-in warranty. Themes move the fill; residual Windows chrome stays static unless experimental chrome Care is on (may no-op after XAML renames). Hybrid idle: AFK → all enabled bars; while active → unused displays follow the cursor. Care applies only to monitors left on.
@@ -52,8 +52,11 @@ Honest limits: Phostide reduces locked-bright time (moving fill + idle Care); it
 - [Install & run](https://phostide.doticca.com/docs/install) — Setup.exe, portable zip, Settings, dual-monitor OLED, uninstall
 - [FAQ](https://phostide.doticca.com/docs/faq) — short answers for agents and humans
 - [Themes](https://phostide.doticca.com/docs/themes) — five looks, intensity, Apply flow
-- [OLED notes](https://phostide.doticca.com/docs/oled) — why motion helps OLED taskbars
+- [Reduce OLED burn-in on Windows 11](https://phostide.doticca.com/docs/oled) — tool-agnostic checklist, then where Phostide fits
 - [Compare approaches](https://phostide.doticca.com/docs/compare) — auto-hide vs monitor Taskbar Detection vs overlay vs idle fade vs Phostide
+- [Phostide with monitor OLED Care](https://phostide.doticca.com/docs/compare/monitor-taskbar-detection) — run alongside ASUS / MSI / Philips Taskbar Detection
+- [Auto-hide vs Phostide](https://phostide.doticca.com/docs/compare/auto-hide) — when hiding the bar is the right call
+- [OLED laptops](https://phostide.doticca.com/docs/oled-laptops) — taskbar care on laptop screens without monitor menus
 - [Troubleshooting](https://phostide.doticca.com/docs/troubleshooting)
 - [Privacy](https://phostide.doticca.com/docs/privacy)
 - [GitHub Releases](https://github.com/teamdoticca/Phostide/releases)

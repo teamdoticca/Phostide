@@ -1,193 +1,196 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  IconArrowLeft,
-  IconArrowRight,
-  IconEye,
-  IconLayers,
-  IconUndo,
-  IconWave,
-} from "@/components/Icons";
+import { DocArticle } from "@/components/DocArticle";
 import { SettingsShot } from "@/components/SettingsShot";
-import { SiteFooter } from "@/components/SiteFooter";
-import { SiteHeader } from "@/components/SiteHeader";
-import { ThemeStrip } from "@/components/ThemeStrip";
 import { pageMetadata } from "@/lib/seo";
-import { themeById } from "@/lib/themes";
 
 export const metadata: Metadata = pageMetadata({
-  title: "OLED notes",
+  title: "How to reduce OLED burn-in on Windows 11 (taskbar, icons, clock)",
   description:
-    "How Phostide protects OLED taskbars: moving fill while you work, hybrid idle Care when you step away, and per-monitor control — without hiding the bar.",
+    "Practical, tool-agnostic ways to reduce OLED burn-in on Windows 11: dark mode, brightness, screen timeouts, the taskbar, clock and icons, your monitor's own care, and where Phostide fits.",
   path: "/docs/oled",
 });
 
 export default function OledPage() {
-  const space = themeById("space");
-
   return (
-    <div className="min-h-screen bg-void text-zinc-100">
-      <SiteHeader active="/docs/oled" />
-
-      <section className="mx-auto max-w-site px-6 pb-12 pt-16 sm:px-10 sm:pb-16 sm:pt-20">
-        <Link
-          href="/docs"
-          className="inline-flex items-center gap-2 text-sm text-soft hover:text-white"
-        >
-          <IconArrowLeft />
-          Docs
-        </Link>
-        <p className="mt-6 eyebrow">OLED notes</p>
-        <h1 className="mt-3 max-w-3xl text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
-          An OLED taskbar solution that keeps the bar usable.
-        </h1>
-        <p className="mt-5 max-w-2xl text-lg text-soft">
-          OLED pixels light themselves. A bright strip that never changes ages
-          faster than the rest of the panel — and the Windows taskbar is one of
-          the most static bright shapes on the desktop. Most OLED tools hide it
-          or cover it. Phostide keeps it visible: moving fill while you work,
-          idle Care when you step away, and per‑monitor control for OLED + LCD
-          desks. Standalone — no Windhawk, no overlay window.
+    <DocArticle
+      active="/docs/oled"
+      title="How to reduce OLED burn-in on Windows 11"
+      lede={
+        <p>
+          OLED pixels make their own light, and they wear a little with every
+          hour of it. Content that changes spreads that wear evenly. Content
+          that sits still, bright, in the same place for months wears one spot
+          faster, and that is what burn-in is. Windows has a few of those
+          spots. Here is what helps, starting with what costs nothing.
         </p>
-      </section>
+      }
+      related={[
+        {
+          href: "/docs/oled-laptops",
+          label: "OLED laptops",
+          body: "Taskbar care on a laptop screen, where monitor features don’t exist.",
+        },
+        {
+          href: "/docs/compare/monitor-taskbar-detection",
+          label: "Phostide with your monitor’s OLED Care",
+          body: "How Taskbar Detection and Phostide work together.",
+        },
+        {
+          href: "/docs/compare/auto-hide",
+          label: "Auto-hide vs Phostide",
+          body: "When hiding the taskbar is the right call, and what it costs.",
+        },
+        {
+          href: "/docs/compare",
+          label: "Compare every approach",
+          body: "Auto-hide, firmware, overlays, idle mods and Phostide side by side.",
+        },
+      ]}
+      prev={{ href: "/docs/themes", label: "Themes" }}
+      next={{ href: "/docs/compare", label: "Next: Compare" }}
+    >
+      <h2>Where Windows keeps pixels still</h2>
+      <ul>
+        <li>
+          <strong>The taskbar.</strong> A full-width strip at the bottom of the
+          screen, on every hour the PC is on. It is the biggest static shape on
+          most desktops.
+        </li>
+        <li>
+          <strong>The clock, tray and pinned icons.</strong> Small, but bright
+          and in exactly the same place.
+        </li>
+        <li>
+          <strong>Desktop icons and wallpaper,</strong> whenever nothing covers
+          them.
+        </li>
+        <li>
+          <strong>App chrome you keep open all day:</strong> a sidebar, a
+          toolbar, a chat window docked to one side.
+        </li>
+      </ul>
 
-      <section className="border-y border-line">
-        <div className="mx-auto flex max-w-site justify-between px-6 py-3 text-xs text-soft sm:px-10">
-          <span>Space · dark fill that keeps moving</span>
-          <span>1920 × 48 · real Explorer BackgroundFill</span>
-        </div>
-        <ThemeStrip theme={space} />
-      </section>
+      <h2>Start with Windows itself</h2>
+      <ol>
+        <li>
+          <strong>Use dark mode.</strong> Settings › Personalization › Colors ›
+          Choose your mode › Dark. Dark pixels emit less light, so they wear
+          less.
+        </li>
+        <li>
+          <strong>Keep desktop brightness moderate.</strong> Wear grows with
+          light output. Save peak brightness for HDR content that changes.
+        </li>
+        <li>
+          <strong>Turn the screen off when you leave.</strong> Settings ›
+          System › Power (Power &amp; battery on a laptop) › Screen and sleep,
+          then pick a short “turn my screen
+          off” time. It is the single biggest saving for an idle desk.
+        </li>
+        <li>
+          <strong>Quiet the clock.</strong> Settings › Personalization ›
+          Taskbar › Taskbar behaviors › Show seconds in system tray clock keeps
+          the digits changing. Hide the date if you don’t need it.
+        </li>
+        <li>
+          <strong>Hide desktop icons</strong> (right-click the desktop › View ›
+          Show desktop icons) and use a dark or slideshow wallpaper.
+        </li>
+        <li>
+          <strong>Consider auto-hide.</strong> Settings › Personalization ›
+          Taskbar › Taskbar behaviors › Automatically hide the taskbar removes
+          the strip completely, at the cost of the clock, tray and open apps at
+          a glance.{" "}
+          <Link href="/docs/compare/auto-hide">Auto-hide vs Phostide</Link>.
+        </li>
+      </ol>
 
-      <section className="mx-auto grid max-w-site gap-5 px-6 py-16 sm:px-10 sm:py-20 md:grid-cols-2">
-        <div className="rounded-xl border border-ember/40 bg-panel p-8">
-          <IconWave className="h-5 w-5 text-ember" />
-          <h2 className="mt-5 text-xl font-semibold">Moving fill while you work</h2>
-          <p className="mt-2 text-soft">
-            Five built‑in themes paint Explorer&apos;s real{" "}
-            <code className="text-zinc-100">BackgroundFill</code> so the
-            background is not one locked bright block. Intensity stays under
-            your control — Space and Aurora stay the quietest everyday OLED
-            choices.
-          </p>
-        </div>
-        <div className="rounded-xl border border-line bg-panel p-8">
-          <IconEye className="h-5 w-5 text-soft" />
-          <h2 className="mt-5 text-xl font-semibold">Idle Care when you leave</h2>
-          <p className="mt-2 text-soft">
-            OLED Care dims the fill after idle. Full AFK dims every enabled bar;
-            while you keep working, leave the cursor on one display and the other
-            can dim alone. Optional experimental chrome dim / clock micro‑nudge
-            softens residual Windows UI on idle bars only.
-          </p>
-        </div>
-        <div className="rounded-xl border border-line bg-panel p-8">
-          <IconLayers className="h-5 w-5 text-soft" />
-          <h2 className="mt-5 text-xl font-semibold">OLED‑only on multi‑monitor</h2>
-          <p className="mt-2 text-soft">
-            Theme and Care the OLED; leave an LCD stock from the Monitors tab —
-            or run different looks per display. Rendering stays one shared Auto /
-            GPU / CPU choice. Not auto‑hide, not a floating overlay.
-          </p>
-        </div>
-        <div className="rounded-xl border border-line bg-panel p-8">
-          <IconUndo className="h-5 w-5 text-soft" />
-          <h2 className="mt-5 text-xl font-semibold">Quit restores Windows</h2>
-          <p className="mt-2 text-soft">
-            Exit from the tray and stock brushes (and any Care chrome changes)
-            come back. Phostide does not patch system files.
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-line bg-panel p-8 md:col-span-2">
-          <h2 className="text-xl font-semibold">OLED Care in Settings</h2>
-          <p className="mt-3 text-soft">
-            Settings › OLED Care: Idle after (Off / 1 / 5 / 10 / 30 minutes), Idle
-            fill intensity, optional Dim icons/tray/clock, optional Micro‑nudge
-            clock, Night boost, Pause when locked, Pause in fullscreen (default
-            on — freezes the covered display only so other bars keep moving).
-            Attendance for split‑monitor
-            idle follows the <strong className="font-medium text-zinc-100">cursor</strong>
-            . Use{" "}
-            <strong className="font-medium text-zinc-100">
-              OLED everyday preset
-            </strong>{" "}
-            for a care defaults pack only — it does not change your Taskbar theme
-            or intensity. Care only paints monitors left on in Monitors. The{" "}
-            <strong className="font-medium text-zinc-100">Monitors</strong> tab
-            shows live status (painting / fullscreen / locked / off / paused) per display.
-          </p>
-          <div className="mt-6 grid gap-4 lg:grid-cols-2">
-            <SettingsShot id="oled-care" />
-            <SettingsShot id="monitors" />
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-line bg-panel p-8 md:col-span-2">
-          <h2 className="text-xl font-semibold">Honest limits</h2>
-          <ul className="mt-3 list-disc space-y-2 pl-5 text-soft">
-            <li>
-              Phostide reduces how long the same bright taskbar pixels stay
-              locked — moving fill while you work, deeper idle Care when you step
-              away. It is <strong className="font-medium text-zinc-100">not</strong>{" "}
-              a burn‑in warranty or a full OLED pixel‑shift replacement.
-            </li>
-            <li>
-              Themes move the background fill. Icons, Start, Search, tray, and
-              clock stay Windows chrome unless you turn on experimental chrome dim
-              / clock nudge — those depend on Explorer XAML names and may quietly
-              no‑op after a Windows update.
-            </li>
-            <li>
-              Hybrid idle: walk away and every enabled bar dims; while you work,
-              only bars without the cursor can reach Idle after alone. Care never
-              paints monitors you turned off.
-            </li>
-            <li>
-              On OLED + LCD desks, uncheck the LCD in Monitors (or use a quieter
-              theme/intensity on the OLED alone) so Care and motion target the
-              panel that needs them.
-            </li>
-            <li>
-              Still useful without Phostide: show clock seconds; hide the date if
-              you do not need it — fewer static bright glyphs.
-            </li>
-          </ul>
-        </div>
-
-        <div className="rounded-xl border border-line bg-panel p-8 md:col-span-2">
-          <h2 className="text-xl font-semibold">Other approaches</h2>
-          <p className="mt-3 text-soft">
-            Auto‑hide, dimmer overlays, and idle‑fade mods solve the same OLED
-            worry differently. See how they compare to a usable bar with moving
-            fill plus idle Care.
-          </p>
-          <Link
-            href="/docs/compare"
-            className="mt-4 inline-flex items-center gap-2 text-sm text-ember"
-          >
-            Compare approaches <IconArrowRight />
+      <h2>Let your monitor do its part</h2>
+      <p>
+        Most OLED monitors have care features of their own. Read your
+        monitor’s manual for the exact names. The common ones:
+      </p>
+      <ul>
+        <li>
+          <strong>Pixel refresh or panel care</strong> runs in standby after
+          hours of use. Let the monitor go to standby normally rather than
+          cutting power at the wall, so it can run.
+        </li>
+        <li>
+          <strong>Pixel shift</strong> moves the whole picture by a few pixels
+          over time.
+        </li>
+        <li>
+          <strong>Taskbar or logo detection</strong> on some newer models dims
+          the area where the taskbar sits.{" "}
+          <Link href="/docs/compare/monitor-taskbar-detection">
+            Using it with Phostide
           </Link>
-        </div>
+          .
+        </li>
+      </ul>
+      <p>
+        Laptop OLED screens rarely have these menus.{" "}
+        <Link href="/docs/oled-laptops">What to do on a laptop</Link>.
+      </p>
 
-        <div className="flex justify-between pt-4 text-sm md:col-span-2">
-          <Link
-            href="/docs/themes"
-            className="inline-flex items-center gap-2 text-soft hover:text-white"
-          >
-            <IconArrowLeft />
-            Themes
-          </Link>
-          <Link
-            href="/docs/compare"
-            className="inline-flex items-center gap-2 text-ember"
-          >
-            Next: Compare <IconArrowRight />
-          </Link>
-        </div>
-      </section>
+      <h2>Where Phostide fits</h2>
+      <p>
+        The steps above deal with an idle screen and with brightness. The
+        taskbar stays a problem while you work, because hiding it is the only
+        built-in fix. Phostide keeps it visible and changes how long its pixels
+        sit still:
+      </p>
+      <ul>
+        <li>
+          <strong>While you work,</strong> the taskbar’s background slowly
+          moves (five built-in themes). Your icons stay on top; it is not an
+          overlay.
+        </li>
+        <li>
+          <strong>When you step away,</strong> OLED Care dims the bar after the
+          idle time you pick (1, 5, 10 or 30 minutes; 5 by default). While you
+          work on one display, a display you’re not using can dim on its own.
+        </li>
+        <li>
+          <strong>When you game,</strong> painting pauses on the display a
+          fullscreen app covers. Other displays keep moving.
+        </li>
+        <li>
+          <strong>On mixed desks,</strong> turn Phostide off for an LCD on the
+          Monitors tab and it stays a plain Windows taskbar.
+        </li>
+      </ul>
+      <p>
+        Optional, experimental: OLED Care can also dim the icons, tray and
+        clock, or nudge the clock by a pixel or two, on an idle bar. Night boost
+        dims sooner and darker in the evening. The OLED everyday preset turns
+        these care settings on together; it never changes your theme.
+      </p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <SettingsShot id="oled-care" />
+        <SettingsShot id="monitors" />
+      </div>
 
-      <SiteFooter />
-    </div>
+      <h2>Honest limits</h2>
+      <ul>
+        <li>
+          Nothing on Windows makes burn-in impossible. Phostide reduces how long
+          the same taskbar pixels stay bright; it is not a burn-in warranty or a
+          replacement for your monitor’s pixel refresh.
+        </li>
+        <li>
+          Themes move the taskbar’s background. Icons, Start, Search, the tray
+          and the clock are still Windows UI, unless you turn on the
+          experimental chrome care, which can stop working if a Windows update
+          renames parts of the taskbar.
+        </li>
+        <li>
+          Quit from the tray and the stock taskbar comes back. Phostide does
+          not change system files.
+        </li>
+      </ul>
+    </DocArticle>
   );
 }

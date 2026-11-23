@@ -25,8 +25,8 @@ Exactly five built-in themes. There is **no** end-user theme editor, no import o
 1. Rainbow — soft color bands drifting across the bar
 2. Sea Waves — side-on ocean silhouette with foam
 3. Weather — night storm, purple flash, soft bolts
-4. Space — mostly black with slow scattered stars (good everyday OLED default)
-5. Aurora — magenta curtains over black (also dark / OLED-friendly)
+4. Space — near-black with slow scattered stars most of the time, plus a bright nebula pass in each ~35 s loop (second-brightest on average)
+5. Aurora — magenta curtains over black (darkest on average; the best everyday OLED choice and the fresh-install default)
 
 Intensity is 0–100% (default 35% on a fresh install). Lower = quieter OLED look; higher = stronger motion/color. All themes share the same Auto/GPU/CPU painter from the System tab.
 
@@ -130,6 +130,9 @@ Holds fallback `theme` / `intensity`, app-global `renderMode` (Auto/GPU/CPU), OL
 - Themes: https://phostide.doticca.com/docs/themes
 - OLED: https://phostide.doticca.com/docs/oled
 - Compare: https://phostide.doticca.com/docs/compare
+- With monitor OLED Care / Taskbar Detection: https://phostide.doticca.com/docs/compare/monitor-taskbar-detection
+- Auto-hide vs Phostide: https://phostide.doticca.com/docs/compare/auto-hide
+- OLED laptops: https://phostide.doticca.com/docs/oled-laptops
 - Troubleshooting: https://phostide.doticca.com/docs/troubleshooting
 - Privacy: https://phostide.doticca.com/docs/privacy
 - Releases: https://github.com/teamdoticca/Phostide/releases

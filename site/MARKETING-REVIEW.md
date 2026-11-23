@@ -4,6 +4,16 @@ Reviewed 2026-11-22 against the live site (https://phostide.doticca.com, v0.1.37
 
 ### Status (2026-11-22)
 
+**P2 done (2026-11-24):**
+- **Themes.** `/docs/themes` has Brightness and Motion meters, measured from the WebM captures at 100% intensity (mean luma and frame-to-frame change). The raw numbers are in `src/lib/themes.ts`. The home page stays without a themes section, as the owner decided in 3c87b63.
+- **Finding.** Space is near-black for most of its 35 s loop but has a bright nebula pass. On average it is the second-brightest theme, not one of the darkest. The themes page says so. README, FAQ, install, Compare and both llms files now recommend Aurora first, with the same note about Space.
+- **Home.** New "Inside the app" section: a tab viewer over the four real Settings captures, plus the tray shortcuts.
+- **SEO pages.**
+  - `/docs/oled` rewritten as the tool-agnostic pillar page "How to reduce OLED burn-in on Windows 11".
+  - New `/docs/oled-laptops`, `/docs/compare/monitor-taskbar-detection` and `/docs/compare/auto-hide`, sharing a `DocArticle` shell and `.doc-prose` styles.
+  - Sitemap, docs hub, Compare links and llms files updated.
+- **Next steps.** After clicking Download, the hero shows three steps: SmartScreen → Launch → Welcome. The download block always shows them.
+
 **P1 done (2026-11-24)** except WinGet:
 - **Home page.** New sections: Problem (static-light illustration, ~2,900 h/yr), Trade-off (hide / dim / cover, then Phostide), Multi-monitor (three-screen illustration plus Monitors tab and status glossary), Trust (six facts, SmartScreen note, "What Phostide won't do") and a six-question FAQ with FAQPage JSON-LD (`src/lib/homeFaq.ts`). The old "Inside the bar" cards and Privacy chips are folded into Trust. S4 (a day with Phostide) is the hero.
 - **Compare page.** Adds monitor Taskbar Detection and overlay apps. Has a ✓/◐/✕ matrix with the Phostide column highlighted, which becomes stacked cards on phones.

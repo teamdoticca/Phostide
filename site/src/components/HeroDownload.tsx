@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
+import { NextSteps } from "@/components/NextSteps";
 
 type HeroDownloadProps = {
   setupUrl: string;
@@ -31,6 +32,7 @@ export function HeroDownload({ setupUrl, zipUrl, pageUrl }: HeroDownloadProps) {
   // Platform never changes mid-visit; the server renders the Windows CTA.
   const elsewhere = useSyncExternalStore(noopSubscribe, isNotWindows, () => false);
   const [copied, setCopied] = useState(false);
+  const [started, setStarted] = useState(false);
 
   const carry = async () => {
     const data = {
@@ -80,16 +82,23 @@ export function HeroDownload({ setupUrl, zipUrl, pageUrl }: HeroDownloadProps) {
   return (
     <div>
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <a href={setupUrl} className="btn-ember">
+        <a href={setupUrl} className="btn-ember" onClick={() => setStarted(true)}>
           Download for Windows 11
         </a>
         <a href={zipUrl} className="btn-ghost">
           Portable zip
         </a>
       </div>
-      <p className="mt-3 text-[13px] text-soft">
-        Signed installer · per-user, no admin rights · no account
-      </p>
+      {started ? (
+        <div className="mt-5 rounded-xl border border-line bg-panel p-5" role="status">
+          <p className="text-sm font-medium text-zinc-100">Downloading. Next:</p>
+          <NextSteps stacked className="mt-3" />
+        </div>
+      ) : (
+        <p className="mt-3 text-[13px] text-soft">
+          Signed installer · per-user, no admin rights · no account
+        </p>
+      )}
     </div>
   );
 }
