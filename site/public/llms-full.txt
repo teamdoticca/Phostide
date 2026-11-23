@@ -111,8 +111,9 @@ Phostide reduces locked-bright time on the taskbar (moving fill while you work +
 
 - vs auto-hide: Phostide keeps the bar visible.
 - vs dimmer overlays: Phostide is not a window on top of the taskbar.
+- vs monitor Taskbar Detection (some ASUS / MSI / Philips OLED monitors): complementary, both can run. Firmware dims a fixed area all day; Phostide adds motion while you work, idle dimming, per-display rest and a fullscreen pause, and also covers laptops and panels without that feature.
 - vs Windhawk idle-fade mods: Phostide is standalone; Windhawk is not required; Phostide themes the fill and can optionally idle-dim chrome without hiding the bar.
-- Product category: Windows 11 animated taskbar background / OLED-safe taskbar theme utility.
+- Product category: Windows 11 OLED taskbar burn-in care / animated taskbar background utility.
 
 ## Defaults and settings file
 

@@ -16,74 +16,140 @@ import { pageMetadata } from "@/lib/seo";
 export const metadata: Metadata = pageMetadata({
   title: "OLED taskbar burn-in: overlays vs real fill",
   description:
-    "Compare Windows 11 OLED taskbar approaches — auto-hide, dimmer overlays, fade mods, and Phostide painting the real Explorer BackgroundFill.",
+    "Compare ways to protect an OLED from the Windows 11 taskbar: auto-hide, monitor Taskbar Detection, overlay dimmers, idle-fade mods and Phostide.",
   path: "/docs/compare",
 });
 
-const approaches = [
+type Approach = {
+  name: string;
+  short: string;
+  how: string;
+  costs: string;
+  fit: string;
+};
+
+const approaches: Approach[] = [
   {
     name: "Auto-hide taskbar",
-    how: "Windows hides the bar until you hit the screen edge.",
-    burnIn: "Good while hidden — zero static strip.",
-    usability: "You lose always-on Start, pins, and clock.",
+    short: "Auto-hide",
+    how: "Windows hides the bar until you move the pointer to the screen edge.",
+    costs:
+      "No static strip while it’s hidden, but you lose the clock, tray and open apps at a glance. Some owners find the slide animation laggy on OLED.",
     fit: "Fine if you already live with auto-hide.",
   },
   {
-    name: "Dim / black overlay",
-    how: "A semi-transparent window sits on top of the taskbar.",
-    burnIn: "Lowers brightness of the strip (and often icons).",
-    usability: "Can fight z-order, fullscreen games, and multi-monitor edge cases.",
-    fit: "Common AHK / small-tool approach.",
+    name: "Monitor Taskbar Detection",
+    short: "Monitor firmware",
+    how: "Some newer OLED monitors (for example ASUS OLED Care, MSI OLED Care and Philips) detect the taskbar area and lower its brightness.",
+    costs:
+      "Built in and free where it exists. It dims a fixed area all day and doesn’t know when you’ve stepped away or which screen you’re using. Laptops and older panels usually don’t have it.",
+    fit: "Worth turning on if your monitor has it. Phostide runs alongside it.",
+  },
+  {
+    name: "Overlay dimmer apps",
+    short: "Overlay apps",
+    how: "A free script or a paid app places a dark, semi-transparent window over the taskbar.",
+    costs:
+      "Lowers the strip’s brightness, but it covers your icons too and can fight with notifications, fullscreen games and multi-monitor edges.",
+    fit: "A quick fix if you don’t mind a dimmer, covered bar.",
   },
   {
     name: "Idle fade / hide mods",
-    how: "Third-party mods dim or hide the bar after idle (e.g. Windhawk-style).",
-    burnIn: "Strong when idle; static again while you work on the bar.",
-    usability: "Keeps a normal bar when awake; depends on the mod ecosystem.",
-    fit: "Great if you want idle protection more than themes.",
+    short: "Idle mods",
+    how: "Third-party mods (for example through Windhawk) fade or hide the bar after a period without input.",
+    costs:
+      "Strong when you’re away; the bar is static again while you work. Needs the mod platform and its injection.",
+    fit: "Good if idle protection matters more to you than the look.",
   },
   {
     name: "Phostide",
-    how: "Standalone OLED taskbar solution: moving fill in Explorer’s real BackgroundFill while you work, hybrid idle Care when you AFK (and unused displays alone while you work), optional experimental chrome dim/clock nudge — not a floating window, not a Windhawk mod.",
-    burnIn:
-      "Reduces locked-bright time on the strip (motion + idle Care). Optional chrome dim/nudge targets residual static UI. Not a burn-in warranty.",
-    usability:
-      "Bar stays visible; five built-in themes; OLED Care (incl. fullscreen pause on the covered display); per-monitor on/off + live paint status; SoftSuspend on Enable; Exit restores stock brushes and chrome.",
-    fit: "When you want a full OLED care package that keeps the bar usable — not hidden or covered.",
+    short: "Phostide",
+    how: "A standalone app that paints the taskbar’s own background in Explorer. No window on top, no Windhawk.",
+    costs:
+      "Reduces how long the same pixels stay bright: motion while you work, OLED Care when you step away, a pause for fullscreen games. Not a burn-in warranty.",
+    fit: "When you want to keep a visible, usable taskbar on an OLED.",
   },
 ];
 
-const rows: { label: string; values: string[] }[] = [
+type Mark = "yes" | "no" | "part" | "na";
+
+const MARK_LABEL: Record<Mark, string> = {
+  yes: "Yes",
+  no: "No",
+  part: "Partly",
+  na: "Not applicable",
+};
+
+/** Cells follow the `approaches` order. */
+const matrix: { label: string; cells: [Mark, string?][] }[] = [
   {
-    label: "Mechanism",
-    values: [
-      "Hide bar",
-      "Overlay window",
-      "Idle opacity / hide",
-      "Explorer BackgroundFill",
-    ],
+    label: "Taskbar stays visible",
+    cells: [["no"], ["yes", "Dimmed"], ["yes", "Covered"], ["part", "While you work"], ["yes"]],
   },
   {
-    label: "Bar stays visible",
-    values: ["No", "Yes", "While awake", "Yes"],
+    label: "Icons not covered",
+    cells: [["na"], ["part", "Dimmed with the bar"], ["no"], ["yes"], ["yes"]],
   },
   {
-    label: "Icons stay on top",
-    values: ["N/A", "Under overlay", "Yes", "Yes"],
+    label: "Moves while you work",
+    cells: [["no"], ["no"], ["no"], ["no"], ["yes"]],
   },
   {
-    label: "Animated themes",
-    values: ["No", "Rare", "Usually no", "Five built-in"],
+    label: "Knows when you step away",
+    cells: [["na"], ["no"], ["part", "Varies"], ["yes"], ["yes"]],
   },
   {
-    label: "Per-monitor control",
-    values: ["OS only", "Often fragile", "Depends on mod", "On/off + theme/intensity"],
+    label: "Rests screens you’re not using",
+    cells: [["no"], ["no"], ["no"], ["part", "Varies"], ["yes"]],
   },
   {
-    label: "Restores on quit",
-    values: ["N/A", "Close overlay", "Disable mod", "Tray › Exit"],
+    label: "Pauses for fullscreen games",
+    cells: [["na"], ["na"], ["part", "Varies"], ["part", "Varies"], ["yes", "Covered display only"]],
+  },
+  {
+    label: "Works on any OLED, laptops too",
+    cells: [["yes"], ["no", "Some newer monitors"], ["yes"], ["yes"], ["yes"]],
+  },
+  {
+    label: "Nothing extra to install",
+    cells: [["yes"], ["yes"], ["no"], ["no", "Mod platform"], ["no", "One app"]],
   },
 ];
+
+const PHOSTIDE_COL = approaches.length - 1;
+
+function MarkGlyph({ mark }: { mark: Mark }) {
+  const glyph = { yes: "✓", no: "✕", part: "◐", na: "–" }[mark];
+  const tone = {
+    yes: "text-emerald-300",
+    no: "text-zinc-500",
+    part: "text-amber-300",
+    na: "text-zinc-600",
+  }[mark];
+  return (
+    <span className={`inline-block w-4 shrink-0 text-center ${tone}`} aria-hidden="true">
+      {glyph}
+    </span>
+  );
+}
+
+function Cell({ mark, note }: { mark: Mark; note?: string }) {
+  return (
+    <span className="inline-flex items-start gap-2">
+      <MarkGlyph mark={mark} />
+      <span>
+        {note ? (
+          <>
+            <span className="sr-only">{MARK_LABEL[mark]}: </span>
+            {note}
+          </>
+        ) : (
+          MARK_LABEL[mark]
+        )}
+      </span>
+    </span>
+  );
+}
 
 export default function ComparePage() {
   return (
@@ -104,99 +170,121 @@ export default function ComparePage() {
           Windows 11 OLED taskbar burn‑in: what actually changes the bar.
         </h1>
         <p className="mt-5 max-w-2xl text-lg text-soft">
-          People search for ways to protect an OLED from a static taskbar —
-          auto‑hide, dimmer overlays, idle‑fade mods, or painting the real fill.
-          Here is an honest map of those approaches. Phostide keeps the bar
-          usable: moving fill while you work, hybrid idle Care when you step
-          away, per‑monitor control — standalone, no Windhawk, five built‑in
-          themes, no theme editor.
+          The taskbar is a bright strip that never moves, so OLED owners hide
+          it, dim it, cover it or fade it when idle. Here is an honest map of
+          those options, including the Taskbar Detection built into some
+          monitors. Phostide keeps the bar visible and works alongside your
+          monitor’s own care.
         </p>
 
-        <section className="mt-14">
-          <h2 className="text-2xl font-semibold">The problem in one line</h2>
-          <p className="mt-3 max-w-2xl text-soft">
-            OLED pixels age with light. The Windows taskbar is a bright, mostly
-            static strip for hours. Tools either hide it, cover it, fade it when
-            idle, or — like Phostide — keep it usable with a full care package:
-            move the{" "}
-            <strong className="font-medium text-zinc-100">background</strong>{" "}
-            while you work, dim when you leave, and target only the OLED on
-            multi‑monitor desks.
-          </p>
-        </section>
-
-        <section className="mt-14 grid gap-5 md:grid-cols-2">
-          {approaches.map((item) => (
-            <article
-              key={item.name}
-              className={`rounded-xl border p-7 ${
-                item.name === "Phostide"
-                  ? "border-ember/50 bg-emberdim/20"
-                  : "border-line bg-panel"
-              }`}
-            >
-              <h3 className="text-lg font-semibold">{item.name}</h3>
-              <dl className="mt-4 space-y-3 text-sm text-soft">
-                <div>
-                  <dt className="text-zinc-100">How it works</dt>
-                  <dd className="mt-1">{item.how}</dd>
-                </div>
-                <div>
-                  <dt className="text-zinc-100">Burn‑in angle</dt>
-                  <dd className="mt-1">{item.burnIn}</dd>
-                </div>
-                <div>
-                  <dt className="text-zinc-100">Usability</dt>
-                  <dd className="mt-1">{item.usability}</dd>
-                </div>
-                <div>
-                  <dt className="text-zinc-100">Best fit</dt>
-                  <dd className="mt-1">{item.fit}</dd>
-                </div>
-              </dl>
-            </article>
-          ))}
-        </section>
-
         <section className="mt-16">
-          <h2 className="text-2xl font-semibold">Side‑by‑side</h2>
+          <h2 className="text-2xl font-semibold">At a glance</h2>
           <p className="mt-3 max-w-2xl text-soft">
-            Columns follow the same order: auto‑hide, overlay dimmer, idle fade
-            mods, Phostide.
+            ✓ yes · ◐ partly, or depends on the tool · ✕ no · – not applicable
           </p>
-          <div className="mt-6 overflow-x-auto rounded-xl border border-line">
-            <table className="min-w-[40rem] w-full border-collapse text-left text-sm">
-              <thead className="bg-panel text-soft">
-                <tr>
-                  <th className="px-4 py-3 font-medium"> </th>
-                  <th className="px-4 py-3 font-medium">Auto‑hide</th>
-                  <th className="px-4 py-3 font-medium">Overlay</th>
-                  <th className="px-4 py-3 font-medium">Idle fade</th>
-                  <th className="px-4 py-3 font-medium text-zinc-100">
-                    Phostide
+
+          {/* Wide screens: one matrix, Phostide column highlighted. */}
+          <div className="mt-6 hidden overflow-hidden rounded-xl border border-line md:block">
+            <table className="w-full border-collapse text-left text-sm">
+              <thead>
+                <tr className="bg-panel text-soft">
+                  <th className="px-4 py-3 font-medium">
+                    <span className="sr-only">Feature</span>
                   </th>
+                  {approaches.map((a, i) => (
+                    <th
+                      key={a.short}
+                      scope="col"
+                      className={`px-4 py-3 font-medium ${
+                        i === PHOSTIDE_COL ? "bg-emberdim/50 text-zinc-50" : ""
+                      }`}
+                    >
+                      {a.short}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
+                {matrix.map((row) => (
                   <tr key={row.label} className="border-t border-line">
-                    <th className="px-4 py-3 font-medium text-zinc-100">
+                    <th scope="row" className="px-4 py-3 font-medium text-zinc-100">
                       {row.label}
                     </th>
-                    {row.values.map((value, i) => (
+                    {row.cells.map(([mark, note], i) => (
                       <td
-                        key={`${row.label}-${i}`}
-                        className={`px-4 py-3 text-soft ${
-                          i === 3 ? "text-zinc-100" : ""
+                        key={i}
+                        className={`px-4 py-3 align-top ${
+                          i === PHOSTIDE_COL ? "bg-emberdim/25 text-zinc-100" : "text-soft"
                         }`}
                       >
-                        {value}
+                        <Cell mark={mark} note={note} />
                       </td>
                     ))}
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Phones: one card per approach, rows in the same order. */}
+          <div className="mt-6 space-y-4 md:hidden">
+            {approaches.map((a, col) => (
+              <div
+                key={a.short}
+                className={`rounded-xl border p-5 ${
+                  col === PHOSTIDE_COL
+                    ? "border-ember/50 bg-emberdim/25"
+                    : "border-line bg-panel"
+                }`}
+              >
+                <h3 className="font-semibold">{a.name}</h3>
+                <dl className="mt-3 space-y-2 text-sm">
+                  {matrix.map((row) => {
+                    const [mark, note] = row.cells[col];
+                    return (
+                      <div key={row.label} className="flex justify-between gap-4">
+                        <dt className="text-soft">{row.label}</dt>
+                        <dd className="shrink-0 text-right text-zinc-200">
+                          <Cell mark={mark} note={note} />
+                        </dd>
+                      </div>
+                    );
+                  })}
+                </dl>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-20">
+          <h2 className="text-2xl font-semibold">Each approach, honestly</h2>
+          <div className="mt-6 grid gap-5 md:grid-cols-2">
+            {approaches.map((item, i) => (
+              <article
+                key={item.name}
+                className={`rounded-xl border p-7 ${
+                  i === PHOSTIDE_COL
+                    ? "border-ember/50 bg-emberdim/20 md:col-span-2"
+                    : "border-line bg-panel"
+                }`}
+              >
+                <h3 className="text-lg font-semibold">{item.name}</h3>
+                <dl className="mt-4 space-y-3 text-sm text-soft">
+                  <div>
+                    <dt className="text-zinc-100">How it works</dt>
+                    <dd className="mt-1">{item.how}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-zinc-100">What it costs you</dt>
+                    <dd className="mt-1">{item.costs}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-zinc-100">Best fit</dt>
+                    <dd className="mt-1">{item.fit}</dd>
+                  </div>
+                </dl>
+              </article>
+            ))}
           </div>
         </section>
 
@@ -205,17 +293,18 @@ export default function ComparePage() {
             <IconLayers className="h-5 w-5 text-ember" />
             <h3 className="mt-4 font-semibold">Not an overlay</h3>
             <p className="mt-2 text-sm text-soft">
-              Phostide injects a helper into Explorer and replaces the taskbar
-              fill brush. Icons, tray, and clock stay Windows chrome on top.
+              Phostide runs a small helper inside Explorer that replaces the
+              taskbar’s background brush. Icons, tray and clock stay Windows UI
+              on top.
             </p>
           </div>
           <div className="rounded-xl border border-line bg-panel p-6">
             <IconDisplay className="h-5 w-5 text-ember" />
             <h3 className="mt-4 font-semibold">OLED‑aware, not a warranty</h3>
             <p className="mt-2 text-sm text-soft">
-              Moving fill plus idle Care reduce locked‑bright time; they are not
-              a burn‑in warranty. Residual chrome can still age unless
-              experimental chrome Care is on (and working) — see{" "}
+              Motion plus idle OLED Care reduce the time the same pixels stay
+              bright; they are not a burn‑in warranty. Icons and the clock can
+              still age unless experimental chrome care is on (and working). See{" "}
               <Link href="/docs/oled" className="text-zinc-100 underline-offset-2 hover:underline">
                 OLED notes
               </Link>
@@ -226,8 +315,8 @@ export default function ComparePage() {
             <IconUndo className="h-5 w-5 text-ember" />
             <h3 className="mt-4 font-semibold">Exit restores stock</h3>
             <p className="mt-2 text-sm text-soft">
-              Tray › Exit puts the original brushes back. No system‑file patch.
-              Local settings only — details on{" "}
+              Tray › Exit puts the original brushes back. No system files are
+              patched. Settings stay local; details on{" "}
               <Link href="/docs/privacy" className="text-zinc-100 underline-offset-2 hover:underline">
                 Privacy
               </Link>
@@ -237,15 +326,15 @@ export default function ComparePage() {
         </section>
 
         <section className="mt-16 rounded-xl border border-ember/50 bg-emberdim/30 p-8">
-          <p className="text-xs text-soft">Try it</p>
-          <h2 className="mt-1 text-2xl font-semibold">
-            Prefer a usable OLED taskbar — not a hidden one?
+          <h2 className="text-2xl font-semibold">
+            Want a usable OLED taskbar, not a hidden one?
           </h2>
           <p className="mt-3 max-w-xl text-soft">
-            Install the signed Setup.exe (per‑user, no admin), open Settings from
-            the tray: Taskbar theme + OLED Care (or everyday preset), Monitors to
-            leave an LCD stock. Start with Space or Aurora at modest intensity
-            for the quietest everyday look.
+            Install the signed Setup.exe (per‑user, no admin) and open Settings
+            from the tray. Pick a theme on the Taskbar tab, set OLED Care (or
+            use the everyday preset), and turn off any LCD on the Monitors tab.
+            Space and Aurora at a modest intensity are the quietest everyday
+            look.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <LatestDownload className="btn-ember">

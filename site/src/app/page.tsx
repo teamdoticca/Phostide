@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { IconDownload } from "@/components/Icons";
 import {
-  IconDownload,
-  IconGrid,
-  IconLayers,
-  IconUndo,
-} from "@/components/Icons";
+  HomeFaqSection,
+  MultiMonitorSection,
+  ProblemSection,
+  TradeOffSection,
+  TrustSection,
+} from "@/components/HomeSections";
 import { JsonLd } from "@/components/JsonLd";
 import { LatestDownload } from "@/components/LatestDownload";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -74,64 +76,11 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="border-b border-line bg-panel">
-        <div className="mx-auto grid max-w-site gap-6 px-6 py-20 sm:px-10 sm:py-24 lg:grid-cols-3">
-          <div className="mb-2 lg:col-span-3">
-            <p className="eyebrow">How it works</p>
-            <h2 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-              Inside the bar, not on top of it.
-            </h2>
-          </div>
-          {[
-            {
-              icon: IconLayers,
-              title: "Painted into the real taskbar",
-              body: "Phostide paints the taskbar’s own background, on your GPU when it can. No window floats on top, so Start, your icons, the tray and the clock work exactly as before.",
-            },
-            {
-              icon: IconGrid,
-              title: "Rests when you do",
-              body: "OLED Care dims the bar when you step away, and dims a screen you’re not using while you work on another. Theme only your OLED and leave an LCD as stock Windows.",
-            },
-            {
-              icon: IconUndo,
-              title: "Quit restores it",
-              body: "Exit from the tray and the normal Windows taskbar comes straight back. No system files are changed, so nothing is left behind.",
-            },
-          ].map((step) => (
-            <div
-              key={step.title}
-              className="rounded-xl border border-line bg-black p-7"
-            >
-              <step.icon className="h-5 w-5 text-ember" />
-              <h3 className="mt-5 text-lg font-semibold">{step.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-soft">{step.body}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="mx-auto grid max-w-site items-center gap-12 px-6 py-20 sm:px-10 sm:py-24 lg:grid-cols-2 lg:gap-16">
-        <div>
-          <p className="eyebrow">Privacy</p>
-          <h2 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-            Local only. That&apos;s the whole policy.
-          </h2>
-          <p className="mt-5 max-w-lg leading-relaxed text-soft">
-            No account to create, no telemetry, no network calls needed to run.
-            The source is open under MIT, so you can read every line.
-          </p>
-        </div>
-        <ul className="grid grid-cols-2 gap-4 text-sm">
-          {["No account", "No telemetry", "MIT open source", "Signed installer"].map(
-            (label) => (
-              <li key={label} className="rounded-xl border border-line p-5">
-                <p className="font-medium">{label}</p>
-              </li>
-            )
-          )}
-        </ul>
-      </section>
+      <ProblemSection />
+      <TradeOffSection />
+      <MultiMonitorSection />
+      <TrustSection />
+      <HomeFaqSection />
 
       <section id="download" className="mx-auto max-w-site px-6 pb-20 sm:px-10 sm:pb-28">
         <div className="rounded-2xl border border-line bg-panel p-8 sm:p-12">

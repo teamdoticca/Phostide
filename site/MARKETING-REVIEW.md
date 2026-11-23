@@ -4,7 +4,15 @@ Reviewed 2026-11-22 against the live site (https://phostide.doticca.com, v0.1.37
 
 ### Status (2026-11-22)
 
-**P0 done in the working tree** (not committed yet):
+**P1 done (2026-11-24)** except WinGet:
+- **Home page.** New sections: Problem (static-light illustration, ~2,900 h/yr), Trade-off (hide / dim / cover, then Phostide), Multi-monitor (three-screen illustration plus Monitors tab and status glossary), Trust (six facts, SmartScreen note, "What Phostide won't do") and a six-question FAQ with FAQPage JSON-LD (`src/lib/homeFaq.ts`). The old "Inside the bar" cards and Privacy chips are folded into Trust. S4 (a day with Phostide) is the hero.
+- **Compare page.** Adds monitor Taskbar Detection and overlay apps. Has a ✓/◐/✕ matrix with the Phostide column highlighted, which becomes stacked cards on phones.
+- **Kept aligned.** `/docs/faq` gained the firmware and laptop questions, and `llms.txt` / `llms-full.txt` were updated to match.
+- **Not verified.** The PC Gamer article body could not be fetched, so the Problem section cites only the headline (a two-year, 6,000-hour test showing burn-in increasing). A taskbar-specific claim was not added.
+- **WinGet is still blocked.** The winget-pkgs PR for 0.1.31 is still open.
+- **Arm support was left unstated.** The installer allows `x64compatible`, so copy says only "x64".
+
+**P0 committed in 38923a6:**
 - New hero copy.
 - The hero now walks through three moments (work, away, game) over a true-scale bar: a code editor while you work, the same screen when you step away, and a fullscreen game scene that covers the bar.
 - Non-Windows visitors get a "Send link to my PC" CTA.

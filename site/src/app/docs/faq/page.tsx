@@ -43,6 +43,14 @@ const faqs: { q: string; a: string }[] = [
     a: "Start with Space or Aurora — they stay darkest. Keep intensity modest (default is 35% on a fresh install). Weather and Sea Waves are busier; dial intensity down if you want calmer motion. OLED Care › OLED everyday preset sets idle care only (5m idle, low fill, chrome/clock care, night boost) — it does not change your Taskbar theme or intensity.",
   },
   {
+    q: "Does it work with my monitor’s own OLED Care or Taskbar Detection?",
+    a: "Yes, you can run both. Features like ASUS, MSI or Philips Taskbar Detection work on the panel and dim a fixed area; Phostide works on the taskbar’s background inside Windows and adds motion while you work, dimming when you step away, per-display rest and a pause for fullscreen games.",
+  },
+  {
+    q: "Does it work on OLED laptops?",
+    a: "Yes. It works on any display connected to a Windows 11 22H2 or later x64 PC, laptop screens included.",
+  },
+  {
     q: "What is OLED Care?",
     a: "A dedicated Settings tab. Idle is hybrid: walk away (no input for Idle after) and every enabled bar dims; while you keep working, leave the cursor on one display and the other can dim alone after Idle after (attendance follows the cursor). Optional experimental toggles dim icons/tray/clock (including Search) or micro-nudge the clock only on that idle bar — not on the one you’re using. Night boost shortens the idle timeout and darkens the fill in the evening. Pause themes while locked / in fullscreen (both default on) freeze paint without flipping Enable — fullscreen pauses only the covered display so other bars keep moving. Live status lives on the Monitors tab. OLED everyday preset applies those care defaults only — it does not change Taskbar theme or intensity. Exit restores stock brushes and chrome.",
   },

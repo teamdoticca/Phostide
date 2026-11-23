@@ -53,7 +53,7 @@ Honest limits: Phostide reduces locked-bright time (moving fill + idle Care); it
 - [FAQ](https://phostide.doticca.com/docs/faq) — short answers for agents and humans
 - [Themes](https://phostide.doticca.com/docs/themes) — five looks, intensity, Apply flow
 - [OLED notes](https://phostide.doticca.com/docs/oled) — why motion helps OLED taskbars
-- [Compare approaches](https://phostide.doticca.com/docs/compare) — auto-hide vs overlay vs idle fade vs BackgroundFill
+- [Compare approaches](https://phostide.doticca.com/docs/compare) — auto-hide vs monitor Taskbar Detection vs overlay vs idle fade vs Phostide
 - [Troubleshooting](https://phostide.doticca.com/docs/troubleshooting)
 - [Privacy](https://phostide.doticca.com/docs/privacy)
 - [GitHub Releases](https://github.com/teamdoticca/Phostide/releases)
