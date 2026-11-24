@@ -1,4 +1,5 @@
 #include "Diagnostics.h"
+#include "FullscreenDetect.h"
 #include "Injector.h"
 #include "SettingsStore.h"
 #include "SettingsWindow.h"
@@ -48,7 +49,6 @@ constexpr UINT kIdlePollMs = 1000;       // while awake — cheap attendance
 constexpr UINT kIdlePollCareMs = 200;    // while any bar is dimmed — snappy wake
 constexpr UINT kFullscreenEnterDwellMs = 750;
 constexpr UINT kFullscreenLeaveDwellMs = 300;
-constexpr LONG kFullscreenCoverTolerancePx = 4;
 constexpr ULONGLONG kTimedPauseMs = 60ull * 60ull * 1000ull;
 constexpr UINT kResumeCheckMs = 15000;  // GetTickCount64 counts sleep; WM_TIMER may lag
 
@@ -160,42 +160,6 @@ void ClearMonitorCareIdle() {
   }
 }
 
-bool IsShellOrOwnWindow(HWND hwnd) {
-  if (!hwnd) return true;
-  if (hwnd == g_hwnd) return true;
-  HWND settings = phostide::SettingsWindowHwnd();
-  if (settings && (hwnd == settings || IsChild(settings, hwnd))) return true;
-  wchar_t cls[64]{};
-  if (GetClassNameW(hwnd, cls, 64) <= 0) return false;
-  return _wcsicmp(cls, L"Progman") == 0 || _wcsicmp(cls, L"WorkerW") == 0 ||
-         _wcsicmp(cls, L"Shell_TrayWnd") == 0 ||
-         _wcsicmp(cls, L"Shell_SecondaryTrayWnd") == 0;
-}
-
-bool WindowCoversMonitor(const RECT& wr, const RECT& mr) {
-  const LONG tol = kFullscreenCoverTolerancePx;
-  return wr.left <= mr.left + tol && wr.top <= mr.top + tol &&
-         wr.right >= mr.right - tol && wr.bottom >= mr.bottom - tol;
-}
-
-uint32_t CollectFullscreenCoveredHashes(uint64_t* outHashes, uint32_t maxHashes) {
-  if (!outHashes || maxHashes == 0) return 0;
-  HWND fg = GetForegroundWindow();
-  if (!fg || !IsWindowVisible(fg) || IsIconic(fg)) return 0;
-  if (IsShellOrOwnWindow(fg)) return 0;
-
-  RECT wr{};
-  if (!GetWindowRect(fg, &wr)) return 0;
-
-  uint32_t count = 0;
-  for (const auto& mon : phostide::EnumerateAttachedMonitors()) {
-    if (count >= maxHashes) break;
-    if (!WindowCoversMonitor(wr, mon.rc)) continue;
-    outHashes[count++] = mon.deviceHash;
-  }
-  return count;
-}
-
 bool FullscreenHashSetsEqual(const uint64_t* a, uint32_t aCount, const uint64_t* b,
                              uint32_t bCount) {
   if (aCount != bCount) return false;
@@ -232,7 +196,7 @@ bool RefreshFullscreenPauseState() {
 
   uint64_t covered[phostide::kMaxMonitorSlots]{};
   const uint32_t coveredCount =
-      CollectFullscreenCoveredHashes(covered, phostide::kMaxMonitorSlots);
+      phostide::CollectFullscreenCoveredMonitors(covered, phostide::kMaxMonitorSlots);
   const bool raw = coveredCount > 0;
   const DWORD now = GetTickCount();
   if (raw != g_fullscreenRaw) {
