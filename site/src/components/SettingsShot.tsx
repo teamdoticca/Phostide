@@ -23,9 +23,9 @@ const SHOTS: Record<
   },
   monitors: {
     src: "/images/settings/settings-monitors.png",
-    alt: "Phostide Settings — Monitors tab with live paint status",
+    alt: "Phostide Settings — Monitors tab with display model names, Identify and live paint status",
     defaultCaption:
-      "Monitors — on/off plus live status (painting / fullscreen / locked / off / paused)",
+      "Monitors — model names, Identify, on/off and live status (painting / fullscreen / locked / off / paused)",
   },
   system: {
     src: "/images/settings/settings-system.png",

@@ -65,9 +65,9 @@ Rendering mode is app-global. Care only paints monitors left on. Tray left-click
 <p align="center"><em>OLED Care — pause while locked / in fullscreen (defaults on)</em></p>
 
 <p align="center">
-  <img src="assets/readme/settings/settings-monitors.png" alt="Phostide Settings — Monitors with live paint status" width="720" />
+  <img src="assets/readme/settings/settings-monitors.png" alt="Phostide Settings — Monitors with display model names, Identify and live paint status" width="720" />
 </p>
-<p align="center"><em>Monitors — on/off plus live painting / fullscreen / locked status</em></p>
+<p align="center"><em>Monitors — model names, Identify, on/off and live painting / fullscreen / locked status</em></p>
 
 <details>
 <summary>Taskbar and System tabs</summary>
