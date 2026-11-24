@@ -18,6 +18,11 @@ std::wstring SetupFileNameFromUrl(std::wstring_view url);
 // signer; an unsigned dev host requires the Doticca publisher.
 bool IsAcceptedSetupSigner(std::wstring_view setupSigner, std::wstring_view hostSigner);
 
+// True when the exe lives in a Scoop app dir: <scoop root>\apps\phostide\<version or
+// current>\Phostide.exe (user or global root). Such installs update with
+// `scoop update phostide`; running Setup there would add a second, separate copy.
+bool IsScoopInstallPath(std::wstring_view exePath);
+
 struct SetupDownloadResult {
   bool ok = false;
   std::wstring setupPath;

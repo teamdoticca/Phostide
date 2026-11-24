@@ -52,6 +52,12 @@ With no `settings.json`, the host saves the defaults (Aurora 35%, OLED Care idle
 
 Settings › System › **Update now** (`UpdateInstall.cpp`) only downloads `Phostide-Setup-*.exe` from `https://github.com/teamdoticca/Phostide/releases/download/`, into `%TEMP%\Phostide\update`. It accepts the file only if its Authenticode signer equals the host's (an unsigned dev host requires `CN=Doticca SRL`) and its file version is newer than `kAppVersion`. Then it runs Setup with `/SILENT /SUPPRESSMSGBOXES /NORESTART /RELAUNCH=1 /LOG="%TEMP%\Phostide\setup.log"` and the host exits. `/RELAUNCH=1` makes Setup start Phostide at `ssDone` (silent mode skips the postinstall `[Run]` entry). Any failure opens the release page. Testing the download against a real release from a dev build needs a build that reports an older version than that release.
 
+Scoop installs (`…\apps\phostide\<version|current>\Phostide.exe`, see `IsScoopInstallPath`) never run Setup: Update now shows "update with: scoop update phostide" instead, so Scoop and Setup copies never mix.
+
+## Scoop bucket
+
+Source: `packaging/scoop/` (README + `bucket/phostide.json`), published as the `teamdoticca/scoop-bucket` repo. The manifest installs the signed portable zip; `pre_uninstall` runs `Phostide.exe /exit` (and on uninstall drops a `Run\Phostide` value that points into the Scoop dir), `post_install` restarts Phostide after an update that stopped it. After promoting a release: `.\scripts\update-scoop-manifest.ps1 -Version x.y.z` (downloads the release zip, rewrites version/url/hash), then copy `bucket/phostide.json` to the bucket repo.
+
 `scripts/package-release.ps1 -InstallerOnly` rebuilds and signs just Setup from the existing signed stage (installer script fixes).
 
 ## Dev reinject ritual (fresh DLL)

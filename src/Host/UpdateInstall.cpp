@@ -40,6 +40,30 @@ std::wstring LowerAscii(std::wstring_view s) {
   return out;
 }
 
+}  // namespace
+
+bool IsScoopInstallPath(std::wstring_view exePath) {
+  std::wstring path = LowerAscii(exePath);
+  std::replace(path.begin(), path.end(), L'/', L'\\');
+  std::vector<std::wstring> parts;
+  size_t start = 0;
+  while (start <= path.size()) {
+    const size_t end = path.find(L'\\', start);
+    const std::wstring part =
+        path.substr(start, end == std::wstring::npos ? std::wstring::npos : end - start);
+    if (!part.empty()) parts.push_back(part);
+    if (end == std::wstring::npos) break;
+    start = end + 1;
+  }
+  // ...\apps\phostide\<version|current>\phostide.exe
+  if (parts.size() < 5) return false;
+  const size_t n = parts.size();
+  return parts[n - 1] == L"phostide.exe" && parts[n - 3] == L"phostide" &&
+         parts[n - 4] == L"apps" && !parts[n - 2].empty();
+}
+
+namespace {
+
 // "0.1.37" from the Setup's VS_FIXEDFILEINFO (Inno: VersionInfoVersion=x.y.z.0).
 std::wstring FileVersionTriple(const std::wstring& path) {
   DWORD handle = 0;

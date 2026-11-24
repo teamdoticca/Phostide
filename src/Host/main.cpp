@@ -584,8 +584,23 @@ void ReportUpdateProgress(void*, int percent) {
 
 // Settings › System › "Update now": download the signed Setup, verify it, run it
 // silently and exit. Setup restarts Explorer if the TAP changed and relaunches us.
+bool RunningFromScoop() {
+  static const bool scoop = [] {
+    wchar_t exe[MAX_PATH]{};
+    const DWORD n = GetModuleFileNameW(nullptr, exe, MAX_PATH);
+    return n > 0 && n < MAX_PATH && phostide::IsScoopInstallPath(exe);
+  }();
+  return scoop;
+}
+
 void StartUpdateInstall() {
   if (g_updateInstallRunning) return;
+  // Scoop owns this copy: Setup would install a second one under Programs.
+  if (RunningFromScoop()) {
+    g_updateStatusText = L"Installed with Scoop - update with: scoop update phostide";
+    phostide::SettingsWindowRefreshUpdateUi();
+    return;
+  }
   if (!HasPendingUpdate() || !phostide::IsTrustedSetupUrl(g_settings.pendingSetupUrl)) {
     OpenReleasePageInBrowser();
     return;

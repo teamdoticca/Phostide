@@ -59,3 +59,16 @@ TEST(IsAcceptedSetupSigner_Rules) {
   CHECK(!IsAcceptedSetupSigner(L"CN=Someone Else", L""));
   CHECK(!IsAcceptedSetupSigner(L"", L""));
 }
+
+TEST(IsScoopInstallPath_DetectsScoopLayout) {
+  CHECK(IsScoopInstallPath(LR"(C:\Users\a\scoop\apps\phostide\current\Phostide.exe)"));
+  CHECK(IsScoopInstallPath(LR"(C:\Users\a\scoop\apps\phostide\0.1.39\Phostide.exe)"));
+  CHECK(IsScoopInstallPath(LR"(C:\ProgramData\scoop\apps\Phostide\current\PHOSTIDE.EXE)"));
+  CHECK(IsScoopInstallPath(L"D:/tools/scoop/apps/phostide/current/Phostide.exe"));
+  // Setup / zip / dev locations are not Scoop.
+  CHECK(!IsScoopInstallPath(LR"(C:\Users\a\AppData\Local\Programs\Phostide\Phostide.exe)"));
+  CHECK(!IsScoopInstallPath(LR"(Z:\Doticca\Phostide\out\Release\Phostide.exe)"));
+  CHECK(!IsScoopInstallPath(LR"(C:\scoop\apps\other\current\Phostide.exe)"));
+  CHECK(!IsScoopInstallPath(LR"(C:\apps\phostide\Phostide.exe)"));
+  CHECK(!IsScoopInstallPath(L""));
+}

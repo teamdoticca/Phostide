@@ -1,0 +1,60 @@
+{
+    "version": "0.1.39",
+    "description": "OLED taskbar solution for Windows 11: animated themes painted into the real taskbar, idle OLED Care and per-monitor control.",
+    "homepage": "https://phostide.doticca.com",
+    "license": "MIT",
+    "notes": [
+        "Start Phostide from Start menu > Scoop Apps > Phostide (it lives in the tray).",
+        "Update with: scoop update phostide (Settings > System > Update now points here too)."
+    ],
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/teamdoticca/Phostide/releases/download/v0.1.39/Phostide-0.1.39-win-x64.zip",
+            "hash": "5f9c42ddab417e661a13667a17251e20da37b99831d21ec0aabc8a350d6f5721"
+        }
+    },
+    "shortcuts": [
+        [
+            "Phostide.exe",
+            "Phostide"
+        ]
+    ],
+    "pre_uninstall": [
+        "# Runs on uninstall and before an update replaces the files.",
+        "$appRoot = Split-Path $dir",
+        "$flag = Join-Path $env:TEMP 'Phostide\\scoop-relaunch'",
+        "$running = Get-Process Phostide -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($appRoot, [StringComparison]::OrdinalIgnoreCase) }",
+        "if ($running) {",
+        "    # Tray Exit: restores the stock taskbar and releases the files.",
+        "    Start-Process (Join-Path $dir 'Phostide.exe') -ArgumentList '/exit' -Wait -WindowStyle Hidden",
+        "    if ($cmd -eq 'update') { New-Item -ItemType File -Force $flag | Out-Null }",
+        "}",
+        "if ($cmd -eq 'uninstall') {",
+        "    $run = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'",
+        "    $value = (Get-ItemProperty $run -ErrorAction SilentlyContinue).Phostide",
+        "    if ($value -and $value.Trim('\"').StartsWith($appRoot, [StringComparison]::OrdinalIgnoreCase)) {",
+        "        Remove-ItemProperty $run -Name Phostide -ErrorAction SilentlyContinue",
+        "    }",
+        "}"
+    ],
+    "post_install": [
+        "# After an update, start Phostide again if the update stopped it.",
+        "$flag = Join-Path $env:TEMP 'Phostide\\scoop-relaunch'",
+        "if (Test-Path $flag) {",
+        "    Remove-Item $flag -Force",
+        "    $current = Join-Path (Split-Path $dir) 'current\\Phostide.exe'",
+        "    if (-not (Test-Path $current)) { $current = Join-Path $dir 'Phostide.exe' }",
+        "    Start-Process $current",
+        "}"
+    ],
+    "checkver": {
+        "github": "https://github.com/teamdoticca/Phostide"
+    },
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/teamdoticca/Phostide/releases/download/v$version/Phostide-$version-win-x64.zip"
+            }
+        }
+    }
+}
