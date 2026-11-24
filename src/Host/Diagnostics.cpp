@@ -1,5 +1,6 @@
 #include "Diagnostics.h"
 #include "../Common/MonitorEnum.h"
+#include "MonitorNames.h"
 
 #include <algorithm>
 #include <fstream>
@@ -227,11 +228,15 @@ std::wstring BuildDiagnosticsReport(const Settings& s, const DiagnosticsHostStat
 
   out += L"\r\n--- Displays ---\r\n";
   const auto monitors = EnumerateAttachedMonitors();
+  const auto modelNames = QueryMonitorFriendlyNames();
   int index = 1;
   for (const auto& mon : monitors) {
     const MonitorAppearance a = ResolveMonitorAppearance(s, mon.deviceName);
-    swprintf_s(line, L"%d. %s %dx%d%s - %s, %s %d%%\r\n", index++, mon.deviceName.c_str(),
-               mon.width, mon.height, mon.primary ? L" primary" : L"",
+    const auto model = modelNames.find(mon.deviceName);
+    const std::wstring modelText =
+        model != modelNames.end() ? L" (" + model->second + L")" : std::wstring();
+    swprintf_s(line, L"%d. %s%s %dx%d%s - %s, %s %d%%\r\n", index++, mon.deviceName.c_str(),
+               modelText.c_str(), mon.width, mon.height, mon.primary ? L" primary" : L"",
                IsMonitorDisabled(s, mon.deviceName) ? L"off" : L"on", ThemeName(a.theme),
                a.intensity);
     out += line;

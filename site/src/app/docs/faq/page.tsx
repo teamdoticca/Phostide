@@ -36,7 +36,7 @@ const faqs: { q: string; a: string }[] = [
   },
   {
     q: "Can I theme only my OLED and leave the other monitor alone?",
-    a: "Yes. Open Settings › Monitors and uncheck the non-OLED display. Then on the Taskbar tab, Apply to the OLED monitor number, pick Aurora (or Space) at a modest intensity, and Apply. You can also leave both on and set different themes per display. OLED Care follows the same on/off list.",
+    a: "Yes. Open Settings › Monitors and uncheck the non-OLED display. Rows show each monitor's model name, and Identify shows each display's number on screen. Then on the Taskbar tab, Apply to the OLED monitor number, pick Aurora (or Space) at a modest intensity, and Apply. You can also leave both on and set different themes per display. OLED Care follows the same on/off list.",
   },
   {
     q: "Which theme should I use on an OLED panel?",

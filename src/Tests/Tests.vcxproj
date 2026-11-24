@@ -44,6 +44,7 @@
     <ClCompile Include="SettingsStoreTests.cpp" />
     <ClCompile Include="DiagnosticsTests.cpp" />
     <ClCompile Include="UpdateInstallTests.cpp" />
+    <ClCompile Include="MonitorNamesTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="TestHarness.h" />

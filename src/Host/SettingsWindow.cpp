@@ -1,4 +1,5 @@
 #include "SettingsWindow.h"
+#include "MonitorNames.h"
 #include "resource.h"
 #include "../Common/MonitorEnum.h"
 #include "../ExplorerTAP/PixelThemes.h"
@@ -8,6 +9,7 @@
 #include <uxtheme.h>
 
 #include <algorithm>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -58,6 +60,7 @@ constexpr int IDC_SCOPE_CAPTION = 1530;
 constexpr int IDC_SCOPE_BASE = 1540;  // +0 All, +1..N monitors
 constexpr int IDC_MONITORS_CAPTION = 1560;
 constexpr int IDC_MONITORS_HINT = 1561;
+constexpr int IDC_IDENTIFY = 1562;
 constexpr int IDC_MONITOR_BASE = 1570;  // +0..N-1 toggle rows
 constexpr int IDC_CARE_SUBTITLE = 1620;
 constexpr int IDC_CARE_IDLE_CAPTION = 1621;
@@ -125,6 +128,8 @@ int g_previewBmpH = 0;
 
 std::vector<AttachedMonitor> g_monitors;
 std::vector<bool> g_draftMonitorActive;  // parallel to g_monitors
+// EDID model names by device name (\.\DISPLAYn); missing = unknown.
+std::map<std::wstring, std::wstring> g_monitorNames;
 
 HFONT g_fontUi = nullptr;
 HFONT g_fontSection = nullptr;
@@ -220,6 +225,7 @@ void SyncDraftFromScope() {
 void RefreshMonitorList() {
   g_monitors = EnumerateAttachedMonitors();
   if (g_monitors.size() > kMaxMonitorSlots) g_monitors.resize(kMaxMonitorSlots);
+  g_monitorNames = QueryMonitorFriendlyNames();
   g_draftMonitorActive.resize(g_monitors.size());
   for (size_t i = 0; i < g_monitors.size(); ++i) {
     const bool disabled =
@@ -233,6 +239,14 @@ void SyncDraftFromSettings() {
   if (!g_host.settings) return;
   RefreshMonitorList();
   SyncDraftFromScope();
+}
+
+// EDID model name for an attached monitor row, or empty when Windows has none.
+const std::wstring& MonitorModelName(int index) {
+  static const std::wstring kNone;
+  if (index < 0 || index >= static_cast<int>(g_monitors.size())) return kNone;
+  const auto it = g_monitorNames.find(g_monitors[index].deviceName);
+  return it != g_monitorNames.end() ? it->second : kNone;
 }
 
 // --- Unsaved-change tracking (drafts vs. applied settings), per tab ---
@@ -654,6 +668,13 @@ void RelayoutScopeAndMonitors(HWND hwnd) {
                 &captionRc);
   POINT capt{captionRc.left, captionRc.bottom};
   ScreenToClient(hwnd, &capt);
+  if (HWND identify = GetDlgItem(hwnd, IDC_IDENTIFY)) {
+    const int bw = 120;
+    const int bh = 30;
+    SetWindowPos(identify, nullptr, pad + contentW - bw, capt.y - bh + 4, bw, bh,
+                 SWP_NOZORDER | SWP_NOACTIVATE);
+    ShowWindow(identify, (g_activeTab == 2 || welcome) ? SW_SHOW : SW_HIDE);
+  }
   int my = capt.y + 14;
   const int rowH = 40;
   for (int i = 0; i < static_cast<int>(kMaxMonitorSlots); ++i) {
@@ -1009,12 +1030,14 @@ void DrawMonitorRow(DRAWITEMSTRUCT* dis, int index) {
       wcscmp(status, L"paused") == 0;
   const COLORREF dotColor = statusPainting ? kGood : (statusHot ? kEmber : kMuted);
 
-  wchar_t line[128];
-  if (mon.primary) {
-    swprintf_s(line, L"Monitor %d  ·  %d×%d  ·  Primary", index + 1, mon.width, mon.height);
-  } else {
-    swprintf_s(line, L"Monitor %d  ·  %d×%d", index + 1, mon.width, mon.height);
-  }
+  // "Monitor 1  ·  LG 27GR95QE  ·  2560×1440  ·  Primary" (number = Identify overlay).
+  std::wstring line = L"Monitor " + std::to_wstring(index + 1);
+  const std::wstring& model = MonitorModelName(index);
+  if (!model.empty()) line += L"  ·  " + model;
+  wchar_t size[48];
+  swprintf_s(size, L"  ·  %d×%d", mon.width, mon.height);
+  line += size;
+  if (mon.primary) line += L"  ·  Primary";
 
   SetBkMode(dis->hDC, TRANSPARENT);
   HFONT old = static_cast<HFONT>(SelectObject(dis->hDC, g_fontUi));
@@ -1022,7 +1045,8 @@ void DrawMonitorRow(DRAWITEMSTRUCT* dis, int index) {
   textRc.left += 44;
   textRc.right -= 110;
   SetTextColor(dis->hDC, on ? kInk : kSoft);
-  DrawTextW(dis->hDC, line, -1, &textRc, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX | DT_END_ELLIPSIS);
+  DrawTextW(dis->hDC, line.c_str(), -1, &textRc,
+            DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX | DT_END_ELLIPSIS);
 
   RECT statusRc = dis->rcItem;
   statusRc.right -= 16;
@@ -1066,6 +1090,142 @@ void DrawPreview(DRAWITEMSTRUCT* dis) {
   SelectObject(mem, oldBmp);
   DeleteObject(back);
   DeleteDC(mem);
+}
+
+// --- Identify: a large number on every display, matching "Monitor N" rows ---
+
+constexpr wchar_t kIdentifyClass[] = L"PhostideIdentify";
+constexpr UINT_PTR ID_IDENTIFY_TIMER = 78;
+constexpr UINT kIdentifyMs = 3000;
+
+struct IdentifyCard {
+  HWND hwnd = nullptr;
+  int number = 0;
+  std::wstring model;
+  float scale = 1.f;
+};
+std::vector<IdentifyCard> g_identifyCards;
+bool g_identifyClassRegistered = false;
+
+void CloseIdentifyCards() {
+  std::vector<IdentifyCard> cards;
+  cards.swap(g_identifyCards);
+  for (auto& c : cards) {
+    if (c.hwnd && IsWindow(c.hwnd)) DestroyWindow(c.hwnd);
+  }
+}
+
+const IdentifyCard* CardFor(HWND hwnd) {
+  for (const auto& c : g_identifyCards) {
+    if (c.hwnd == hwnd) return &c;
+  }
+  return nullptr;
+}
+
+void PaintIdentifyCard(HWND hwnd, HDC dc) {
+  const IdentifyCard* card = CardFor(hwnd);
+  RECT rc{};
+  GetClientRect(hwnd, &rc);
+  // Plain fill: DWM rounds the corners and draws the ember border (see ShowIdentifyCards).
+  FillRect(dc, &rc, g_brScreen);
+  if (!card) return;
+
+  const float s = card->scale;
+  SetBkMode(dc, TRANSPARENT);
+  HFONT big = CreateFontW(-static_cast<int>(120 * s), 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE,
+                          DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                          CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
+  HFONT label = CreateFontW(-static_cast<int>(20 * s), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                            CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
+  HGDIOBJ old = SelectObject(dc, big);
+  SetTextColor(dc, kInk);
+  RECT numRc = rc;
+  numRc.bottom = rc.top + (rc.bottom - rc.top) * 72 / 100;
+  const std::wstring number = std::to_wstring(card->number);
+  DrawTextW(dc, number.c_str(), -1, &numRc, DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+
+  SelectObject(dc, label);
+  SetTextColor(dc, kSoft);
+  RECT nameRc = rc;
+  nameRc.top = numRc.bottom - static_cast<int>(8 * s);
+  nameRc.left += static_cast<int>(16 * s);
+  nameRc.right -= static_cast<int>(16 * s);
+  const std::wstring caption = card->model.empty() ? L"Monitor " + number : card->model;
+  DrawTextW(dc, caption.c_str(), -1, &nameRc,
+            DT_CENTER | DT_TOP | DT_SINGLELINE | DT_NOPREFIX | DT_END_ELLIPSIS);
+  SelectObject(dc, old);
+  DeleteObject(big);
+  DeleteObject(label);
+}
+
+LRESULT CALLBACK IdentifyWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+  switch (msg) {
+    case WM_PAINT: {
+      PAINTSTRUCT ps{};
+      HDC dc = BeginPaint(hwnd, &ps);
+      PaintIdentifyCard(hwnd, dc);
+      EndPaint(hwnd, &ps);
+      return 0;
+    }
+    case WM_ERASEBKGND:
+      return 1;
+    case WM_TIMER:
+      if (wParam == ID_IDENTIFY_TIMER) CloseIdentifyCards();
+      return 0;
+    case WM_LBUTTONUP:  // click any card to dismiss early
+      CloseIdentifyCards();
+      return 0;
+    case WM_MOUSEACTIVATE:
+      return MA_NOACTIVATE;
+    default:
+      return DefWindowProcW(hwnd, msg, wParam, lParam);
+  }
+}
+
+void ShowIdentifyCards(HWND owner) {
+  CloseIdentifyCards();
+  const HINSTANCE hi = ParentInstance(owner);
+  if (!g_identifyClassRegistered) {
+    WNDCLASSEXW wc{sizeof(wc)};
+    wc.lpfnWndProc = IdentifyWndProc;
+    wc.hInstance = hi;
+    wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+    wc.lpszClassName = kIdentifyClass;
+    g_identifyClassRegistered = RegisterClassExW(&wc) != 0;
+    if (!g_identifyClassRegistered) return;
+  }
+
+  // Fresh topology: the user may have just plugged a display in.
+  const auto monitors = EnumerateAttachedMonitors();
+  for (size_t i = 0; i < monitors.size() && i < kMaxMonitorSlots; ++i) {
+    const auto& mon = monitors[i];
+    IdentifyCard card;
+    card.number = static_cast<int>(i) + 1;
+    const auto it = g_monitorNames.find(mon.deviceName);
+    if (it != g_monitorNames.end()) card.model = it->second;
+    // Per-monitor DPI aware host: rcMonitor is physical pixels; size by panel height.
+    card.scale = (std::clamp)(static_cast<float>(mon.height) / 1440.f, 0.75f, 2.5f);
+    const int w = static_cast<int>(280 * card.scale);
+    const int h = static_cast<int>(230 * card.scale);
+    const int x = mon.rc.left + (mon.width - w) / 2;
+    const int y = mon.rc.top + (mon.height - h) / 2;
+    card.hwnd = CreateWindowExW(
+        WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_LAYERED, kIdentifyClass,
+        L"", WS_POPUP, x, y, w, h, owner, nullptr, hi, nullptr);
+    if (!card.hwnd) continue;
+    SetLayeredWindowAttributes(card.hwnd, 0, 240, LWA_ALPHA);
+    const DWORD round = 2;  // DWMWCP_ROUND
+    DwmSetWindowAttribute(card.hwnd, 33 /* DWMWA_WINDOW_CORNER_PREFERENCE */, &round,
+                          sizeof(round));
+    const COLORREF border = kEmber;
+    DwmSetWindowAttribute(card.hwnd, 34 /* DWMWA_BORDER_COLOR */, &border, sizeof(border));
+    g_identifyCards.push_back(std::move(card));
+  }
+  for (const auto& c : g_identifyCards) ShowWindow(c.hwnd, SW_SHOWNOACTIVATE);
+  if (!g_identifyCards.empty()) {
+    SetTimer(g_identifyCards.front().hwnd, ID_IDENTIFY_TIMER, kIdentifyMs, nullptr);
+  }
 }
 
 void UpdateWelcomeIntro(HWND hwnd) {
@@ -1301,16 +1461,17 @@ void BuildChildren(HWND hwnd) {
 
   // --- Monitors tab ---
   const int my = y;
-  MkStatic(hwnd, IDC_MONITORS_CAPTION, L"ACTIVE DISPLAYS", pad, my, contentW, 16,
+  MkStatic(hwnd, IDC_MONITORS_CAPTION, L"ACTIVE DISPLAYS", pad, my, contentW - 136, 16,
            g_fontSection);
   for (int i = 0; i < static_cast<int>(kMaxMonitorSlots); ++i) {
     MkButton(hwnd, IDC_MONITOR_BASE + i, L"", pad, my + 28, contentW, 40, BS_OWNERDRAW);
   }
   MkStatic(hwnd, IDC_MONITORS_HINT, L"", pad, kClientH - 96, contentW, 32, g_fontUi);
+  MkButton(hwnd, IDC_IDENTIFY, L"Identify", pad + contentW - 120, my, 120, 30, BS_OWNERDRAW);
 
   // --- First-run Welcome (no tab button; tab row hidden while shown) ---
   MkStatic(hwnd, IDC_WELCOME_INTRO, L"", pad, 70, contentW, 64, g_fontUi);
-  MkStatic(hwnd, IDC_WELCOME_CAPTION, L"WHICH DISPLAYS ARE OLED?", pad, 150, contentW, 16,
+  MkStatic(hwnd, IDC_WELCOME_CAPTION, L"WHICH DISPLAYS ARE OLED?", pad, 150, contentW - 136, 16,
            g_fontSection);
   MkStatic(hwnd, IDC_WELCOME_HINT,
            L"Done saves this choice. Customize opens the full Settings (themes, "
@@ -1534,10 +1695,11 @@ LRESULT SettingsWndProcImpl(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         return TRUE;
       }
       if (dis->CtlID == IDC_CLOSE || dis->CtlID == IDC_CHECK_UPDATES ||
-          dis->CtlID == IDC_COPY_DIAG) {
+          dis->CtlID == IDC_COPY_DIAG || dis->CtlID == IDC_IDENTIFY) {
         const wchar_t* label = (g_activeTab == kTabWelcome) ? L"Customize" : L"Close";
         if (dis->CtlID == IDC_CHECK_UPDATES) label = L"Check for updates";
         if (dis->CtlID == IDC_COPY_DIAG) label = L"Copy diagnostics";
+        if (dis->CtlID == IDC_IDENTIFY) label = L"Identify";
         DrawGhostButton(dis, label, IsWindowEnabled(dis->hwndItem) != FALSE);
         return TRUE;
       }
@@ -1688,6 +1850,10 @@ LRESULT SettingsWndProcImpl(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         if (g_host.onOpenUpdate) g_host.onOpenUpdate();
         return 0;
       }
+      if (id == IDC_IDENTIFY) {
+        ShowIdentifyCards(hwnd);
+        return 0;
+      }
       if (id == IDC_COPY_DIAG) {
         const bool ok = g_host.onCopyDiagnostics && g_host.onCopyDiagnostics(hwnd);
         SetWindowTextW(GetDlgItem(hwnd, IDC_DIAG_STATUS),
@@ -1703,6 +1869,7 @@ LRESULT SettingsWndProcImpl(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
       return 0;
     case WM_DESTROY:
       KillTimer(hwnd, ID_PREVIEW_TIMER);
+      CloseIdentifyCards();
       if (g_previewBmp) {
         DeleteObject(g_previewBmp);
         g_previewBmp = nullptr;

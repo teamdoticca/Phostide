@@ -63,6 +63,8 @@ Tray left-click / Enable soft-pauses paint (**SoftSuspend** keeps `BackgroundFil
 ### Monitors tab
 
 - Per-display **enable/disable** (default: all on).
+- Rows are named from the monitor's EDID model (e.g. "Monitor 1 · LG 27GR95QE"); laptop panels without a name show "Built-in display".
+- **Identify** shows a large number (matching "Monitor N" and the Taskbar tab chips) on every display for 3 seconds. The first-run Welcome has the same button.
 - Unchecked = that display keeps a **stock** Windows taskbar (Phostide does not paint it).
 - Each row shows live paint status: **painting** / **fullscreen** / **locked** / **off** / **paused** (Enable off).
 - Grayed chips on the Taskbar tab mean that display is off here; you can still edit its saved look for when you turn it back on.
