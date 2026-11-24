@@ -5,7 +5,7 @@ export const FALLBACK_RELEASES =
 export const GITHUB_REPO = "https://github.com/teamdoticca/Phostide";
 
 /** Bump with each published GitHub Release (used when the API is unreachable). */
-export const FALLBACK_TAG = "v0.1.39";
+export const FALLBACK_TAG = "v0.1.40";
 const FALLBACK_SETUP =
   "https://github.com/teamdoticca/Phostide/releases/download/v0.1.15/Phostide-Setup-0.1.15-win-x64.exe";
 const FALLBACK_ZIP =

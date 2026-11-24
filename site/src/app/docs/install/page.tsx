@@ -22,6 +22,7 @@ const toc = [
   { href: "#monitors", label: "Multi-monitor" },
   { href: "#oled-dual", label: "Dual-monitor OLED" },
   { href: "#portable", label: "Portable zip" },
+  { href: "#scoop", label: "Scoop" },
   { href: "#settings-file", label: "Settings file" },
   { href: "#uninstall", label: "Uninstall" },
 ];
@@ -318,6 +319,27 @@ export default async function InstallPage() {
             <LatestDownload kind="zip" className="btn-ghost mt-5">
               Download zip
             </LatestDownload>
+          </section>
+
+          <section id="scoop" className="mt-14">
+            <h2 className="text-2xl font-semibold">Use Scoop? Install it there.</h2>
+            <p className="mt-3 text-soft">
+              The Doticca bucket installs the same signed portable zip and adds
+              a Start menu shortcut under Scoop Apps.
+            </p>
+            <div className="mt-4 rounded-lg border border-line bg-panel px-5 py-4 font-mono text-sm">
+              scoop bucket add doticca https://github.com/teamdoticca/scoop-bucket
+              <br />
+              scoop install doticca/phostide
+            </div>
+            <p className="mt-4 text-soft">
+              Update with <code className="text-zinc-100">scoop update phostide</code>;
+              on a Scoop install, Settings › System › Update now points there
+              instead of running Setup.{" "}
+              <code className="text-zinc-100">scoop uninstall phostide</code>{" "}
+              exits Phostide, restores the stock taskbar and removes its Start
+              with Windows entry. Settings stay under %APPDATA%\Phostide.
+            </p>
           </section>
 
           <section id="settings-file" className="mt-14">

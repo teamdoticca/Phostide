@@ -16,6 +16,7 @@ Technical path (high level): `Phostide.exe` (system-tray host) injects `Explorer
 - Download: https://phostide.doticca.com or https://github.com/teamdoticca/Phostide/releases
 - Setup.exe: run it → tray icon appears → Start menu entry optional. Files: `Phostide.exe`, `ExplorerTAP.dll`, `Themes.hlsl` (keep together).
 - Portable: unzip the release zip anywhere; run `Phostide.exe`. Settings still live under `%APPDATA%\Phostide`. Delete the folder after Exit to remove binaries.
+- Scoop: `scoop bucket add doticca https://github.com/teamdoticca/scoop-bucket`, then `scoop install doticca/phostide`. Installs the signed portable zip with a Start menu shortcut (Scoop Apps). Update with `scoop update phostide`; on a Scoop install, Settings › System › Update now shows that command instead of running Setup. `scoop uninstall phostide` exits Phostide, restores the stock taskbar and removes its Start with Windows entry.
 - Uninstall: tray › Exit, then Settings › Apps › Uninstall Phostide; optionally delete `%APPDATA%\Phostide`.
 
 ## Themes

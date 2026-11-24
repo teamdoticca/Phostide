@@ -33,7 +33,7 @@ Most OLED taskbar tools **hide** the bar. Phostide keeps it usable and moves the
 - Real Explorer background fill (TAP helper + Composition surfaces)
 - Multi-monitor: theme/intensity per display, on/off per display, live paint/pause status, shared Auto/GPU/CPU rendering
 - Fullscreen pause (default on) freezes paint on the covered display so games keep the GPU
-- Signed Setup.exe (per-user, no admin) and portable zip
+- Signed Setup.exe (per-user, no admin), portable zip and a Scoop bucket
 - Local only — no account, no telemetry
 - MIT open source
 - Standalone — **no Windhawk** or separate taskbar overlay required
@@ -93,6 +93,15 @@ On an OLED + LCD setup you can theme only the OLED: **Monitors** → uncheck the
 3. Optional: **Monitors** tab to leave a display stock; **System** tab for rendering / Start with Windows › Apply.
 
 Portable zip: unzip anywhere and run `Phostide.exe`.
+
+Scoop:
+
+```powershell
+scoop bucket add doticca https://github.com/teamdoticca/scoop-bucket
+scoop install doticca/phostide
+```
+
+Update with `scoop update phostide` (on a Scoop install, Update now points there instead of running Setup).
 
 More detail: [Install & run](https://phostide.doticca.com/docs/install) · [FAQ](https://phostide.doticca.com/docs/faq) · [Compare approaches](https://phostide.doticca.com/docs/compare).
 

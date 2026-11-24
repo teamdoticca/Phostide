@@ -76,7 +76,7 @@ const faqs: { q: string; a: string }[] = [
   },
   {
     q: "Where do I download it?",
-    a: "https://phostide.doticca.com or GitHub Releases for teamdoticca/Phostide. Prefer the signed Setup.exe; portable zip is available on the same release.",
+    a: "https://phostide.doticca.com or GitHub Releases for teamdoticca/Phostide. Prefer the signed Setup.exe; portable zip is available on the same release. Scoop users: scoop bucket add doticca https://github.com/teamdoticca/scoop-bucket, then scoop install doticca/phostide.",
   },
 ];
 
