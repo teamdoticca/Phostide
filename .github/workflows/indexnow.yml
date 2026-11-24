@@ -1,0 +1,62 @@
+name: IndexNow
+
+# Tell Bing (and through it Copilot) plus other IndexNow engines that the site changed.
+# Fires when Vercel reports a successful deployment of main, and only if that commit
+# touched site/. The key file lives at site/public/<key>.txt (public by design).
+
+on:
+  status:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SITE: https://phostide.doticca.com
+  INDEXNOW_KEY: a09fab7d9648e4bd37e870a3ae62bcc2
+
+jobs:
+  ping:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.context == 'Vercel' &&
+       github.event.state == 'success' &&
+       contains(github.event.branches.*.name, 'main'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          ref: ${{ github.event.sha || github.sha }}
+
+      - name: Did this commit change the site?
+        id: changed
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || \
+             git diff --name-only HEAD^ HEAD -- site/ | grep -q .; then
+            echo "site=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No site/ changes in this commit; skipping."
+          fi
+
+      - name: Ping IndexNow with every sitemap URL
+        if: steps.changed.outputs.site == 'true'
+        run: |
+          set -euo pipefail
+          # The key file must be live before engines will accept the ping.
+          live=$(curl -fsS "$SITE/$INDEXNOW_KEY.txt")
+          [ "$live" = "$INDEXNOW_KEY" ] || { echo "Key file not served yet"; exit 1; }
+
+          urls=$(curl -fsS "$SITE/sitemap.xml" | grep -o '<loc>[^<]*</loc>' | sed 's/<[^>]*>//g')
+          [ -n "$urls" ] || { echo "Sitemap is empty"; exit 1; }
+          echo "$urls"
+
+          body=$(jq -n --arg host "${SITE#https://}" --arg key "$INDEXNOW_KEY" \
+                       --arg loc "$SITE/$INDEXNOW_KEY.txt" --arg urls "$urls" \
+                 '{host:$host, key:$key, keyLocation:$loc, urlList:($urls|split("\n"))}')
+
+          code=$(curl -sS -o resp.txt -w '%{http_code}' -X POST https://api.indexnow.org/indexnow \
+                 -H 'Content-Type: application/json; charset=utf-8' -d "$body")
+          cat resp.txt; echo
+          echo "IndexNow HTTP $code"
+          case "$code" in 200|202) ;; *) exit 1 ;; esac
