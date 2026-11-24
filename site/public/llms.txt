@@ -13,7 +13,7 @@ Full agent brief: https://phostide.doticca.com/llms-full.txt
 - Standalone: does **not** require Windhawk, TranslucentTB, RainbowTaskbar, or any separate taskbar overlay.
 - Mechanism: tray host injects ExplorerTAP into Explorer; paints each taskbar's own `BackgroundFill`. Icons, Start, tray, and clock stay on top. Quitting restores the normal Windows brushes. Does not modify system files.
 - Themes: exactly five built-in — Rainbow, Sea Waves, Weather, Space, Aurora. There is **no theme editor** and no custom theme upload.
-- Privacy: local by default — no account, no telemetry; themes work offline; optional GitHub update check and in-app Update now (downloads the signed Setup) only.
+- Privacy: local by default — no account, no telemetry; themes work offline; optional GitHub update check and in-app Update now (downloads the signed Setup) only. The website uses cookieless Vercel Analytics (aggregate page views); the app does not.
 - Distribution: signed Setup.exe and portable zip via GitHub Releases (also linked from the site).
 
 ## Settings (tray › Settings…)

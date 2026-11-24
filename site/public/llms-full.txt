@@ -95,6 +95,7 @@ You may also leave both monitors on and set different themes/intensities per dis
 - Does not modify Windows system files.
 - Tray › Exit (or crash recovery) restores original taskbar brushes and any chrome opacity/transform changes from OLED Care.
 - License: MIT.
+- The website (not the app) uses cookieless Vercel Web Analytics and Speed Insights for aggregate page views and load times; no custom events. The app never contacts Vercel.
 
 ## Honest OLED limits
 

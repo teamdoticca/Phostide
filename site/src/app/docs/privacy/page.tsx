@@ -94,6 +94,32 @@ export default function PrivacyPage() {
 
           <div>
             <h2 className="text-xl font-semibold text-zinc-100">
+              This website
+            </h2>
+            <p className="mt-3">
+              Everything above is about the app. This site,
+              phostide.doticca.com, is hosted on Vercel and uses Vercel Web
+              Analytics and Speed Insights to count page views and measure how
+              fast pages load. Neither sets cookies, and we see only aggregate
+              numbers such as pages visited, referrers, country, browser and
+              device type. No personal profile is built, and nothing is sold or
+              shared for advertising.
+            </p>
+            <p className="mt-3">
+              The site sends no custom events, so clicks such as Download
+              aren&apos;t tracked. The app itself never talks to Vercel.{" "}
+              <a
+                href="https://vercel.com/docs/analytics/privacy-policy"
+                className="text-zinc-200 underline decoration-line underline-offset-4 hover:decoration-zinc-400"
+                rel="noreferrer"
+              >
+                How Vercel Analytics handles data
+              </a>
+            </p>
+          </div>
+
+          <div>
+            <h2 className="text-xl font-semibold text-zinc-100">
               Builds &amp; source
             </h2>
             <p className="mt-3">
