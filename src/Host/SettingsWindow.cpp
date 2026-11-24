@@ -73,6 +73,7 @@ constexpr int IDC_CARE_PRESET = 1647;
 constexpr int IDC_CARE_HINT = 1648;
 constexpr int IDC_CARE_OPTIONS_CAPTION = 1649;
 constexpr int IDC_CARE_PAUSE_FS = 1650;
+constexpr int IDC_CARE_PRESET_DESC = 1651;
 constexpr int IDC_WELCOME_INTRO = 1660;
 constexpr int IDC_WELCOME_CAPTION = 1661;
 constexpr int IDC_WELCOME_HINT = 1662;
@@ -91,6 +92,11 @@ constexpr COLORREF kInk = RGB(244, 244, 245);
 constexpr COLORREF kSoft = RGB(150, 150, 155);
 constexpr COLORREF kEmber = RGB(255, 138, 61);
 constexpr COLORREF kEmberHot = RGB(255, 160, 96);
+constexpr COLORREF kGood = RGB(74, 222, 128);
+constexpr COLORREF kMuted = RGB(90, 90, 94);
+
+constexpr int kLogoSize = 32;
+constexpr int kTitleTextX = 24 + kLogoSize + 12;  // pad + logo + gap
 
 SettingsWindowHost g_host{};
 HWND g_settingsHwnd = nullptr;
@@ -126,6 +132,7 @@ HFONT g_fontTitle = nullptr;
 HFONT g_fontValue = nullptr;
 HBRUSH g_brScreen = nullptr;
 HBRUSH g_brPanel = nullptr;
+HICON g_logoIcon = nullptr;
 
 float ThemeBaseTime(ThemeId id) {
   switch (id) {
@@ -179,6 +186,23 @@ void LoadAppearanceDraft(const MonitorAppearance& a) {
   g_previewTime = ThemeBaseTime(g_draftTheme);
 }
 
+// Saved appearance for the current "Apply to" scope (All = global fallback).
+MonitorAppearance SavedScopeAppearance() {
+  if (g_scopeIndex >= 0 && g_scopeIndex < static_cast<int>(g_monitors.size())) {
+    return ResolveMonitorAppearance(*g_host.settings, g_monitors[g_scopeIndex].deviceName);
+  }
+  MonitorAppearance a;
+  a.theme = g_host.settings->theme;
+  a.intensity = g_host.settings->intensity;
+  return a;
+}
+
+// Scope chip switch / tray Theme menu: reload only the look, keep other tabs' drafts.
+void LoadScopeAppearance() {
+  if (!g_host.settings) return;
+  LoadAppearanceDraft(SavedScopeAppearance());
+}
+
 void SyncDraftFromScope() {
   if (!g_host.settings) return;
   g_draftAutostart = g_host.settings->startWithWindows;
@@ -190,15 +214,7 @@ void SyncDraftFromScope() {
   g_draftCareNightBoost = g_host.settings->oledCareNightBoost;
   g_draftPauseWhenLocked = g_host.settings->pauseWhenLocked;
   g_draftPauseWhenFullscreen = g_host.settings->pauseWhenFullscreen;
-  if (g_scopeIndex >= 0 && g_scopeIndex < static_cast<int>(g_monitors.size())) {
-    LoadAppearanceDraft(
-        ResolveMonitorAppearance(*g_host.settings, g_monitors[g_scopeIndex].deviceName));
-  } else {
-    MonitorAppearance a;
-    a.theme = g_host.settings->theme;
-    a.intensity = g_host.settings->intensity;
-    LoadAppearanceDraft(a);
-  }
+  LoadScopeAppearance();
 }
 
 void RefreshMonitorList() {
@@ -217,6 +233,67 @@ void SyncDraftFromSettings() {
   if (!g_host.settings) return;
   RefreshMonitorList();
   SyncDraftFromScope();
+}
+
+// --- Unsaved-change tracking (drafts vs. applied settings), per tab ---
+
+bool TaskbarDirty() {
+  if (!g_host.settings) return false;
+  const MonitorAppearance saved = SavedScopeAppearance();
+  return g_draftTheme != saved.theme || g_draftIntensity != saved.intensity;
+}
+
+bool CareDirty() {
+  if (!g_host.settings) return false;
+  const Settings& s = *g_host.settings;
+  return g_draftCareIdleMinutes != ClampOledCareIdleMinutes(s.oledCareIdleMinutes) ||
+         g_draftCareFillIntensity != ClampPercent(s.oledCareFillIntensity) ||
+         g_draftCareChromeDim != s.oledCareChromeDim ||
+         g_draftCareClockNudge != s.oledCareClockNudge ||
+         g_draftCareNightBoost != s.oledCareNightBoost ||
+         g_draftPauseWhenLocked != s.pauseWhenLocked ||
+         g_draftPauseWhenFullscreen != s.pauseWhenFullscreen;
+}
+
+bool MonitorsDirty() {
+  if (!g_host.settings) return false;
+  for (size_t i = 0; i < g_monitors.size() && i < g_draftMonitorActive.size(); ++i) {
+    const bool savedOn = !IsMonitorDisabled(*g_host.settings, g_monitors[i].deviceName);
+    if (g_draftMonitorActive[i] != savedOn) return true;
+  }
+  return false;
+}
+
+bool SystemDirty() {
+  if (!g_host.settings) return false;
+  return g_draftAutostart != g_host.settings->startWithWindows ||
+         g_draftRenderMode != g_host.settings->renderMode;
+}
+
+bool AnyDirty() { return TaskbarDirty() || CareDirty() || MonitorsDirty() || SystemDirty(); }
+
+bool TabDirty(int tab) {
+  switch (tab) {
+    case 0: return TaskbarDirty();
+    case 1: return CareDirty();
+    case 2: return MonitorsDirty();
+    case 3: return SystemDirty();
+    default: return false;
+  }
+}
+
+void RefreshDirtyUi(HWND hwnd) {
+  if (!hwnd) return;
+  // Welcome "Done" always confirms the display choice, even when unchanged.
+  const bool canApply = g_activeTab == kTabWelcome || AnyDirty();
+  HWND apply = GetDlgItem(hwnd, IDC_APPLY);
+  if (apply && (IsWindowEnabled(apply) != FALSE) != canApply) {
+    EnableWindow(apply, canApply ? TRUE : FALSE);
+  }
+  if (apply) InvalidateRect(apply, nullptr, FALSE);
+  for (int id : {IDC_TAB_TASKBAR, IDC_TAB_CARE, IDC_TAB_MONITORS, IDC_TAB_SYSTEM}) {
+    InvalidateRect(GetDlgItem(hwnd, id), nullptr, FALSE);
+  }
 }
 
 void InvalidateRenderRows(HWND hwnd) {
@@ -392,9 +469,13 @@ void RefreshUpdateControls(HWND hwnd) {
   SetWindowTextW(GetDlgItem(hwnd, IDC_UPDATE_STATUS), status);
 
   EnableWindow(GetDlgItem(hwnd, IDC_CHECK_UPDATES), (checking || installing) ? FALSE : TRUE);
-  EnableWindow(GetDlgItem(hwnd, IDC_UPDATE_BTN),
-               (!checking && !installing && HasPendingUpdate()) ? TRUE : FALSE);
-  InvalidateRect(GetDlgItem(hwnd, IDC_UPDATE_BTN), nullptr, TRUE);
+  HWND updateBtn = GetDlgItem(hwnd, IDC_UPDATE_BTN);
+  EnableWindow(updateBtn, (!checking && !installing && HasPendingUpdate()) ? TRUE : FALSE);
+  // "Update now" only exists when there is something to install (stays, disabled, while
+  // the install runs so the button does not vanish under the cursor).
+  const bool showUpdate = installing || HasPendingUpdate();
+  ShowWindow(updateBtn, (g_activeTab == 3 && showUpdate) ? SW_SHOW : SW_HIDE);
+  InvalidateRect(updateBtn, nullptr, TRUE);
   InvalidateRect(GetDlgItem(hwnd, IDC_UPDATE_STATUS), nullptr, TRUE);
 }
 
@@ -511,8 +592,11 @@ void RelayoutCare(HWND hwnd) {
     y += rowH + rowGap;
   }
 
-  // Preset + hint always above the footer (never push Close/Apply off-screen).
+  // Preset (+ what it sets) and hint always above the footer (never push Close/Apply
+  // off-screen).
   const int presetH = 40;
+  const int presetW = 220;
+  const int descGap = 16;
   const int hintH = 18;
   const int hintGap = 8;
   const int footerClearance = 16;
@@ -521,7 +605,9 @@ void RelayoutCare(HWND hwnd) {
   if (bottomY + presetH + hintGap + hintH > footerY - footerClearance) {
     bottomY = footerY - footerClearance - hintH - hintGap - presetH;
   }
-  place(IDC_CARE_PRESET, pad, bottomY, contentW, presetH);
+  place(IDC_CARE_PRESET, pad, bottomY, presetW, presetH);
+  place(IDC_CARE_PRESET_DESC, pad + presetW + descGap, bottomY, contentW - presetW - descGap,
+        presetH);
   place(IDC_CARE_HINT, pad, bottomY + presetH + hintGap, contentW, hintH);
 }
 
@@ -603,6 +689,7 @@ void LoadControlsFromDraft(HWND hwnd) {
   RefreshPauseStatus(hwnd);
   RelayoutScopeAndMonitors(hwnd);
   RefreshPreview(hwnd);
+  RefreshDirtyUi(hwnd);
 }
 
 void ReadDraftFromControls(HWND hwnd) {
@@ -674,8 +761,52 @@ HWND MkButton(HWND parent, int id, const wchar_t* text, int x, int y, int w, int
 }
 
 void EnableDarkTitleBar(HWND hwnd) {
+  // Raw ids: older SDK headers lack the Win11 names. Failures (Win10) are harmless.
+  constexpr DWORD kUseImmersiveDarkMode = 20;
+  constexpr DWORD kBorderColor = 34;
+  constexpr DWORD kCaptionColor = 35;
+  constexpr DWORD kTextColor = 36;
   BOOL useDark = TRUE;
-  DwmSetWindowAttribute(hwnd, 20, &useDark, sizeof(useDark));
+  DwmSetWindowAttribute(hwnd, kUseImmersiveDarkMode, &useDark, sizeof(useDark));
+  // Caption blends into the client so the window reads as one dark surface.
+  const COLORREF caption = kScreen;
+  const COLORREF text = kInk;
+  const COLORREF border = kLine;
+  DwmSetWindowAttribute(hwnd, kCaptionColor, &caption, sizeof(caption));
+  DwmSetWindowAttribute(hwnd, kTextColor, &text, sizeof(text));
+  DwmSetWindowAttribute(hwnd, kBorderColor, &border, sizeof(border));
+}
+
+enum class PendingChoice { Apply, Discard, Cancel };
+
+// Unsaved changes: Apply / Discard / Cancel (Esc). The Settings drafts stay untouched
+// on Cancel.
+PendingChoice AskAboutPendingChanges(HWND owner, const wchar_t* heading) {
+  constexpr int kApplyId = 100;
+  constexpr int kDiscardId = 101;
+  const TASKDIALOG_BUTTON buttons[] = {
+      {kApplyId, L"Apply"},
+      {kDiscardId, L"Discard"},
+  };
+  TASKDIALOGCONFIG cfg{sizeof(cfg)};
+  cfg.hwndParent = owner;
+  cfg.dwFlags = TDF_ALLOW_DIALOG_CANCELLATION | TDF_POSITION_RELATIVE_TO_WINDOW;
+  cfg.dwCommonButtons = TDCBF_CANCEL_BUTTON;
+  cfg.pszWindowTitle = L"Phostide";
+  cfg.pszMainInstruction = heading;
+  cfg.pszContent = L"Some settings were changed but not applied.";
+  cfg.pButtons = buttons;
+  cfg.cButtons = ARRAYSIZE(buttons);
+  cfg.nDefaultButton = kApplyId;
+  int pressed = IDCANCEL;
+  if (FAILED(TaskDialogIndirect(&cfg, &pressed, nullptr, nullptr))) {
+    const int r = MessageBoxW(owner, L"Apply your changes?", L"Phostide",
+                              MB_YESNOCANCEL | MB_ICONQUESTION);
+    pressed = r == IDYES ? kApplyId : (r == IDNO ? kDiscardId : IDCANCEL);
+  }
+  if (pressed == kApplyId) return PendingChoice::Apply;
+  if (pressed == kDiscardId) return PendingChoice::Discard;
+  return PendingChoice::Cancel;
 }
 
 // backdrop: when set, paint the whole rect first so the pixels outside the rounded
@@ -722,7 +853,20 @@ void DrawGhostButton(DRAWITEMSTRUCT* dis, const wchar_t* label, bool enabled) {
   SelectObject(dis->hDC, old);
 }
 
-void DrawTabButton(DRAWITEMSTRUCT* dis, const wchar_t* label, bool active) {
+void FillDot(HDC hdc, int cx, int cy, int r, COLORREF color) {
+  HBRUSH br = CreateSolidBrush(color);
+  HPEN pen = CreatePen(PS_SOLID, 1, color);
+  HGDIOBJ oldBr = SelectObject(hdc, br);
+  HGDIOBJ oldPen = SelectObject(hdc, pen);
+  Ellipse(hdc, cx - r, cy - r, cx + r + 1, cy + r + 1);
+  SelectObject(hdc, oldBr);
+  SelectObject(hdc, oldPen);
+  DeleteObject(br);
+  DeleteObject(pen);
+}
+
+// dirty: unsaved changes on that tab -> small ember dot right after the label.
+void DrawTabButton(DRAWITEMSTRUCT* dis, const wchar_t* label, bool active, bool dirty) {
   const bool pressed = (dis->itemState & ODS_SELECTED) != 0;
   const COLORREF fill = active ? RGB(36, 28, 22) : (pressed ? RGB(34, 34, 36) : kPanel);
   const COLORREF border = active ? kEmber : kLine;
@@ -732,6 +876,13 @@ void DrawTabButton(DRAWITEMSTRUCT* dis, const wchar_t* label, bool active) {
   HFONT old = static_cast<HFONT>(SelectObject(dis->hDC, g_fontSection));
   DrawTextW(dis->hDC, label, -1, const_cast<RECT*>(&dis->rcItem),
             DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+  if (dirty) {
+    SIZE text{};
+    GetTextExtentPoint32W(dis->hDC, label, static_cast<int>(wcslen(label)), &text);
+    const int midX = (dis->rcItem.left + dis->rcItem.right) / 2;
+    const int midY = (dis->rcItem.top + dis->rcItem.bottom) / 2;
+    FillDot(dis->hDC, midX + text.cx / 2 + 9, midY, 3, kEmber);
+  }
   SelectObject(dis->hDC, old);
 }
 
@@ -852,9 +1003,11 @@ void DrawMonitorRow(DRAWITEMSTRUCT* dis, int index) {
   }
 
   const wchar_t* status = MonitorPaintStatusLabel(index, on);
+  const bool statusPainting = wcscmp(status, L"painting") == 0;
   const bool statusHot =
       wcscmp(status, L"fullscreen") == 0 || wcscmp(status, L"locked") == 0 ||
       wcscmp(status, L"paused") == 0;
+  const COLORREF dotColor = statusPainting ? kGood : (statusHot ? kEmber : kMuted);
 
   wchar_t line[128];
   if (mon.primary) {
@@ -876,6 +1029,12 @@ void DrawMonitorRow(DRAWITEMSTRUCT* dis, int index) {
   statusRc.left = statusRc.right - 96;
   SetTextColor(dis->hDC, statusHot ? kEmber : kSoft);
   DrawTextW(dis->hDC, status, -1, &statusRc, DT_RIGHT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+  if (*status) {
+    SIZE text{};
+    GetTextExtentPoint32W(dis->hDC, status, static_cast<int>(wcslen(status)), &text);
+    FillDot(dis->hDC, statusRc.right - text.cx - 11,
+            (statusRc.top + statusRc.bottom) / 2, 4, dotColor);
+  }
   SelectObject(dis->hDC, old);
 }
 
@@ -968,7 +1127,7 @@ void ShowTab(HWND hwnd, int tab) {
       IDC_CARE_SUBTITLE,       IDC_CARE_IDLE_CAPTION, IDC_CARE_FILL_CAPTION, IDC_CARE_FILL_VALUE,
       IDC_CARE_FILL,           IDC_CARE_OPTIONS_CAPTION, IDC_CARE_CHROME,    IDC_CARE_NUDGE,
       IDC_CARE_NIGHT,          IDC_CARE_PAUSE_LOCK,   IDC_CARE_PAUSE_FS,     IDC_CARE_PRESET,
-      IDC_CARE_HINT,
+      IDC_CARE_PRESET_DESC,    IDC_CARE_HINT,
   };
   for (int id : careIds) {
     HWND c = GetDlgItem(hwnd, id);
@@ -988,16 +1147,18 @@ void ShowTab(HWND hwnd, int tab) {
   const int systemIds[] = {
       IDC_GENERAL_CAPTION, IDC_AUTOSTART,      IDC_RENDER_CAPTION,  IDC_RENDER_BASE,
       IDC_RENDER_BASE + 1, IDC_RENDER_BASE + 2, IDC_UPDATES_CAPTION, IDC_VERSION,
-      IDC_UPDATE_STATUS,  IDC_CHECK_UPDATES, IDC_UPDATE_BTN,   IDC_DIAG_CAPTION,
-      IDC_COPY_DIAG,      IDC_DIAG_STATUS,
+      IDC_UPDATE_STATUS,  IDC_CHECK_UPDATES, IDC_DIAG_CAPTION,   IDC_COPY_DIAG,
+      IDC_DIAG_STATUS,
   };
   for (int id : systemIds) {
     HWND c = GetDlgItem(hwnd, id);
     if (c) ShowWindow(c, system ? SW_SHOW : SW_HIDE);
   }
+  RefreshUpdateControls(hwnd);  // shows "Update now" only when an update is pending
 
   RelayoutScopeAndMonitors(hwnd);
   RelayoutCare(hwnd);
+  RefreshDirtyUi(hwnd);
 
   InvalidateRect(GetDlgItem(hwnd, IDC_TAB_TASKBAR), nullptr, FALSE);
   InvalidateRect(GetDlgItem(hwnd, IDC_TAB_CARE), nullptr, FALSE);
@@ -1019,7 +1180,9 @@ void BuildChildren(HWND hwnd) {
   g_previewW = contentW - 6;
   int y = 14;
 
-  MkStatic(hwnd, IDC_TITLE, L"Settings", pad, y, contentW, 32, g_fontTitle);
+  // Logo is painted in WM_PAINT at (pad, y); the heading sits to its right.
+  MkStatic(hwnd, IDC_TITLE, L"Settings", kTitleTextX, y - 1, kClientW - pad - kTitleTextX, 32,
+           g_fontTitle);
   y += 44;  // leave room for title descenders (g) before the tab row
 
   const int tabGap = 6;
@@ -1128,6 +1291,10 @@ void BuildChildren(HWND hwnd) {
            BS_OWNERDRAW);
 
   MkButton(hwnd, IDC_CARE_PRESET, L"OLED everyday preset", pad, cy, contentW, 40, BS_OWNERDRAW);
+  MkStatic(hwnd, IDC_CARE_PRESET_DESC,
+           L"Idle after 5 min at 5% fill, dim icons & clock, clock nudge, night boost. "
+           L"Your theme and intensity stay as they are.",
+           pad, cy, contentW, 40, g_fontUi, SS_LEFT | SS_NOPREFIX);
   MkStatic(hwnd, IDC_CARE_HINT,
            L"Applies only to monitors left on in the Monitors tab.", pad, cy, contentW, 20,
            g_fontUi);
@@ -1200,12 +1367,41 @@ void FocusUpdatesSection(HWND hwnd) {
   }
 }
 
-LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+// Close / Esc / title-bar X: ask before dropping unapplied drafts.
+void TryCloseSettings(HWND hwnd) {
+  if (g_activeTab != kTabWelcome && AnyDirty()) {
+    switch (AskAboutPendingChanges(hwnd, L"Apply changes before closing?")) {
+      case PendingChoice::Apply:
+        ApplyDraft(hwnd);
+        break;
+      case PendingChoice::Discard:
+        break;
+      case PendingChoice::Cancel:
+        return;
+    }
+  }
+  DestroyWindow(hwnd);
+}
+
+LRESULT SettingsWndProcImpl(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
   switch (msg) {
     case WM_CREATE:
       EnableDarkTitleBar(hwnd);
+      if (!g_logoIcon) {
+        g_logoIcon = static_cast<HICON>(
+            LoadImageW(reinterpret_cast<LPCREATESTRUCTW>(lParam)->hInstance,
+                       MAKEINTRESOURCEW(IDI_APPICON), IMAGE_ICON, kLogoSize, kLogoSize,
+                       LR_DEFAULTCOLOR));
+      }
       BuildChildren(hwnd);
       return 0;
+    case WM_PAINT: {
+      PAINTSTRUCT ps{};
+      HDC dc = BeginPaint(hwnd, &ps);
+      if (g_logoIcon) DrawIconEx(dc, 24, 14, g_logoIcon, kLogoSize, kLogoSize, 0, nullptr, DI_NORMAL);
+      EndPaint(hwnd, &ps);
+      return 0;
+    }
     case WM_DISPLAYCHANGE:
       RefreshMonitorList();
       SyncDraftFromScope();
@@ -1235,7 +1431,7 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
           id == IDC_CARE_SUBTITLE || id == IDC_CARE_IDLE_CAPTION ||
           id == IDC_CARE_FILL_CAPTION || id == IDC_CARE_OPTIONS_CAPTION || id == IDC_CARE_HINT ||
           id == IDC_WELCOME_CAPTION || id == IDC_WELCOME_HINT || id == IDC_DIAG_CAPTION ||
-          id == IDC_DIAG_STATUS) {
+          id == IDC_DIAG_STATUS || id == IDC_CARE_PRESET_DESC) {
         SetTextColor(hdc, kSoft);
       } else if (id == IDC_UPDATE_STATUS && HasPendingUpdate()) {
         SetTextColor(hdc, kEmber);
@@ -1247,19 +1443,19 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
     case WM_DRAWITEM: {
       auto* dis = reinterpret_cast<DRAWITEMSTRUCT*>(lParam);
       if (dis->CtlID == IDC_TAB_TASKBAR) {
-        DrawTabButton(dis, L"Taskbar", g_activeTab == 0);
+        DrawTabButton(dis, L"Taskbar", g_activeTab == 0, TabDirty(0));
         return TRUE;
       }
       if (dis->CtlID == IDC_TAB_CARE) {
-        DrawTabButton(dis, L"OLED Care", g_activeTab == 1);
+        DrawTabButton(dis, L"OLED Care", g_activeTab == 1, TabDirty(1));
         return TRUE;
       }
       if (dis->CtlID == IDC_TAB_MONITORS) {
-        DrawTabButton(dis, L"Monitors", g_activeTab == 2);
+        DrawTabButton(dis, L"Monitors", g_activeTab == 2, TabDirty(2));
         return TRUE;
       }
       if (dis->CtlID == IDC_TAB_SYSTEM) {
-        DrawTabButton(dis, L"System", g_activeTab == 3);
+        DrawTabButton(dis, L"System", g_activeTab == 3, TabDirty(3));
         return TRUE;
       }
       if (dis->CtlID == IDC_PREVIEW) {
@@ -1383,8 +1579,22 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
       }
       if (id >= IDC_SCOPE_BASE && id < IDC_SCOPE_BASE + kMaxScopeChips) {
         const int chip = id - IDC_SCOPE_BASE;
-        g_scopeIndex = (chip == 0) ? -1 : chip - 1;
-        SyncDraftFromScope();
+        const int nextScope = (chip == 0) ? -1 : chip - 1;
+        if (nextScope == g_scopeIndex) return 0;
+        // The draft look belongs to the current scope; don't silently drop it.
+        if (TaskbarDirty()) {
+          switch (AskAboutPendingChanges(hwnd, L"Apply changes before switching display?")) {
+            case PendingChoice::Apply:
+              ApplyDraft(hwnd);
+              break;
+            case PendingChoice::Discard:
+              break;
+            case PendingChoice::Cancel:
+              return 0;
+          }
+        }
+        g_scopeIndex = nextScope;
+        LoadScopeAppearance();  // other tabs keep their unsaved drafts
         LoadControlsFromDraft(hwnd);
         return 0;
       }
@@ -1466,7 +1676,7 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
         return 0;
       }
       if (id == IDC_CLOSE || id == IDCANCEL) {
-        DestroyWindow(hwnd);
+        TryCloseSettings(hwnd);
         return 0;
       }
       if (id == IDC_CHECK_UPDATES) {
@@ -1489,7 +1699,7 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
       return 0;
     }
     case WM_CLOSE:
-      DestroyWindow(hwnd);
+      TryCloseSettings(hwnd);
       return 0;
     case WM_DESTROY:
       KillTimer(hwnd, ID_PREVIEW_TIMER);
@@ -1507,6 +1717,16 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
   return DefWindowProcW(hwnd, msg, wParam, lParam);
 }
 
+LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+  const LRESULT result = SettingsWndProcImpl(hwnd, msg, wParam, lParam);
+  // Any edit path (clicks, sliders, display change) re-evaluates Apply + tab dots.
+  if ((msg == WM_COMMAND || msg == WM_HSCROLL || msg == WM_DISPLAYCHANGE) &&
+      g_settingsHwnd == hwnd && IsWindow(hwnd)) {
+    RefreshDirtyUi(hwnd);
+  }
+  return result;
+}
+
 bool EnsureClass(HINSTANCE hi) {
   if (g_classRegistered) return true;
   EnsureGdi();
@@ -1517,6 +1737,9 @@ bool EnsureClass(HINSTANCE hi) {
   wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
   wc.hbrBackground = g_brScreen;
   wc.hIcon = LoadIconW(hi, MAKEINTRESOURCEW(IDI_APPICON));
+  wc.hIconSm = static_cast<HICON>(LoadImageW(hi, MAKEINTRESOURCEW(IDI_APPICON), IMAGE_ICON,
+                                             GetSystemMetrics(SM_CXSMICON),
+                                             GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR));
   wc.lpszClassName = kClassName;
   g_classRegistered = RegisterClassExW(&wc) != 0;
   return g_classRegistered;
@@ -1543,21 +1766,14 @@ void SettingsWindowRefreshUpdateUi() {
 void SettingsWindowReloadAppearance() {
   if (!g_settingsHwnd || !g_host.settings) return;
   // Keep other unsaved drafts (Care, System); only the look changed under us.
-  if (g_scopeIndex >= 0 && g_scopeIndex < static_cast<int>(g_monitors.size())) {
-    LoadAppearanceDraft(
-        ResolveMonitorAppearance(*g_host.settings, g_monitors[g_scopeIndex].deviceName));
-  } else {
-    MonitorAppearance a;
-    a.theme = g_host.settings->theme;
-    a.intensity = g_host.settings->intensity;
-    LoadAppearanceDraft(a);
-  }
+  LoadScopeAppearance();
   SendDlgItemMessageW(g_settingsHwnd, IDC_INTENSITY, TBM_SETPOS, TRUE,
                       static_cast<LPARAM>(g_draftIntensity));
   UpdateIntensityValue(g_settingsHwnd);
   InvalidateThemeRows(g_settingsHwnd);
   RefreshPreview(g_settingsHwnd);
   if (g_activeTab == kTabWelcome) UpdateWelcomeIntro(g_settingsHwnd);
+  RefreshDirtyUi(g_settingsHwnd);
 }
 
 void SettingsWindowRefreshPauseUi() {
@@ -1574,7 +1790,8 @@ void SettingsWindowShow(HWND owner, HINSTANCE instance, SettingsFocus focus) {
   if (g_settingsHwnd) {
     ShowWindow(g_settingsHwnd, SW_SHOW);
     SetForegroundWindow(g_settingsHwnd);
-    SyncDraftFromSettings();
+    // Re-opening from the tray must not wipe edits that were not applied yet.
+    if (!AnyDirty()) SyncDraftFromSettings();
     LoadControlsFromDraft(g_settingsHwnd);
     if (focus == SettingsFocus::Updates) {
       FocusUpdatesSection(g_settingsHwnd);
