@@ -1,5 +1,5 @@
 {
-    "version": "0.1.40",
+    "version": "0.1.41",
     "description": "OLED taskbar solution for Windows 11: animated themes painted into the real taskbar, idle OLED Care and per-monitor control.",
     "homepage": "https://phostide.doticca.com",
     "license": "MIT",
@@ -9,8 +9,8 @@
     ],
     "architecture": {
         "64bit": {
-            "url": "https://github.com/teamdoticca/Phostide/releases/download/v0.1.40/Phostide-0.1.40-win-x64.zip",
-            "hash": "7969b47dfb883a7ee8bf8a64fe7b866a10dbe943471826881c1fc1fad33fe740"
+            "url": "https://github.com/teamdoticca/Phostide/releases/download/v0.1.41/Phostide-0.1.41-win-x64.zip",
+            "hash": "0874720d336c2903e7bff03ba75417fa648852d159a9229ddcf3dbb0990d5659"
         }
     },
     "shortcuts": [
