@@ -1,8 +1,10 @@
+#include "CareNotice.h"
 #include "Diagnostics.h"
 #include "FullscreenDetect.h"
 #include "Injector.h"
 #include "SettingsStore.h"
 #include "SettingsWindow.h"
+#include "Toast.h"
 #include "UpdateCheck.h"
 #include "UpdateInstall.h"
 #include "resource.h"
@@ -30,10 +32,12 @@ constexpr UINT WM_INJECT_DONE = WM_APP + 2;
 constexpr UINT WM_UPDATE_DONE = WM_APP + 3;
 constexpr UINT WM_UPDATE_PROGRESS = WM_APP + 4;  // wParam = percent + 1 (0 = unknown)
 constexpr UINT WM_UPDATE_READY = WM_APP + 5;     // lParam = SetupDownloadResult*
+constexpr UINT WM_TOAST_ACTIVATED = WM_APP + 6;  // lParam = std::wstring* argument
 constexpr UINT_PTR ID_ANIM_TIMER = 1;
 constexpr UINT_PTR ID_REINJECT_TIMER = 2;
 constexpr UINT_PTR ID_IDLE_TIMER = 3;
 constexpr UINT_PTR ID_RESUME_TIMER = 4;  // checks the "Pause for 1 hour" deadline
+constexpr UINT_PTR ID_UPDATE_TIMER = 5;  // automatic update check / pending notice
 constexpr UINT ID_ENABLE = 100;
 constexpr UINT ID_SETTINGS = 110;
 constexpr UINT ID_PAUSE_HOUR = 120;
@@ -81,6 +85,7 @@ MonitorCareState g_careMonitors[phostide::kMaxMonitorSlots]{};
 uint32_t g_careMonitorCount = 0;
 DWORD g_careProcessStartTick = 0;
 bool g_careWasSystemIdle = false;
+uint32_t g_careDimmedCount = 0;  // displays really dimming at the last care refresh
 bool g_tapBound = false;
 bool g_clearedAccentForTap = false;
 bool g_updateCheckRunning = false;
@@ -101,7 +106,13 @@ struct UpdateDonePayload {
 
 void ApplyTheme(bool pushToTap);
 void SyncAnimTimer(HWND hwnd);
-void ShowBalloon(const wchar_t* title, const wchar_t* body);
+// automatic: not a direct answer to a tray click (OLED Care, update, timed resume);
+// skipped while Windows reports a fullscreen app, presentation mode or quiet time.
+// Returns false when the balloon was not shown (no tray icon, or suppressed).
+bool ShowBalloon(const wchar_t* title, const wchar_t* body, bool automatic = false);
+// Short status message: a Windows notification (replaces the previous one, expires
+// in minutes) on Setup installs, else a tray balloon. Same `automatic` rules.
+bool Notify(const wchar_t* title, const wchar_t* body, bool automatic = false);
 
 // Every host save goes through here so a temporary tray pause is never written.
 void PersistSettings() {
@@ -274,6 +285,7 @@ bool RefreshOledCareIdleStates() {
   g_careMonitorCount = nextCount;
 
   if (minutes <= 0 || !g_settings.enabled || g_sessionLocked || g_careMonitorCount == 0) {
+    g_careDimmedCount = 0;
     bool changed = false;
     for (uint32_t i = 0; i < g_careMonitorCount; ++i) {
       if (g_careMonitors[i].idle) {
@@ -290,6 +302,7 @@ bool RefreshOledCareIdleStates() {
   // "old", which would enter care immediately and feel stuck until input.
   constexpr DWORD kStartupGraceMs = 8000;
   if (now - g_careProcessStartTick < kStartupGraceMs) {
+    g_careDimmedCount = 0;
     bool changed = false;
     for (uint32_t i = 0; i < g_careMonitorCount; ++i) {
       g_careMonitors[i].lastAttendedTick = now;
@@ -329,7 +342,7 @@ bool RefreshOledCareIdleStates() {
   }
 
   bool changed = false;
-  uint32_t idleCount = 0;
+  uint32_t dimmedCount = 0;  // idle displays that really dim (not paused, not off)
   for (uint32_t i = 0; i < g_careMonitorCount; ++i) {
     const bool unattended =
         (now - g_careMonitors[i].lastAttendedTick) >= thresholdMs;
@@ -338,13 +351,18 @@ bool RefreshOledCareIdleStates() {
       g_careMonitors[i].idle = idle;
       changed = true;
     }
-    if (g_careMonitors[i].idle) ++idleCount;
+    const bool fsPaused =
+        g_settings.pauseWhenFullscreen && IsFullscreenHash(g_careMonitors[i].deviceHash);
+    const bool off = i < monitors.size() &&
+                     phostide::IsMonitorDisabled(g_settings, monitors[i].deviceName);
+    if (g_careMonitors[i].idle && !fsPaused && !off) ++dimmedCount;
   }
-  if (changed && idleCount > 0) {
+  if (phostide::CareDimNoticeDue(g_careDimmedCount, dimmedCount)) {
     wchar_t body[80];
-    swprintf_s(body, L"OLED Care on — %u display(s) dimmed.", idleCount);
-    ShowBalloon(L"Phostide", body);
+    swprintf_s(body, L"OLED Care on — %u display(s) dimmed.", dimmedCount);
+    Notify(L"Phostide", body, /*automatic=*/true);
   }
+  g_careDimmedCount = dimmedCount;
   return changed;
 }
 
@@ -522,15 +540,72 @@ bool HasPendingUpdate() {
          phostide::IsVersionNewer(g_settings.pendingUpdateTag, phostide::kAppVersion);
 }
 
-void ShowBalloon(const wchar_t* title, const wchar_t* body) {
-  if (!g_trayAdded) return;
+// %TEMP%\Phostide\host.log: host lifetime, notifications and their clicks.
+void HostLog(const std::wstring& line) {
+  wchar_t temp[MAX_PATH]{};
+  if (!GetTempPathW(MAX_PATH, temp)) return;
+  const std::wstring dir = std::wstring(temp) + L"Phostide";
+  CreateDirectoryW(dir.c_str(), nullptr);
+  HANDLE f = CreateFileW((dir + L"\\host.log").c_str(), FILE_APPEND_DATA, FILE_SHARE_READ,
+                         nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+  if (f == INVALID_HANDLE_VALUE) return;
+  SYSTEMTIME st{};
+  GetLocalTime(&st);
+  wchar_t prefix[64];
+  swprintf_s(prefix, L"%04u-%02u-%02u %02u:%02u:%02u ", st.wYear, st.wMonth, st.wDay, st.wHour,
+             st.wMinute, st.wSecond);
+  const std::wstring out = prefix + line + L"\r\n";
+  DWORD written = 0;
+  WriteFile(f, out.c_str(), static_cast<DWORD>(out.size() * sizeof(wchar_t)), &written, nullptr);
+  CloseHandle(f);
+}
+
+// An abrupt exit otherwise leaves no trace (no WER report on many machines).
+LONG WINAPI LogUnhandledException(EXCEPTION_POINTERS* info) {
+  wchar_t text[160];
+  swprintf_s(text, L"crash: exception 0x%08lX at %p",
+             info && info->ExceptionRecord ? info->ExceptionRecord->ExceptionCode : 0ul,
+             info && info->ExceptionRecord ? info->ExceptionRecord->ExceptionAddress : nullptr);
+  HostLog(text);
+  return EXCEPTION_CONTINUE_SEARCH;
+}
+
+bool ShowBalloon(const wchar_t* title, const wchar_t* body, bool automatic) {
+  if (!g_trayAdded) return false;
+  if (automatic) {
+    QUERY_USER_NOTIFICATION_STATE state = QUNS_ACCEPTS_NOTIFICATIONS;
+    if (SUCCEEDED(SHQueryUserNotificationState(&state)) &&
+        !phostide::AutomaticBalloonAllowed(state)) {
+      return false;
+    }
+  }
   NOTIFYICONDATAW tip = g_nid;
   tip.uFlags = NIF_INFO | NIF_GUID;
   tip.guidItem = phostide::kTrayIconGuid;
   tip.dwInfoFlags = NIIF_INFO | NIIF_NOSOUND;
   wcsncpy_s(tip.szInfoTitle, title, _TRUNCATE);
   wcsncpy_s(tip.szInfo, body, _TRUNCATE);
-  Shell_NotifyIconW(NIM_MODIFY, &tip);
+  return Shell_NotifyIconW(NIM_MODIFY, &tip) != FALSE;
+}
+
+bool NotificationsWelcome() {
+  QUERY_USER_NOTIFICATION_STATE state = QUNS_ACCEPTS_NOTIFICATIONS;
+  return FAILED(SHQueryUserNotificationState(&state)) ||
+         phostide::AutomaticBalloonAllowed(state);
+}
+
+bool Notify(const wchar_t* title, const wchar_t* body, bool automatic) {
+  if (!phostide::ToastsAvailable()) return ShowBalloon(title, body, automatic);
+  if (automatic && !NotificationsWelcome()) return false;
+  phostide::ToastContent t;
+  t.title = title;
+  t.body = body;
+  t.launchArgument = phostide::kToastArgOpenSettings;
+  t.tag = L"status";       // each status message replaces the previous one
+  t.expiryMinutes = 10;    // and does not pile up in Notification Center
+  const bool toast = phostide::ShowToast(t);
+  HostLog(std::wstring(L"notify ") + (toast ? L"toast: " : L"toast failed: ") + title);
+  return toast || ShowBalloon(title, body, automatic);
 }
 
 void OpenReleasePageInBrowser() {
@@ -618,6 +693,89 @@ void HandleUpdateReady(HWND hwnd, phostide::SetupDownloadResult* raw) {
 }
 
 void OpenPendingUpdate() { StartUpdateInstall(); }
+
+// Announce a found update once per version.
+// Windows notification (Setup installs): Install update / Later buttons; while a
+// fullscreen app or Do Not Disturb is on it goes silently to Notification Center.
+// Tray balloon (portable / Scoop): held back then, retried on the next tick.
+void TryNotifyPendingUpdate() {
+  if (!HasPendingUpdate() || g_updateInstallRunning) return;
+  if (!phostide::UpdateNoticeDue(g_settings.pendingUpdateTag, g_settings.notifiedUpdateTag)) {
+    return;
+  }
+  bool shown = false;
+  if (phostide::ToastsAvailable()) {
+    phostide::ToastContent t;
+    t.title = L"Phostide " + g_settings.pendingUpdateTag + L" is available";
+    t.body = RunningFromScoop() ? L"Update with: scoop update phostide"
+                                : L"Install now: Phostide closes, updates and starts again.";
+    t.launchArgument = phostide::kToastArgOpenUpdates;
+    if (!RunningFromScoop()) {
+      t.buttons = {{L"Install update", phostide::kToastArgInstallUpdate},
+                   {L"Later", phostide::kToastArgDismiss}};
+    }
+    t.tag = L"update";
+    t.silentToCenter = !NotificationsWelcome();
+    shown = phostide::ShowToast(t);
+    HostLog(L"update toast " + g_settings.pendingUpdateTag + (shown ? L" shown" : L" failed") +
+            (t.silentToCenter ? L" (to Notification Center only)" : L""));
+  }
+  if (!shown) {
+    const std::wstring body = L"Phostide " + g_settings.pendingUpdateTag +
+                              L" is available. Right-click the tray icon > Install update.";
+    shown = ShowBalloon(L"Phostide update", body.c_str(), /*automatic=*/true);
+  }
+  if (shown) {
+    g_settings.notifiedUpdateTag = g_settings.pendingUpdateTag;
+    PersistSettings();
+  }
+}
+
+// Tray "Install update" and the notification's button.
+void InstallUpdateFromShell(HWND hwnd) {
+  if (RunningFromScoop()) {
+    // Scoop owns updates: Settings shows the "scoop update phostide" hint.
+    phostide::SettingsWindowShow(hwnd, g_instance, phostide::SettingsFocus::Updates);
+  }
+  // Same verified path as Settings > Update now (download, signature, silent
+  // Setup, relaunch); progress shows in Settings if it is open.
+  StartUpdateInstall();
+  if (g_updateInstallRunning) {
+    const std::wstring body = L"Downloading " + g_settings.pendingUpdateTag +
+                              L". Phostide restarts when it is installed.";
+    Notify(L"Phostide update", body.c_str());
+  }
+}
+
+void HandleToastActivated(HWND hwnd, const std::wstring& argument) {
+  HostLog(L"notification clicked: " + (argument.empty() ? std::wstring(L"(body)") : argument));
+  if (argument == phostide::kToastArgInstallUpdate) {
+    InstallUpdateFromShell(hwnd);
+  } else if (argument == phostide::kToastArgOpenUpdates) {
+    phostide::SettingsWindowShow(hwnd, g_instance, phostide::SettingsFocus::Updates);
+  } else if (argument == phostide::kToastArgOpenSettings) {
+    phostide::SettingsWindowShow(hwnd, g_instance, phostide::SettingsFocus::Normal);
+  }
+  // kToastArgDismiss ("Later"): nothing; the notification is gone already.
+}
+
+void StartUpdateCheck(bool manual);
+
+// Automatic updates: first tick kAutoUpdateFirstDelayMs after startup, then hourly.
+// Network only when a day has passed since the last check (IsUpdateCheckDue).
+void OnUpdateTimer(HWND hwnd) {
+  if (g_injectInFlight.load()) {
+    // Taskbar hook still running (it can include an Explorer restart): come back.
+    SetTimer(hwnd, ID_UPDATE_TIMER, phostide::kAutoUpdateRetryMs, nullptr);
+    return;
+  }
+  SetTimer(hwnd, ID_UPDATE_TIMER, phostide::kAutoUpdateTickMs, nullptr);
+  if (!g_settings.autoCheckUpdates) return;
+  TryNotifyPendingUpdate();
+  if (phostide::IsUpdateCheckDue(g_settings.lastUpdateCheckUtc)) {
+    StartUpdateCheck(false);
+  }
+}
 
 void OnApplyAppearanceFromSettings() {
   g_animStart = std::chrono::steady_clock::now();
@@ -708,7 +866,7 @@ void StartTempPause(HWND hwnd, TempPause kind) {
   }
   g_settings.enabled = false;
   ApplyEnabledChange(hwnd);
-  ShowBalloon(L"Phostide", (g_pauseText + L". Click the tray icon to resume now.").c_str());
+  Notify(L"Phostide", (g_pauseText + L". Click the tray icon to resume now.").c_str());
 }
 
 void CheckTimedPause(HWND hwnd) {
@@ -718,7 +876,7 @@ void CheckTimedPause(HWND hwnd) {
   }
   if (GetTickCount64() < g_tempPauseDeadline) return;
   SetPaintEnabled(hwnd, true);
-  ShowBalloon(L"Phostide", L"Themes on again.");
+  Notify(L"Phostide", L"Themes on again.", /*automatic=*/true);
 }
 
 // Tray Theme menu: like Taskbar tab "Apply to All", but each display keeps its
@@ -789,9 +947,11 @@ void RebuildMenu() {
   AppendMenuW(g_menu, MF_POPUP, reinterpret_cast<UINT_PTR>(themes), L"Theme (all displays)");
   AppendMenuW(g_menu, MF_SEPARATOR, 0, nullptr);
   AppendMenuW(g_menu, MF_STRING, ID_SETTINGS, L"Settings...");
-  if (HasPendingUpdate()) {
+  if (g_updateInstallRunning) {
+    AppendMenuW(g_menu, MF_STRING | MF_GRAYED, ID_OPEN_UPDATE, L"Installing update...");
+  } else if (HasPendingUpdate()) {
     wchar_t updateLabel[96];
-    swprintf_s(updateLabel, L"Update available: %s", g_settings.pendingUpdateTag.c_str());
+    swprintf_s(updateLabel, L"Install update %s", g_settings.pendingUpdateTag.c_str());
     AppendMenuW(g_menu, MF_STRING, ID_OPEN_UPDATE, updateLabel);
   }
   AppendMenuW(g_menu, MF_SEPARATOR, 0, nullptr);
@@ -878,6 +1038,7 @@ void ShutdownHost() {
   static bool once = false;
   if (once) return;
   once = true;
+  HostLog(L"exit");
 
   if (g_hwnd) {
     KillTimer(g_hwnd, ID_ANIM_TIMER);
@@ -887,6 +1048,8 @@ void ShutdownHost() {
     DestroyWindow(phostide::SettingsWindowHwnd());
   }
   RemoveTrayIcon();
+  // Nothing would answer their buttons once we are gone.
+  phostide::ToastShutdown();
   // Restore stock taskbar in Explorer, then drop our hook so Setup can replace files.
   phostide::RequestTapRestore();
   Sleep(60);
@@ -901,10 +1064,11 @@ void StartUpdateCheck(bool manual) {
   g_updateCheckRunning = true;
   if (!g_updateInstallRunning) g_updateStatusText.clear();
   phostide::SettingsWindowRefreshUpdateUi();
-  std::thread([manual] {
+  const bool includePrereleases = g_settings.updateIncludePrereleases;
+  std::thread([manual, includePrereleases] {
     auto* payload = new UpdateDonePayload();
     payload->manual = manual;
-    payload->result = phostide::CheckForUpdates();
+    payload->result = phostide::CheckForUpdates(includePrereleases);
     if (g_hwnd) {
       PostMessageW(g_hwnd, WM_UPDATE_DONE, 0, reinterpret_cast<LPARAM>(payload));
     } else {
@@ -926,11 +1090,12 @@ void HandleUpdateDone(UpdateDonePayload* payload) {
       g_settings.pendingUpdateTag = r.latestTag;
       g_settings.pendingSetupUrl =
           !r.setupUrl.empty() ? r.setupUrl : r.releasePageUrl;
-      PersistSettings();
-      if (!owned->manual) {
-        ShowBalloon(L"Phostide update",
-                    L"A newer version is available. Settings > System > Update now installs it.");
+      if (owned->manual) {
+        // Seen in Settings already: no notification for this version later.
+        g_settings.notifiedUpdateTag = r.latestTag;
       }
+      PersistSettings();
+      if (!owned->manual) TryNotifyPendingUpdate();
     } else {
       g_settings.pendingUpdateTag.clear();
       g_settings.pendingSetupUrl.clear();
@@ -972,6 +1137,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         CheckTimedPause(hwnd);
         return 0;
       }
+      if (wParam == ID_UPDATE_TIMER) {
+        OnUpdateTimer(hwnd);
+        return 0;
+      }
       if (wParam == ID_ANIM_TIMER && g_settings.enabled && !IsThemePaintPaused()) {
         if (RefreshTapBound()) {
           SyncAnimTimer(hwnd);
@@ -1003,6 +1172,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     case WM_UPDATE_PROGRESS:
       HandleUpdateProgress(static_cast<int>(wParam) - 1);
       return 0;
+    case WM_TOAST_ACTIVATED: {
+      std::unique_ptr<std::wstring> argument(reinterpret_cast<std::wstring*>(lParam));
+      if (argument) HandleToastActivated(hwnd, *argument);
+      return 0;
+    }
     case WM_UPDATE_READY:
       HandleUpdateReady(hwnd, reinterpret_cast<phostide::SetupDownloadResult*>(lParam));
       return 0;
@@ -1019,7 +1193,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         // fill refs so the next click can rebind without a full Explorer rescan.
         // During a timed / until-restart pause this resumes.
         SetPaintEnabled(hwnd, !g_settings.enabled);
-        ShowBalloon(L"Phostide",
+        Notify(L"Phostide",
                     g_settings.enabled ? L"Themes on." : L"Themes paused. Click again to resume.");
       }
       return 0;
@@ -1051,7 +1225,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         return 0;
       }
       if (id == ID_OPEN_UPDATE) {
-        phostide::SettingsWindowShow(hwnd, g_instance, phostide::SettingsFocus::Updates);
+        InstallUpdateFromShell(hwnd);
         return 0;
       }
       if (id == ID_EXIT) {
@@ -1134,9 +1308,14 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR cmdLine, int) {
 
   g_instance = hi;
   g_taskbarCreatedMsg = RegisterWindowMessageW(L"TaskbarCreated");
+  SetUnhandledExceptionFilter(&LogUnhandledException);
+  HostLog(std::wstring(L"start ") + phostide::kAppVersion.data() +
+          (phostide::ToastsAvailable() ? L" (Windows notifications)" : L" (tray balloons)"));
 
   // Keep Start / taskbar / notification prefs tied to one identity across updates.
   SetCurrentProcessExplicitAppUserModelID(phostide::kAppUserModelId.data());
+  // UI thread is an STA: Windows notifications (WinRT) are created here.
+  CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 
   // Ensure Explorer is alive after a previous crash before we touch the shell.
   if (!FindWindowW(L"Shell_TrayWnd", nullptr)) {
@@ -1197,6 +1376,7 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR cmdLine, int) {
     return 1;
   }
   ShowWindow(g_hwnd, SW_HIDE);
+  phostide::ToastInit(g_hwnd, WM_TOAST_ACTIVATED);
 
   // Tray immediately — before any injection work.
   AddTrayIcon(g_hwnd, hi);
@@ -1210,10 +1390,9 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR cmdLine, int) {
   // Inject on a worker so the UI thread stays responsive.
   StartInjectWorker();
 
-  // Daily (or first-run) update check — silent unless newer.
-  if (phostide::IsUpdateCheckDue(g_settings.lastUpdateCheckUtc)) {
-    StartUpdateCheck(false);
-  }
+  // Automatic update check: never at startup (it would compete with the taskbar
+  // hook); first tick a couple of minutes in, then hourly (network once a day).
+  SetTimer(g_hwnd, ID_UPDATE_TIMER, phostide::kAutoUpdateFirstDelayMs, nullptr);
 
   MSG msg;
   while (GetMessageW(&msg, nullptr, 0, 0) > 0) {

@@ -46,6 +46,9 @@
     <ClCompile Include="UpdateInstallTests.cpp" />
     <ClCompile Include="MonitorNamesTests.cpp" />
     <ClCompile Include="FullscreenDetectTests.cpp" />
+    <ClCompile Include="InjectorTests.cpp" />
+    <ClCompile Include="CareNoticeTests.cpp" />
+    <ClCompile Include="ToastTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="TestHarness.h" />

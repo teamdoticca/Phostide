@@ -79,10 +79,12 @@ export default function PrivacyPage() {
               Optional network use
             </h2>
             <p className="mt-3">
-              Checking for updates (automatic about once a day while running, or
-              when you click Check for updates) contacts GitHub&apos;s public
-              Releases API for this repository. Themes keep working if that
-              request fails or you are offline.
+              Checking for updates (automatic about once a day while running,
+              unless you turn it off in Settings › System, or when you click
+              Check for updates) contacts GitHub&apos;s public
+              Releases API for this repository (with Include pre-releases on,
+              its release list instead of only the latest release). Themes keep
+              working if that request fails or you are offline.
             </p>
             <p className="mt-3">
               When you click Update now (Settings › System), Phostide downloads

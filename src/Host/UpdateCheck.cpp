@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #pragma comment(lib, "winhttp.lib")
 
@@ -19,6 +20,9 @@ namespace {
 constexpr wchar_t kApiHost[] = L"api.github.com";
 constexpr wchar_t kApiPath[] =
     L"/repos/teamdoticca/Phostide/releases/latest";
+// Newest first; pre-releases included (releases/latest never returns them).
+constexpr wchar_t kApiListPath[] =
+    L"/repos/teamdoticca/Phostide/releases?per_page=30";
 constexpr wchar_t kFallbackReleasePage[] =
     L"https://github.com/teamdoticca/Phostide/releases/latest";
 
@@ -102,6 +106,67 @@ std::string ExtractJsonString(const std::string& json, const char* key) {
     }
     return {};
   }
+}
+
+// First top-level `"key": true|false` in obj, or fallback.
+bool ExtractJsonBool(const std::string& obj, const char* key, bool fallback) {
+  const std::string needle = std::string("\"") + key + "\"";
+  const size_t pos = obj.find(needle);
+  if (pos == std::string::npos) return fallback;
+  size_t i = obj.find(':', pos + needle.size());
+  if (i == std::string::npos) return fallback;
+  ++i;
+  while (i < obj.size() && (obj[i] == ' ' || obj[i] == '\t' || obj[i] == '\r' || obj[i] == '\n')) {
+    ++i;
+  }
+  if (obj.compare(i, 4, "true") == 0) return true;
+  if (obj.compare(i, 5, "false") == 0) return false;
+  return fallback;
+}
+
+// Objects of a top-level JSON array, as substrings (strings and nesting aware).
+std::vector<std::string> SplitTopLevelObjects(const std::string& json) {
+  std::vector<std::string> out;
+  int depth = 0;
+  bool inString = false;
+  size_t start = 0;
+  for (size_t i = 0; i < json.size(); ++i) {
+    const char c = json[i];
+    if (inString) {
+      if (c == '\\') {
+        ++i;
+      } else if (c == '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (c == '"') {
+      inString = true;
+    } else if (c == '{') {
+      if (depth++ == 0) start = i;
+    } else if (c == '}') {
+      if (depth > 0 && --depth == 0) out.push_back(json.substr(start, i - start + 1));
+    }
+  }
+  return out;
+}
+
+// From a GET /releases list: the release (stable or pre-release, never a draft)
+// with the highest version tag, or empty when none parses.
+std::string SelectNewestRelease(const std::string& listJson) {
+  std::string best;
+  std::wstring bestTag;
+  for (auto& obj : SplitTopLevelObjects(listJson)) {
+    if (ExtractJsonBool(obj, "draft", false)) continue;
+    const std::wstring tag = Utf8ToWide(ExtractJsonString(obj, "tag_name"));
+    int a = 0, b = 0, c = 0;
+    if (!ParseTriple(tag, a, b, c)) continue;
+    if (best.empty() || IsVersionNewer(tag, bestTag)) {
+      bestTag = tag;
+      best = std::move(obj);
+    }
+  }
+  return best;
 }
 
 // Prefer Phostide-Setup*.exe asset URL; else first *.exe matching Setup; else empty.
@@ -264,13 +329,25 @@ bool IsUpdateCheckDue(int64_t lastUpdateCheckUtc) {
   return (UtcNowUnixSeconds() - lastUpdateCheckUtc) >= kDay;
 }
 
-UpdateCheckResult CheckForUpdates() {
+bool UpdateNoticeDue(std::wstring_view pendingTag, std::wstring_view notifiedTag) {
+  return !pendingTag.empty() && pendingTag != notifiedTag;
+}
+
+UpdateCheckResult CheckForUpdates(bool includePrereleases) {
   UpdateCheckResult r;
   r.releasePageUrl = kFallbackReleasePage;
 
   std::string body;
-  if (!HttpGetHttps(kApiHost, kApiPath, body, r.error)) {
+  if (!HttpGetHttps(kApiHost, includePrereleases ? kApiListPath : kApiPath, body, r.error)) {
     return r;
+  }
+  if (includePrereleases) {
+    body = SelectNewestRelease(body);
+    if (body.empty()) {
+      r.error = L"No releases found.";
+      return r;
+    }
+    r.prerelease = ExtractJsonBool(body, "prerelease", false);
   }
 
   const std::string tagUtf8 = ExtractJsonString(body, "tag_name");

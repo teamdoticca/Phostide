@@ -69,9 +69,16 @@ Source: "{#StageDir}\README.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 ; AppUserModelID must stay stable so taskbar / tray prefs survive updates.
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; AppUserModelID: "Doticca.Phostide"
+; Toast activator CLSID: clicks in Notification Center reach Phostide (or start it).
+; Keep in sync with kToastActivatorClsid (src/Host/Toast.h) and [Registry] below.
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; AppUserModelID: "Doticca.Phostide"; AppUserModelToastActivatorCLSID: "7D93B492-A095-4C16-849B-A8E50ECD54C4"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; AppUserModelID: "Doticca.Phostide"
+
+[Registry]
+; COM local server for the toast activator (per-user, removed on uninstall).
+Root: HKCU; Subkey: "Software\Classes\CLSID\{{7D93B492-A095-4C16-849B-A8E50ECD54C4}"; ValueType: string; ValueName: ""; ValueData: "Phostide notification activator"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\CLSID\{{7D93B492-A095-4C16-849B-A8E50ECD54C4}\LocalServer32"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" -ToastActivated"
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent

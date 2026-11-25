@@ -288,6 +288,24 @@ bool CopyTapToCache(fs::path& destOut, std::wstring* errorOut) {
   return false;
 }
 
+// Milliseconds since the process started, or UINT64_MAX if it cannot be read.
+uint64_t ProcessAgeMs(DWORD pid) {
+  HANDLE process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+  if (!process) return UINT64_MAX;
+  FILETIME created{}, exited{}, kernel{}, user{};
+  const BOOL ok = GetProcessTimes(process, &created, &exited, &kernel, &user);
+  CloseHandle(process);
+  if (!ok) return UINT64_MAX;
+  FILETIME nowFt{};
+  GetSystemTimeAsFileTime(&nowFt);
+  const auto ticks = [](const FILETIME& ft) {
+    return (static_cast<uint64_t>(ft.dwHighDateTime) << 32) | ft.dwLowDateTime;
+  };
+  const uint64_t start = ticks(created);
+  const uint64_t now = ticks(nowFt);
+  return now > start ? (now - start) / 10000 : 0;
+}
+
 bool HookTapIntoTray(const fs::path& dest, std::wstring* errorOut) {
   // Last gate before the DLL reaches Explorer (and our own LoadLibrary below).
   // Fails closed without bouncing the shell — a restart would not fix a bad file.
@@ -311,6 +329,14 @@ bool HookTapIntoTray(const fs::path& dest, std::wstring* errorOut) {
     return false;
   }
   LogInject(L"tid=" + std::to_wstring(tid) + L" pid=" + std::to_wstring(pid));
+
+  // A just-restarted Explorer (Setup's update bounce, logon) would make ixde fail
+  // for the life of the process and cost a second shell restart.
+  if (const uint32_t settle = ExplorerSettleWaitMs(ProcessAgeMs(pid))) {
+    LogInject(L"explorer started recently; settling " + std::to_wstring(settle) +
+              L" ms before hook");
+    Sleep(settle);
+  }
 
   // Drop any previous host-side hook/module before loading a new build.
   DetachExplorerTap();
@@ -351,6 +377,11 @@ bool HookTapIntoTray(const fs::path& dest, std::wstring* errorOut) {
 }
 
 }  // namespace
+
+uint32_t ExplorerSettleWaitMs(uint64_t explorerAgeMs) {
+  if (explorerAgeMs >= kExplorerSettleMs) return 0;  // also covers UINT64_MAX
+  return static_cast<uint32_t>(kExplorerSettleMs - explorerAgeMs);
+}
 
 std::wstring TapDllPath() {
   return ModuleDir() + L"\\ExplorerTAP.dll";

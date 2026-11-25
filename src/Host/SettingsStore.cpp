@@ -280,6 +280,9 @@ Settings LoadSettings() {
   s.oledCareClockOpacity = ClampPercent(ParseInt(json, "oledCareClockOpacity", 22));
   s.oledCareClockNudge = ParseBool(json, "oledCareClockNudge", false);
   s.oledCareNightBoost = ParseBool(json, "oledCareNightBoost", false);
+  s.autoCheckUpdates = ParseBool(json, "autoCheckUpdates", true);
+  s.updateIncludePrereleases = ParseBool(json, "updateIncludePrereleases", false);
+  s.notifiedUpdateTag = Utf8ToWide(ParseUtf8String(json, "notifiedUpdateTag"));
   s.lastUpdateCheckUtc = ParseInt64(json, "lastUpdateCheckUtc", 0);
   s.pendingUpdateTag = Utf8ToWide(ParseUtf8String(json, "pendingUpdateTag"));
   s.pendingSetupUrl = Utf8ToWide(ParseUtf8String(json, "pendingSetupUrl"));
@@ -313,6 +316,11 @@ void SaveSettings(const Settings& settings) {
       << ",\n"
       << "  \"oledCareNightBoost\": " << (settings.oledCareNightBoost ? "true" : "false")
       << ",\n"
+      << "  \"autoCheckUpdates\": " << (settings.autoCheckUpdates ? "true" : "false") << ",\n"
+      << "  \"updateIncludePrereleases\": "
+      << (settings.updateIncludePrereleases ? "true" : "false") << ",\n"
+      << "  \"notifiedUpdateTag\": \"" << EscapeJson(WideToUtf8(settings.notifiedUpdateTag))
+      << "\",\n"
       << "  \"lastUpdateCheckUtc\": " << settings.lastUpdateCheckUtc << ",\n"
       << "  \"pendingUpdateTag\": \""
       << EscapeJson(WideToUtf8(settings.pendingUpdateTag)) << "\",\n"

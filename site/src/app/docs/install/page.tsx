@@ -215,6 +215,7 @@ export default async function InstallPage() {
                   <span className="text-zinc-100">System</span> tab —{" "}
                   <span className="text-zinc-100">RENDERING</span> (Auto / GPU /
                   CPU, shared by all bars), Start with Windows, check for updates
+                  (optionally including pre-releases)
                 </li>
               </ul>
               <p className="mt-3">

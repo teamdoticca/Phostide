@@ -36,6 +36,8 @@ constexpr int IDC_VERSION = 1300;
 constexpr int IDC_UPDATE_STATUS = 1301;
 constexpr int IDC_CHECK_UPDATES = 1302;
 constexpr int IDC_UPDATE_BTN = 1303;
+constexpr int IDC_PRERELEASES = 1304;
+constexpr int IDC_AUTO_UPDATES = 1305;
 constexpr int IDC_DIAG_CAPTION = 1310;
 constexpr int IDC_COPY_DIAG = 1311;
 constexpr int IDC_DIAG_STATUS = 1312;
@@ -108,6 +110,8 @@ bool g_classRegistered = false;
 ThemeId g_draftTheme = ThemeId::Rainbow;
 int g_draftIntensity = 45;
 bool g_draftAutostart = false;
+bool g_draftPrereleases = false;
+bool g_draftAutoUpdates = true;
 RenderMode g_draftRenderMode = RenderMode::Auto;
 int g_draftCareIdleMinutes = 0;
 int g_draftCareFillIntensity = 8;
@@ -211,6 +215,8 @@ void LoadScopeAppearance() {
 void SyncDraftFromScope() {
   if (!g_host.settings) return;
   g_draftAutostart = g_host.settings->startWithWindows;
+  g_draftPrereleases = g_host.settings->updateIncludePrereleases;
+  g_draftAutoUpdates = g_host.settings->autoCheckUpdates;
   g_draftRenderMode = g_host.settings->renderMode;
   g_draftCareIdleMinutes = ClampOledCareIdleMinutes(g_host.settings->oledCareIdleMinutes);
   g_draftCareFillIntensity = ClampPercent(g_host.settings->oledCareFillIntensity);
@@ -281,6 +287,8 @@ bool MonitorsDirty() {
 bool SystemDirty() {
   if (!g_host.settings) return false;
   return g_draftAutostart != g_host.settings->startWithWindows ||
+         g_draftPrereleases != g_host.settings->updateIncludePrereleases ||
+         g_draftAutoUpdates != g_host.settings->autoCheckUpdates ||
          g_draftRenderMode != g_host.settings->renderMode;
 }
 
@@ -351,7 +359,7 @@ void InvalidateCareIdleChips(HWND hwnd) {
 
 void InvalidateCareChecks(HWND hwnd) {
   for (int id : {IDC_CARE_CHROME, IDC_CARE_NUDGE, IDC_CARE_NIGHT, IDC_CARE_PAUSE_LOCK,
-                 IDC_CARE_PAUSE_FS, IDC_AUTOSTART}) {
+                 IDC_CARE_PAUSE_FS, IDC_AUTOSTART, IDC_PRERELEASES, IDC_AUTO_UPDATES}) {
     HWND c = GetDlgItem(hwnd, id);
     if (c) InvalidateRect(c, nullptr, TRUE);
   }
@@ -700,6 +708,8 @@ void LoadControlsFromDraft(HWND hwnd) {
                       static_cast<LPARAM>(g_draftCareFillIntensity));
   UpdateCareFillValue(hwnd);
   CheckDlgButton(hwnd, IDC_AUTOSTART, g_draftAutostart ? BST_CHECKED : BST_UNCHECKED);
+  CheckDlgButton(hwnd, IDC_PRERELEASES, g_draftPrereleases ? BST_CHECKED : BST_UNCHECKED);
+  CheckDlgButton(hwnd, IDC_AUTO_UPDATES, g_draftAutoUpdates ? BST_CHECKED : BST_UNCHECKED);
   InvalidateThemeRows(hwnd);
   InvalidateRenderRows(hwnd);
   InvalidateScopeChips(hwnd);
@@ -733,6 +743,10 @@ void ApplyDraft(HWND hwnd) {
   if (!g_host.settings || !g_host.onApplyAppearance) return;
   ReadDraftFromControls(hwnd);
   g_host.settings->startWithWindows = g_draftAutostart;
+  const bool prereleasesChanged =
+      g_host.settings->updateIncludePrereleases != g_draftPrereleases;
+  g_host.settings->updateIncludePrereleases = g_draftPrereleases;
+  g_host.settings->autoCheckUpdates = g_draftAutoUpdates;
   g_host.settings->renderMode = g_draftRenderMode;
   g_host.settings->oledCareIdleMinutes = ClampOledCareIdleMinutes(g_draftCareIdleMinutes);
   g_host.settings->oledCareFillIntensity = ClampPercent(g_draftCareFillIntensity);
@@ -757,6 +771,9 @@ void ApplyDraft(HWND hwnd) {
   }
 
   g_host.onApplyAppearance();
+  // Re-check right away so a pre-release (or leaving the channel) shows up now,
+  // not at the next daily check.
+  if (prereleasesChanged && g_host.onRequestUpdateCheck) g_host.onRequestUpdateCheck();
 }
 
 HWND MkStatic(HWND parent, int id, const wchar_t* text, int x, int y, int w, int height,
@@ -1307,8 +1324,8 @@ void ShowTab(HWND hwnd, int tab) {
   const int systemIds[] = {
       IDC_GENERAL_CAPTION, IDC_AUTOSTART,      IDC_RENDER_CAPTION,  IDC_RENDER_BASE,
       IDC_RENDER_BASE + 1, IDC_RENDER_BASE + 2, IDC_UPDATES_CAPTION, IDC_VERSION,
-      IDC_UPDATE_STATUS,  IDC_CHECK_UPDATES, IDC_DIAG_CAPTION,   IDC_COPY_DIAG,
-      IDC_DIAG_STATUS,
+      IDC_UPDATE_STATUS,  IDC_CHECK_UPDATES, IDC_AUTO_UPDATES,   IDC_PRERELEASES,
+      IDC_DIAG_CAPTION,   IDC_COPY_DIAG,     IDC_DIAG_STATUS,
   };
   for (int id : systemIds) {
     HWND c = GetDlgItem(hwnd, id);
@@ -1501,7 +1518,13 @@ void BuildChildren(HWND hwnd) {
   MkButton(hwnd, IDC_CHECK_UPDATES, L"Check for updates", pad, syy, 180, 34, BS_OWNERDRAW);
   MkButton(hwnd, IDC_UPDATE_BTN, L"Update now", pad + contentW - 140, syy, 140, 34,
            BS_OWNERDRAW);
-  syy += 34 + 24;
+  syy += 34 + 8;
+  MkButton(hwnd, IDC_AUTO_UPDATES, L"Check for updates automatically", pad, syy, contentW, 36,
+           BS_OWNERDRAW);
+  syy += 36 + 4;
+  MkButton(hwnd, IDC_PRERELEASES, L"Include pre-releases", pad, syy, contentW, 36,
+           BS_OWNERDRAW);
+  syy += 36 + 16;
   MkStatic(hwnd, IDC_DIAG_CAPTION, L"TROUBLESHOOTING", pad, syy, contentW, 16, g_fontSection);
   syy += 28;
   MkButton(hwnd, IDC_COPY_DIAG, L"Copy diagnostics", pad, syy, 180, 34, BS_OWNERDRAW);
@@ -1655,6 +1678,16 @@ LRESULT SettingsWndProcImpl(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         DrawCheckRow(dis, L"Start with Windows", g_draftAutostart);
         return TRUE;
       }
+      if (dis->CtlID == IDC_AUTO_UPDATES) {
+        DrawCheckRow(dis, L"Check for updates automatically (once a day, notifies when found)",
+                     g_draftAutoUpdates);
+        return TRUE;
+      }
+      if (dis->CtlID == IDC_PRERELEASES) {
+        DrawCheckRow(dis, L"Include pre-releases (early builds, may be less tested)",
+                     g_draftPrereleases);
+        return TRUE;
+      }
       if (dis->CtlID == IDC_CARE_CHROME) {
         DrawCheckRow(dis, L"Dim icons, tray & clock (experimental)", g_draftCareChromeDim);
         return TRUE;
@@ -1777,6 +1810,20 @@ LRESULT SettingsWndProcImpl(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         g_previewTime = ThemeBaseTime(g_draftTheme);
         InvalidateThemeRows(hwnd);
         RefreshPreview(hwnd);
+        return 0;
+      }
+      if (id == IDC_AUTO_UPDATES) {
+        g_draftAutoUpdates = !g_draftAutoUpdates;
+        CheckDlgButton(hwnd, IDC_AUTO_UPDATES,
+                       g_draftAutoUpdates ? BST_CHECKED : BST_UNCHECKED);
+        InvalidateRect(GetDlgItem(hwnd, IDC_AUTO_UPDATES), nullptr, TRUE);
+        return 0;
+      }
+      if (id == IDC_PRERELEASES) {
+        g_draftPrereleases = !g_draftPrereleases;
+        CheckDlgButton(hwnd, IDC_PRERELEASES,
+                       g_draftPrereleases ? BST_CHECKED : BST_UNCHECKED);
+        InvalidateRect(GetDlgItem(hwnd, IDC_PRERELEASES), nullptr, TRUE);
         return 0;
       }
       if (id == IDC_AUTOSTART) {

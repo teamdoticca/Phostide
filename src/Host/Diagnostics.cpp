@@ -211,8 +211,11 @@ std::wstring BuildDiagnosticsReport(const Settings& s, const DiagnosticsHostStat
   out += line;
 
   out += L"\r\n--- Settings ---\r\n";
-  swprintf_s(line, L"Render: %s; start with Windows: %s\r\n", RenderModeName(s.renderMode),
-             YesNo(s.startWithWindows));
+  swprintf_s(line,
+             L"Render: %s; start with Windows: %s; auto update check: %s; "
+             L"pre-release updates: %s\r\n",
+             RenderModeName(s.renderMode), YesNo(s.startWithWindows),
+             YesNo(s.autoCheckUpdates), YesNo(s.updateIncludePrereleases));
   out += line;
   swprintf_s(line, L"Fallback look: %s %d%%\r\n", ThemeName(s.theme), s.intensity);
   out += line;

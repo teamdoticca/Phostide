@@ -126,6 +126,9 @@ struct Settings {
   // Per-monitor theme/intensity; missing key → theme/intensity fallbacks.
   std::vector<MonitorAppearanceEntry> monitorSettings;
   // Update check (GitHub Releases)
+  bool autoCheckUpdates = true;           // System tab: background check once a day
+  bool updateIncludePrereleases = false;  // System tab: also offer GitHub pre-releases
+  std::wstring notifiedUpdateTag;         // last tag announced with a notification
   int64_t lastUpdateCheckUtc = 0;  // unix seconds; 0 = never
   std::wstring pendingUpdateTag;   // e.g. "v0.1.3" when newer than kAppVersion
   std::wstring pendingSetupUrl;    // direct Setup.exe download URL

@@ -18,12 +18,12 @@ Phostide is a Windows 11 OLED taskbar solution: moving fill + hybrid idle Care +
   - **Taskbar** — Apply to All or monitor *N*: theme + intensity
   - **OLED Care** — hybrid idle (full AFK dims all; while the session is active, unused displays can dim alone — attendance follows the cursor monitor only); optional experimental chrome/clock care; night boost; pause when locked; pause in fullscreen (default on — covered display only via ThemeCommand v7 `pauseActive`); **OLED everyday preset is care-only** (does not change theme/intensity)
   - **Monitors** — per-display on/off, rows named from the monitor EDID (e.g. "Monitor 1 · LG 27GR95QE"); **Identify** shows each display's number on screen; live paint status (`painting` / `fullscreen` / `locked` / `off` / `paused`)
-  - **System** — shared Auto/GPU/CPU rendering (not per-monitor), Start with Windows, updates (Update now = verified silent Setup + relaunch), Copy diagnostics
+  - **System** — shared Auto/GPU/CPU rendering (not per-monitor), Start with Windows, updates (**Check for updates automatically**, on by default: once a day, first check ~2 min after start, one Windows notification per new version with Install update / Later buttons; Update now = verified silent Setup + relaunch; optional **Include pre-releases**, off by default, also offers GitHub pre-releases), Copy diagnostics
 - First run (no settings file) opens a one-time **Welcome** inside Settings: "Which displays are OLED?" (Done / Customize). It is not a fifth tab. Fresh-install defaults: Aurora 35%, OLED Care idle 5 min.
 - It is **not** an overlay window and **not** Windows auto-hide.
 - Exactly five themes: Rainbow, Sea Waves, Weather, Space, Aurora.
 - OLED Care chrome dim / clock nudge are optional experimental; they restore on Exit and may no-op if Explorer XAML names change.
-- Tray left-click / Enable soft-pauses paint (SoftSuspend keeps `BackgroundFill` refs for rebind); Exit restores stock brushes. Tray right-click also offers Pause for 1 hour / Pause until restart (never persisted) and a Theme submenu (all displays). System tab has Copy diagnostics (redacted report to clipboard).
+- Tray left-click / Enable soft-pauses paint (SoftSuspend keeps `BackgroundFill` refs for rebind); Exit restores stock brushes. Tray right-click also offers Pause for 1 hour / Pause until restart (never persisted) and a Theme submenu (all displays); when an update is pending it also shows **Install update vX** (same verified install as Update now). System tab has Copy diagnostics (redacted report to clipboard).
 
 ## Repo map
 

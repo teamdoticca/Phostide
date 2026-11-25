@@ -64,3 +64,56 @@ TEST(SetupUrl_FallsBackToAnySetupExe_ElseEmpty) {
         "https://g/My-SETUP.EXE");
   CHECK(FindSetupDownloadUrl(R"({"browser_download_url": "https://g/app.zip"})").empty());
 }
+
+// Shape of GET /repos/.../releases (newest first, nested author/assets, braces in bodies).
+static const std::string kReleaseList = R"([
+  {"url": "u", "html_url": "https://github.com/teamdoticca/Phostide/releases/tag/v0.1.43",
+   "tag_name": "v0.1.43", "draft": true, "prerelease": false,
+   "author": {"login": "x", "html_url": "https://github.com/x"}, "body": "draft {x}"},
+  {"url": "u", "html_url": "https://github.com/teamdoticca/Phostide/releases/tag/v0.1.42",
+   "tag_name": "v0.1.42", "draft": false, "prerelease": true,
+   "author": {"login": "x", "html_url": "https://github.com/x"},
+   "assets": [{"name": "Phostide-Setup-0.1.42-win-x64.exe",
+     "browser_download_url": "https://github.com/teamdoticca/Phostide/releases/download/v0.1.42/Phostide-Setup-0.1.42-win-x64.exe"}],
+   "body": "fix \"quotes\" and } braces"},
+  {"url": "u", "html_url": "https://github.com/teamdoticca/Phostide/releases/tag/v0.1.41",
+   "tag_name": "v0.1.41", "draft": false, "prerelease": false, "assets": []}
+])";
+
+TEST(SelectNewestRelease_PicksNewestNonDraftIncludingPrerelease) {
+  const std::string pick = SelectNewestRelease(kReleaseList);
+  CHECK(ExtractJsonString(pick, "tag_name") == "v0.1.42");
+  CHECK(ExtractJsonBool(pick, "prerelease", false));
+  CHECK(ExtractJsonString(pick, "html_url") ==
+        "https://github.com/teamdoticca/Phostide/releases/tag/v0.1.42");
+  CHECK(FindSetupDownloadUrl(pick).find("Phostide-Setup-0.1.42") != std::string::npos);
+}
+
+TEST(SelectNewestRelease_StableWinsWhenNewer) {
+  // Pre-release opt-in never offers an older pre-release over a newer stable.
+  const std::string list = R"([
+    {"tag_name": "v0.2.0", "draft": false, "prerelease": false},
+    {"tag_name": "v0.1.99", "draft": false, "prerelease": true}])";
+  CHECK(ExtractJsonString(SelectNewestRelease(list), "tag_name") == "v0.2.0");
+}
+
+TEST(SelectNewestRelease_EmptyOrUnparseable) {
+  CHECK(SelectNewestRelease("[]").empty());
+  CHECK(SelectNewestRelease("").empty());
+  CHECK(SelectNewestRelease(R"([{"tag_name": "nightly", "draft": false}])").empty());
+}
+
+TEST(UpdateNotice_OncePerVersion) {
+  CHECK(UpdateNoticeDue(L"v0.1.42", L""));
+  CHECK(UpdateNoticeDue(L"v0.1.43", L"v0.1.42"));  // a newer one is announced again
+  CHECK(!UpdateNoticeDue(L"v0.1.42", L"v0.1.42"));
+  CHECK(!UpdateNoticeDue(L"", L"v0.1.42"));         // nothing pending
+}
+
+TEST(AutoUpdateSchedule_FirstCheckWaitsAndTicksHourly) {
+  CHECK(kAutoUpdateFirstDelayMs >= 60u * 1000u);  // never at startup
+  CHECK(kAutoUpdateTickMs <= 24u * 60u * 60u * 1000u);
+  CHECK(IsUpdateCheckDue(0));
+  CHECK(!IsUpdateCheckDue(UtcNowUnixSeconds() - 60));
+  CHECK(IsUpdateCheckDue(UtcNowUnixSeconds() - 25 * 60 * 60));
+}

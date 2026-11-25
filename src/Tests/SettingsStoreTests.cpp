@@ -99,6 +99,9 @@ TEST(SaveLoad_RoundTripsEveryField) {
   in.oledCareClockOpacity = 15;
   in.oledCareClockNudge = true;
   in.oledCareNightBoost = false;
+  in.autoCheckUpdates = false;
+  in.updateIncludePrereleases = true;
+  in.notifiedUpdateTag = L"v0.1.42";
   in.lastUpdateCheckUtc = 1794907410;
   in.pendingUpdateTag = L"v0.1.40";
   in.pendingSetupUrl = L"https://example.test/Phostide-Setup.exe";
@@ -123,6 +126,9 @@ TEST(SaveLoad_RoundTripsEveryField) {
   CHECK(out.oledCareClockOpacity == in.oledCareClockOpacity);
   CHECK(out.oledCareClockNudge == in.oledCareClockNudge);
   CHECK(out.oledCareNightBoost == in.oledCareNightBoost);
+  CHECK(out.autoCheckUpdates == in.autoCheckUpdates);
+  CHECK(out.updateIncludePrereleases == in.updateIncludePrereleases);
+  CHECK(out.notifiedUpdateTag == in.notifiedUpdateTag);
   CHECK(out.lastUpdateCheckUtc == in.lastUpdateCheckUtc);
   CHECK(out.pendingUpdateTag == in.pendingUpdateTag);
   CHECK(out.pendingSetupUrl == in.pendingSetupUrl);
