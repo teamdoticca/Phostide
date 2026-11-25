@@ -68,7 +68,7 @@ const faqs: { q: string; a: string }[] = [
   },
   {
     q: "Does it collect data or need an account?",
-    a: "No account and no telemetry. Themes work offline. The only network use is the optional GitHub update check and, when you click Update now, downloading the signed Setup from GitHub Releases. Settings live in %APPDATA%\\Phostide\\settings.json.",
+    a: "No account and no telemetry. Themes work offline. The only network use is the optional GitHub update check and, when it finds a new version, downloading the signed Setup from GitHub Releases (on a metered connection only when you click Update now). It installs only when you click. Settings live in %APPDATA%\\Phostide\\settings.json.",
   },
   {
     q: "How do I report a problem?",

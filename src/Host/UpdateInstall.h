@@ -25,6 +25,7 @@ bool IsScoopInstallPath(std::wstring_view exePath);
 
 struct SetupDownloadResult {
   bool ok = false;
+  bool fromCache = false;  // an earlier (background) download was reused
   std::wstring setupPath;
   std::wstring error;  // short, user-facing
 };
@@ -32,10 +33,16 @@ struct SetupDownloadResult {
 // percent: 0-100, or -1 while the size is unknown.
 using DownloadProgressFn = void (*)(void* context, int percent);
 
-// Download to %TEMP%\Phostide\update, then verify the Authenticode signer and that
-// the Setup's file version is newer than this build. Blocking; call off the UI thread.
+// Verified Setup for url in %TEMP%\Phostide\update. Reuses a file already there
+// (background pre-download, or one from before a restart) when it still passes the
+// checks, else downloads it again. Checks: Authenticode signer, and a file version
+// newer than this build. Blocking; call off the UI thread.
 SetupDownloadResult DownloadAndVerifySetup(const std::wstring& url,
                                            DownloadProgressFn progress, void* context);
+
+// Delete downloaded Setups (nothing is pending any more). A Setup that is still
+// running is locked and simply stays.
+void ClearUpdateDownloads();
 
 // Start the verified Setup silently. It closes Phostide (if still running),
 // installs, restarts Explorer when the TAP changed, then starts Phostide again.

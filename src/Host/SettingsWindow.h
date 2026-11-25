@@ -20,6 +20,8 @@ struct SettingsWindowHost {
   bool* updateInstallRunning = nullptr;
   // Optional last check message (errors); empty uses default status text.
   std::wstring* updateStatusText = nullptr;
+  // Tag whose Setup is already downloaded and verified (background pre-download).
+  std::wstring* updateReadyTag = nullptr;
   // Live host pause flags (applied settings + session / fullscreen detectors).
   bool* sessionLocked = nullptr;
   bool* fullscreenPaused = nullptr;

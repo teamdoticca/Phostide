@@ -8,7 +8,7 @@ import { pageMetadata } from "@/lib/seo";
 export const metadata: Metadata = pageMetadata({
   title: "Privacy",
   description:
-    "Phostide is local by default — no account, no telemetry; optional GitHub update checks and Update now downloads only.",
+    "Phostide is local by default — no account, no telemetry; optional GitHub update checks and signed Setup downloads for a found update only.",
   path: "/docs/privacy",
 });
 
@@ -87,10 +87,12 @@ export default function PrivacyPage() {
               working if that request fails or you are offline.
             </p>
             <p className="mt-3">
-              When you click Update now (Settings › System), Phostide downloads
-              that release&apos;s signed Setup from GitHub into your temp folder,
-              checks it is signed by Doticca SRL and newer than what you have,
-              then installs it. Nothing about you is sent along.
+              When a check finds a new version, Phostide downloads that
+              release&apos;s signed Setup from GitHub into your temp folder
+              (on a metered connection only once you click Update now) and
+              checks it is signed by Doticca SRL and newer than what you have.
+              It installs only when you click Update now or Install update.
+              Nothing about you is sent along.
             </p>
           </div>
 

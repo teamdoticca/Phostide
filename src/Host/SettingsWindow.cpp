@@ -484,7 +484,11 @@ void RefreshUpdateControls(HWND hwnd) {
   } else if (g_host.updateStatusText && !g_host.updateStatusText->empty()) {
     wcsncpy_s(status, g_host.updateStatusText->c_str(), _TRUNCATE);
   } else if (HasPendingUpdate()) {
-    swprintf_s(status, L"Update available  %s", g_host.settings->pendingUpdateTag.c_str());
+    const bool ready = g_host.updateReadyTag &&
+                       *g_host.updateReadyTag == g_host.settings->pendingUpdateTag;
+    swprintf_s(status, ready ? L"Update %s downloaded - ready to install"
+                             : L"Update available  %s",
+               g_host.settings->pendingUpdateTag.c_str());
   } else {
     wcsncpy_s(status, L"You're up to date", _TRUNCATE);
   }

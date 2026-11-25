@@ -25,13 +25,16 @@
 #include <string>
 #include <thread>
 
+#include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.Networking.Connectivity.h>
+
 namespace {
 
 constexpr UINT WM_TRAY = WM_APP + 1;
 constexpr UINT WM_INJECT_DONE = WM_APP + 2;
 constexpr UINT WM_UPDATE_DONE = WM_APP + 3;
 constexpr UINT WM_UPDATE_PROGRESS = WM_APP + 4;  // wParam = percent + 1 (0 = unknown)
-constexpr UINT WM_UPDATE_READY = WM_APP + 5;     // lParam = SetupDownloadResult*
+constexpr UINT WM_UPDATE_READY = WM_APP + 5;     // lParam = UpdateReadyPayload*
 constexpr UINT WM_TOAST_ACTIVATED = WM_APP + 6;  // lParam = std::wstring* argument
 constexpr UINT_PTR ID_ANIM_TIMER = 1;
 constexpr UINT_PTR ID_REINJECT_TIMER = 2;
@@ -102,6 +105,16 @@ HANDLE g_boundEvent = nullptr;
 struct UpdateDonePayload {
   bool manual = false;
   phostide::UpdateCheckResult result;
+};
+
+// Setup download (background pre-download or "Update now"); UI thread only.
+bool g_updateDownloadRunning = false;  // DownloadAndVerifySetup worker in flight
+std::wstring g_updateReadyTag;         // verified Setup for this tag is on disk
+std::wstring g_prefetchTriedTag;       // one background download per version per run
+
+struct UpdateReadyPayload {
+  std::wstring tag;  // pending tag the download was started for
+  phostide::SetupDownloadResult result;
 };
 
 void ApplyTheme(bool pushToTap);
@@ -632,6 +645,58 @@ bool RunningFromScoop() {
   return scoop;
 }
 
+// The pending update can be installed in-app (signed Setup from our releases).
+bool CanInstallInApp() {
+  return HasPendingUpdate() && !RunningFromScoop() &&
+         phostide::IsTrustedSetupUrl(g_settings.pendingSetupUrl);
+}
+
+// Metered / roaming / near the data cap: no unasked background download.
+bool OnMeteredConnection() {
+  namespace wnc = winrt::Windows::Networking::Connectivity;
+  try {
+    const auto profile = wnc::NetworkInformation::GetInternetConnectionProfile();
+    if (!profile) return false;  // offline: the download simply fails
+    const auto cost = profile.GetConnectionCost();
+    return cost.Roaming() || cost.OverDataLimit() || cost.ApproachingDataLimit() ||
+           cost.NetworkCostType() == wnc::NetworkCostType::Fixed ||
+           cost.NetworkCostType() == wnc::NetworkCostType::Variable;
+  } catch (...) {
+    return false;
+  }
+}
+
+// Download + verify the pending Setup (reuses one already on disk). The result
+// arrives as WM_UPDATE_READY; a running download is never started twice.
+void StartUpdateDownload() {
+  if (g_updateDownloadRunning) return;
+  g_updateDownloadRunning = true;
+  const std::wstring url = g_settings.pendingSetupUrl;
+  const std::wstring tag = g_settings.pendingUpdateTag;
+  std::thread([url, tag] {
+    auto* payload = new UpdateReadyPayload{
+        tag, phostide::DownloadAndVerifySetup(url, &ReportUpdateProgress, nullptr)};
+    if (g_hwnd) {
+      PostMessageW(g_hwnd, WM_UPDATE_READY, 0, reinterpret_cast<LPARAM>(payload));
+    } else {
+      delete payload;
+    }
+  }).detach();
+}
+
+// Background pre-download right after a check finds a version, so Install update
+// starts Setup at once. True while it runs (the announcement waits for it).
+bool PrefetchPendingUpdate() {
+  if (g_updateDownloadRunning) return true;
+  const std::wstring& tag = g_settings.pendingUpdateTag;
+  if (g_updateReadyTag == tag || g_prefetchTriedTag == tag) return false;
+  if (!CanInstallInApp() || OnMeteredConnection()) return false;
+  g_prefetchTriedTag = tag;
+  HostLog(L"update " + tag + L": downloading in the background");
+  StartUpdateDownload();
+  return true;
+}
+
 void StartUpdateInstall() {
   if (g_updateInstallRunning) return;
   // Scoop owns this copy: Setup would install a second one under Programs.
@@ -640,23 +705,17 @@ void StartUpdateInstall() {
     phostide::SettingsWindowRefreshUpdateUi();
     return;
   }
-  if (!HasPendingUpdate() || !phostide::IsTrustedSetupUrl(g_settings.pendingSetupUrl)) {
+  if (!CanInstallInApp()) {
     OpenReleasePageInBrowser();
     return;
   }
   g_updateInstallRunning = true;
-  g_updateStatusText = L"Downloading " + g_settings.pendingUpdateTag + L"...";
+  g_updateStatusText = g_updateReadyTag == g_settings.pendingUpdateTag
+                           ? L"Starting the installer..."
+                           : L"Downloading " + g_settings.pendingUpdateTag + L"...";
   phostide::SettingsWindowRefreshUpdateUi();
-  const std::wstring url = g_settings.pendingSetupUrl;
-  std::thread([url] {
-    auto* result = new phostide::SetupDownloadResult(
-        phostide::DownloadAndVerifySetup(url, &ReportUpdateProgress, nullptr));
-    if (g_hwnd) {
-      PostMessageW(g_hwnd, WM_UPDATE_READY, 0, reinterpret_cast<LPARAM>(result));
-    } else {
-      delete result;
-    }
-  }).detach();
+  // Reuses the verified pre-download; while that still runs, its result installs.
+  StartUpdateDownload();
 }
 
 void HandleUpdateProgress(int percent) {
@@ -671,19 +730,43 @@ void HandleUpdateProgress(int percent) {
   phostide::SettingsWindowRefreshUpdateUi();
 }
 
-void HandleUpdateReady(HWND hwnd, phostide::SetupDownloadResult* raw) {
-  std::unique_ptr<phostide::SetupDownloadResult> r(raw);
+void TryNotifyPendingUpdate();
+
+void HandleUpdateReady(HWND hwnd, UpdateReadyPayload* raw) {
+  std::unique_ptr<UpdateReadyPayload> payload(raw);
+  g_updateDownloadRunning = false;
+  if (!payload) return;
+  const auto& r = payload->result;
+  // A newer check may have replaced the pending version meanwhile.
+  const bool current = HasPendingUpdate() && payload->tag == g_settings.pendingUpdateTag;
+  HostLog(L"update " + payload->tag +
+          (r.ok ? (r.fromCache ? L": verified Setup already downloaded"
+                               : L": downloaded and verified")
+                : L": download failed: " + r.error));
+  if (r.ok && current) g_updateReadyTag = payload->tag;
+
+  if (!g_updateInstallRunning) {
+    // Background pre-download: announce now (also after a failure; Install update
+    // then downloads again).
+    TryNotifyPendingUpdate();
+    phostide::SettingsWindowRefreshUpdateUi();
+    return;
+  }
+  if (r.ok && !current) {
+    StartUpdateDownload();  // install what is pending now
+    return;
+  }
   std::wstring error;
-  if (r && r->ok) {
+  if (r.ok) {
     g_updateStatusText = L"Installing - Phostide will close and start again.";
     phostide::SettingsWindowRefreshUpdateUi();
-    if (phostide::LaunchSetupForUpdate(r->setupPath, &error)) {
+    if (phostide::LaunchSetupForUpdate(r.setupPath, &error)) {
       // Exit now (restores stock brushes, drops the hook) so Setup can replace files.
       DestroyWindow(hwnd);
       return;
     }
-  } else if (r) {
-    error = r->error;
+  } else {
+    error = r.error;
   }
   g_updateInstallRunning = false;
   g_updateStatusText = (error.empty() ? L"Update failed." : error) +
@@ -703,12 +786,17 @@ void TryNotifyPendingUpdate() {
   if (!phostide::UpdateNoticeDue(g_settings.pendingUpdateTag, g_settings.notifiedUpdateTag)) {
     return;
   }
+  // Download first, so the announcement's Install update starts Setup at once;
+  // HandleUpdateReady comes back here when it is done.
+  if (PrefetchPendingUpdate()) return;
+  const bool ready = g_updateReadyTag == g_settings.pendingUpdateTag;
   bool shown = false;
   if (phostide::ToastsAvailable()) {
     phostide::ToastContent t;
     t.title = L"Phostide " + g_settings.pendingUpdateTag + L" is available";
     t.body = RunningFromScoop() ? L"Update with: scoop update phostide"
-                                : L"Install now: Phostide closes, updates and starts again.";
+             : ready ? L"Downloaded and ready: Phostide closes, updates and starts again."
+                     : L"Install now: Phostide closes, updates and starts again.";
     t.launchArgument = phostide::kToastArgOpenUpdates;
     if (!RunningFromScoop()) {
       t.buttons = {{L"Install update", phostide::kToastArgInstallUpdate},
@@ -740,7 +828,8 @@ void InstallUpdateFromShell(HWND hwnd) {
   // Same verified path as Settings > Update now (download, signature, silent
   // Setup, relaunch); progress shows in Settings if it is open.
   StartUpdateInstall();
-  if (g_updateInstallRunning) {
+  // Already downloaded: Setup starts within a second, nothing to report.
+  if (g_updateInstallRunning && g_updateReadyTag != g_settings.pendingUpdateTag) {
     const std::wstring body = L"Downloading " + g_settings.pendingUpdateTag +
                               L". Phostide restarts when it is installed.";
     Notify(L"Phostide update", body.c_str());
@@ -1091,15 +1180,24 @@ void HandleUpdateDone(UpdateDonePayload* payload) {
       g_settings.pendingSetupUrl =
           !r.setupUrl.empty() ? r.setupUrl : r.releasePageUrl;
       if (owned->manual) {
-        // Seen in Settings already: no notification for this version later.
+        // Seen in Settings already: no notification for this version later, but
+        // still downloaded ahead so Update now starts Setup at once.
         g_settings.notifiedUpdateTag = r.latestTag;
       }
       PersistSettings();
-      if (!owned->manual) TryNotifyPendingUpdate();
+      if (owned->manual) {
+        PrefetchPendingUpdate();
+      } else {
+        TryNotifyPendingUpdate();
+      }
     } else {
       g_settings.pendingUpdateTag.clear();
       g_settings.pendingSetupUrl.clear();
       PersistSettings();
+      if (!g_updateDownloadRunning) {
+        g_updateReadyTag.clear();
+        phostide::ClearUpdateDownloads();
+      }
     }
   } else if (owned->manual) {
     g_updateStatusText =
@@ -1178,7 +1276,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
       return 0;
     }
     case WM_UPDATE_READY:
-      HandleUpdateReady(hwnd, reinterpret_cast<phostide::SetupDownloadResult*>(lParam));
+      HandleUpdateReady(hwnd, reinterpret_cast<UpdateReadyPayload*>(lParam));
       return 0;
     case WM_TRAY:
       if (LOWORD(lParam) == NIN_BALLOONUSERCLICK) {
@@ -1334,8 +1432,11 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR cmdLine, int) {
     g_settings.pendingSetupUrl.clear();
     PersistSettings();
   }
+  // Nothing pending (e.g. just updated): drop the downloaded Setup.
+  if (g_settings.pendingUpdateTag.empty()) phostide::ClearUpdateDownloads();
 
   phostide::SettingsWindowHost host{};
+  host.updateReadyTag = &g_updateReadyTag;
   host.settings = &g_settings;
   host.updateCheckRunning = &g_updateCheckRunning;
   host.updateInstallRunning = &g_updateInstallRunning;

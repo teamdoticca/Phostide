@@ -244,6 +244,22 @@ bool IsAcceptedSetupSigner(std::wstring_view setupSigner, std::wstring_view host
   return setupSigner.find(kDoticcaPublisher) != std::wstring_view::npos;
 }
 
+namespace {
+
+bool VerifySetupFile(const fs::path& path, std::wstring& error) {
+  if (!IsAcceptedSetupSigner(AuthenticodeSignerSubject(path.wstring()), HostSignerSubject())) {
+    error = L"The download failed signature verification.";
+    return false;
+  }
+  if (!IsVersionNewer(FileVersionTriple(path.wstring()), kAppVersion)) {
+    error = L"The download is not newer than this version.";
+    return false;
+  }
+  return true;
+}
+
+}  // namespace
+
 SetupDownloadResult DownloadAndVerifySetup(const std::wstring& url, DownloadProgressFn progress,
                                            void* context) {
   SetupDownloadResult r;
@@ -252,32 +268,49 @@ SetupDownloadResult DownloadAndVerifySetup(const std::wstring& url, DownloadProg
     return r;
   }
   const fs::path dir = UpdateDir();
+  const fs::path dest = dir / SetupFileNameFromUrl(url);
   std::error_code ec;
-  fs::create_directories(dir, ec);
-  // Drop earlier downloads; a Setup still running is locked and simply stays.
-  for (fs::directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec)) {
-    std::error_code rm;
-    fs::remove(it->path(), rm);
+  // Already downloaded (in the background, or before a restart): checked again,
+  // since %TEMP% is writable by anything running as this user.
+  if (fs::is_regular_file(dest, ec)) {
+    std::wstring ignored;
+    if (VerifySetupFile(dest, ignored)) {
+      r.ok = true;
+      r.fromCache = true;
+      r.setupPath = dest.wstring();
+      if (progress) progress(context, 100);
+      return r;
+    }
   }
 
-  const fs::path dest = dir / SetupFileNameFromUrl(url);
-  if (!DownloadToFile(url, dest, progress, context, r.error)) return r;
+  fs::create_directories(dir, ec);
+  ClearUpdateDownloads();  // other versions, a failed or partial file
 
-  const std::wstring signer = AuthenticodeSignerSubject(dest.wstring());
-  if (!IsAcceptedSetupSigner(signer, HostSignerSubject())) {
-    fs::remove(dest, ec);
-    r.error = L"The download failed signature verification.";
+  // The Setup's own name only appears once the download is complete.
+  fs::path partial = dest;
+  partial += L".partial";
+  if (!DownloadToFile(url, partial, progress, context, r.error)) return r;
+  fs::rename(partial, dest, ec);
+  if (ec) {
+    fs::remove(partial, ec);
+    r.error = L"Could not write the download to %TEMP%.";
     return r;
   }
-  const std::wstring version = FileVersionTriple(dest.wstring());
-  if (!IsVersionNewer(version, kAppVersion)) {
+  if (!VerifySetupFile(dest, r.error)) {
     fs::remove(dest, ec);
-    r.error = L"The download is not newer than this version.";
     return r;
   }
   r.ok = true;
   r.setupPath = dest.wstring();
   return r;
+}
+
+void ClearUpdateDownloads() {
+  std::error_code ec;
+  for (fs::directory_iterator it(UpdateDir(), ec), end; !ec && it != end; it.increment(ec)) {
+    std::error_code rm;
+    fs::remove(it->path(), rm);
+  }
 }
 
 bool LaunchSetupForUpdate(const std::wstring& setupPath, std::wstring* error) {
